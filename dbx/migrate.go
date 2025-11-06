@@ -1,6 +1,7 @@
 package dbx
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/ASC521/communis/dbx/sqlitex"
 	_ "modernc.org/sqlite"
 )
 
@@ -96,6 +98,18 @@ func NewMigrator(driver MigrationDriver) (*Migrator, error) {
 	mig := &Migrator{driver: driver, embeddedRoot: "sql", Migrations: migs}
 
 	return mig, nil
+}
+
+func NewSQLiteMigrator(ctx context.Context, db *sqlitex.SQLiteDB) (*Migrator, error) {
+	sd, err := sqlitex.NewSQLiteMigrationDriver(db, ctx)
+	if err != nil {
+		return nil, err
+	}
+	migs, err := loadMigrations()
+	if err != nil {
+		return nil, err
+	}
+	return &Migrator{driver: sd, embeddedRoot: "sql", Migrations: migs}, nil
 }
 
 func (m *Migrator) First() (uint, error) {
