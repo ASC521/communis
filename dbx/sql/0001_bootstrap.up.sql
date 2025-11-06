@@ -1,7 +1,3 @@
-CREATE TABLE IF NOT EXISTS version (
-       version INTEGER PRIMARY KEY
-) strict;
-
 CREATE TABLE IF NOT EXISTS notebooks (
        id INTEGER PRIMARY KEY,
        name TEXT NOT NULL

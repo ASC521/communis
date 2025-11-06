@@ -1,0 +1,11 @@
+# Communis configuration
+# Copy this file over to `communis.toml` and fill in blanks as necessary
+
+[sqlite]
+filepath = "<path to database file>"
+journal-mode = "DELETE | TRUNCATE | PERSIST | MEMORY | WAL | OFF"
+busy-timeout = 5000
+synchronous = "OFF | NORMAL | FULL | EXTRA"
+cache-size = 2000
+temp-store = "DEFAULT | FILE | MEMORY"
+foreign-keys = true
