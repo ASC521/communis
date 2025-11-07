@@ -7,27 +7,15 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/ASC521/communis/config"
 	"github.com/BurntSushi/toml"
 )
-
-type SQLiteConfig struct {
-	FilePath    string
-	BusyTimeout int
-	CacheSize   int
-	ForeignKeys bool
-	JournalMode string
-	Synchronous string
-	TempStore   string
-}
-
-type Config struct {
-	SQLite SQLiteConfig
-}
 
 func main() {
 
 	globalFlags := flag.NewFlagSet("global", flag.ExitOnError)
 	cfp := globalFlags.String("config-file", "./communis.toml", "location of configuration toml file")
+	verboseLogF := globalFlags.Bool("verbose-logging", false, "enable verbose logging")
 	sqliteBT := globalFlags.Int("sqlite-busy-timeout", 5000, "busy_timeout pragma setting")
 	sqliteCS := globalFlags.Int("sqlite-cache-size", 2000, "cache_size pragma setting")
 	sqliteFP := globalFlags.String("sqlite-file-path", "", "location of database file")
@@ -41,7 +29,8 @@ func main() {
 		fmt.Fprint(os.Stdout, "Global Options:\n")
 		globalFlags.PrintDefaults()
 		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
-		fmt.Fprint(os.Stdout, "database    create and manage database\n\n")
+		fmt.Fprint(os.Stdout, "database    create and manage database\n")
+		fmt.Fprint(os.Stdout, "web         run web server\n\n")
 	}
 
 	globalFlags.Parse(os.Args[1:])
@@ -52,14 +41,27 @@ func main() {
 		os.Exit(0)
 	}
 
-	var conf Config
+	var conf config.Config
 	_, err := os.Stat(*cfp)
 	if errors.Is(err, os.ErrNotExist) {
 		slog.Debug(fmt.Sprintf("config file does not exist at %s, skipping loading", *cfp), "config-location", *cfp)
 	} else if err != nil {
 		fmt.Fprintf(os.Stderr, "error occured finding config file: %v\n", err)
 	} else {
-		toml.DecodeFile(*cfp, &conf)
+		md, err := toml.DecodeFile(*cfp, &conf)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to parse toml file: %v", err.Error())
+			os.Exit(1)
+		}
+
+		if len(md.Undecoded()) > 0 {
+			fmt.Fprintf(os.Stderr, "unknown configuration keys: %v", md.Undecoded())
+			os.Exit(1)
+		}
+	}
+
+	if verboseLogF != nil {
+		conf.VerboseLogging = *verboseLogF
 	}
 
 	if sqliteBT != nil {
@@ -88,6 +90,8 @@ func main() {
 	switch cmd {
 	case "database":
 		err = DatabaseCMD(&conf, subArgs)
+	case "web":
+		err = WebCMD(&conf, subArgs)
 	default:
 		fmt.Fprintln(os.Stderr, fmt.Errorf("%s is not a valid command", cmd))
 		os.Exit(1)
