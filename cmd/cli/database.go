@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx"
 	"github.com/ASC521/communis/dbx/sqlitex"
 )
 
-func MigrateCMD(conf *Config, args []string) error {
+func MigrateCMD(conf *config.Config, args []string) error {
 	migFlags := flag.NewFlagSet("migrate", flag.ExitOnError)
 	migFlags.Usage = func() {
 		fmt.Fprint(os.Stdout, "Usage: communis [global options] database migrate <subcommand>\n\n")
@@ -96,7 +97,7 @@ func MigrateCMD(conf *Config, args []string) error {
 	}
 }
 
-func DatabaseCMD(conf *Config, args []string) error {
+func DatabaseCMD(conf *config.Config, args []string) error {
 
 	dbFlags := flag.NewFlagSet("database", flag.ExitOnError)
 

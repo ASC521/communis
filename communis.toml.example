@@ -1,6 +1,8 @@
 # Communis configuration
 # Copy this file over to `communis.toml` and fill in blanks as necessary
 
+verbose-logging = false
+
 [sqlite]
 filepath = "<path to database file>"
 journal-mode = "DELETE | TRUNCATE | PERSIST | MEMORY | WAL | OFF"
@@ -9,3 +11,9 @@ synchronous = "OFF | NORMAL | FULL | EXTRA"
 cache-size = 2000
 temp-store = "DEFAULT | FILE | MEMORY"
 foreign-keys = true
+
+[web]
+host = "localhost"
+port = 6789
+logging-ignored-paths = [""]
+
