@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS notes (
        content TEXT,
        notebook INTEGER NOT NULL,
        created_at_utc TEXT DEFAULT (datetime('now')),
+       last_updated_at_utc TEXT DEFAULT (datetime('now')),
        FOREIGN KEY(notebook) REFERENCES notebooks(id)
 ) strict;
 
