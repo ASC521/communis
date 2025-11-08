@@ -169,7 +169,7 @@ func (m *Migrator) Bootstrap() error {
 		}
 	}
 
-	return m.Up()
+	return nil
 }
 
 func (m *Migrator) Up() error {

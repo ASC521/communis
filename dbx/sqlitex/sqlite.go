@@ -275,25 +275,25 @@ func WithTransaction[R any](db *SQLiteDB, ctx context.Context, txIn func(context
 
 }
 
-func Query(db *SQLiteDB, ctx context.Context, q string) (*sql.Rows, error) {
+func Query(db *SQLiteDB, ctx context.Context, q string, args ...any) (*sql.Rows, error) {
 	ctxWTO, cancel := context.WithTimeout(ctx, db.opts.QueryTimeout)
 	defer cancel()
 
-	return db.read.QueryContext(ctxWTO, q)
+	return db.read.QueryContext(ctxWTO, q, args...)
 }
 
-func QueryRow(db *SQLiteDB, ctx context.Context, q string) *sql.Row {
+func QueryRow(db *SQLiteDB, ctx context.Context, q string, args ...any) *sql.Row {
 	ctxWTO, cancel := context.WithTimeout(ctx, db.opts.QueryTimeout)
 	defer cancel()
 
-	return db.read.QueryRowContext(ctxWTO, q)
+	return db.read.QueryRowContext(ctxWTO, q, args...)
 }
 
-func Exec(db *SQLiteDB, ctx context.Context, sql string) (sql.Result, error) {
+func Exec(db *SQLiteDB, ctx context.Context, sql string, args ...any) (sql.Result, error) {
 	ctxWTO, cancel := context.WithTimeout(ctx, db.opts.QueryTimeout)
 	defer cancel()
 
-	return db.write.ExecContext(ctxWTO, sql)
+	return db.write.ExecContext(ctxWTO, sql, args...)
 }
 
 type SQLiteMigrationDriver struct {

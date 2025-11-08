@@ -21,9 +21,9 @@ type Notebook struct {
 }
 
 type NotebookRepository interface {
-	Create(t *Notebook) (int64, error)
+	Create(n *Notebook) (int64, error)
 	FindById(id int64) (*Notebook, error)
-	Update(t *Notebook) error
+	Update(n *Notebook) error
 	Delete(id int64) error
 	List(limit, offset int) ([]*Notebook, error)
 }
