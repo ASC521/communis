@@ -56,7 +56,7 @@ func (r *notebookRepository) Delete(id int64) error {
 	return nil
 }
 
-func (r *notebookRepository) List(limit, offset int) ([]*models.Notebook, error) {
+func (r *notebookRepository) List(limit, offset int) (*models.PaginatedNotebooks, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -66,7 +66,7 @@ func (r *notebookRepository) List(limit, offset int) ([]*models.Notebook, error)
 	}
 
 	query := `SELECT id, name FROM notebooks ORDER BY id ASC LIMIT ? OFFSET ?;`
-	rows, err := sqlitex.Query(r.db, r.ctx, query, limit, offset)
+	rows, err := sqlitex.Query(r.db, r.ctx, query, limit+1, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query notebooks: %w", err)
 	}
@@ -87,5 +87,13 @@ func (r *notebookRepository) List(limit, offset int) ([]*models.Notebook, error)
 		return nil, fmt.Errorf("error iterating notebooks: %w", err)
 	}
 
-	return nbs, nil
+	var nextOffset *int
+	hasMore := len(nbs) > limit
+	if hasMore {
+		nbs = nbs[:limit]
+		next := offset + limit
+		nextOffset = &next
+	}
+
+	return &models.PaginatedNotebooks{Notebooks: nbs, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
 }
