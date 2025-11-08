@@ -148,16 +148,155 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("failed to list notebooks: %w", err)
 				}
-				if len(set1) != 10 {
-					return fmt.Errorf("expected list 1 to have 10, got %v", len(set1))
+				if len(set1.Notebooks) != 10 {
+					return fmt.Errorf("expected list 1 to have 10, got %v", len(set1.Notebooks))
 				}
 
-				set2, err := nr.List(10, 10)
+				if !set1.HasMore {
+					return fmt.Errorf("expected list 1 indates there is no more data, expecting to indicate more data available")
+				}
+
+				if set1.NextOffset == nil {
+					return fmt.Errorf("set 1 next offset is nil but indicates there is more data; expecting NextOffset to be non nil")
+				}
+				set2, err := nr.List(set1.Limit, *set1.NextOffset)
 				if err != nil {
 					return fmt.Errorf("failed to list notebooks: %w", err)
 				}
-				if len(set2) != 9 {
-					return fmt.Errorf("expected list 2 to have 9, got %v", len(set2))
+				if len(set2.Notebooks) != 9 {
+					return fmt.Errorf("expected list 2 to have 9, got %v", len(set2.Notebooks))
+				}
+
+				return nil
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.Name, func(t *testing.T) {
+			err := tc.TFunc(nbRepo)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	db.Close()
+}
+
+func TestSQLiteTagRepository(t *testing.T) {
+
+	ts := make([]*models.Tag, 0, 19)
+	for i := range 20 {
+		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag-%v", i+1)})
+	}
+
+	ctx := context.Background()
+	db, err, cleanUp := bootstrapInMemoryDB(ctx)
+	if err != nil {
+		t.Fatalf("failed to bootstrap sqlite database: %v", err)
+	}
+	defer cleanUp()
+
+	nbRepo := sqlite.NewTagRepository(db, ctx)
+
+	tcs := []struct {
+		Name  string
+		TFunc func(models.TagRepository) error
+	}{
+		{
+			Name: "Create",
+			TFunc: func(tr models.TagRepository) error {
+				for _, t := range ts {
+					id, err := tr.Create(t)
+					if err != nil {
+						return fmt.Errorf("failed to create tag %s: %w", t.Name, err)
+					}
+					if id == 0 {
+						return fmt.Errorf("id not returned for %s", t.Name)
+					}
+					t.Id = id
+				}
+
+				return nil
+			},
+		},
+		{
+			Name: "FindById",
+			TFunc: func(tr models.TagRepository) error {
+				t := ts[2]
+				tq, err := tr.FindById(t.Id)
+				if err != nil {
+					return fmt.Errorf("failed to find tag by id: %w", err)
+				}
+				if tq.Name != ts[2].Name {
+					return fmt.Errorf("find by id returned an unexpected tag, got %v, want %v", tq, ts[2])
+				}
+
+				return nil
+			},
+		},
+		{
+			Name: "Update",
+			TFunc: func(tr models.TagRepository) error {
+				ot := ts[10]
+				nt := &models.Tag{Id: ot.Id, Name: ot.Name}
+				nt.Name = "notebook-25"
+				err := tr.Update(nt)
+				if err != nil {
+					return fmt.Errorf("failed to update tag: %w", err)
+				}
+				qt, err := tr.FindById(ot.Id)
+				if err != nil {
+					return fmt.Errorf("failed to find updated tag by id: %w", err)
+				}
+				if qt.Name != nt.Name {
+					return fmt.Errorf("tag update failed: got %v, want %v", qt.Name, nt.Name)
+				}
+				return nil
+			},
+		},
+		{
+			Name: "Delete",
+			TFunc: func(tr models.TagRepository) error {
+				t := ts[12]
+				err := tr.Delete(t.Id)
+				if err != nil {
+					return fmt.Errorf("tag delete failed: %w", err)
+				}
+
+				dnb, _ := tr.FindById(t.Id)
+				if dnb != nil {
+					return fmt.Errorf("deleted tag id was returned")
+				}
+
+				return nil
+			},
+		},
+		{
+			Name: "List",
+			TFunc: func(tr models.TagRepository) error {
+				set1, err := tr.List(10, 0)
+				if err != nil {
+					return fmt.Errorf("failed to list tags: %w", err)
+				}
+				if len(set1.Tags) != 10 {
+					return fmt.Errorf("expected list 1 to have 10, got %v", len(set1.Tags))
+				}
+
+				if !set1.HasMore {
+					return fmt.Errorf("expected list 1 indates there is no more data, expecting to indicate more data available")
+				}
+
+				if set1.NextOffset == nil {
+					return fmt.Errorf("set 1 next offset is nil but indicates there is more data; expecting NextOffset to be non nil")
+				}
+				set2, err := tr.List(set1.Limit, *set1.NextOffset)
+				if err != nil {
+					return fmt.Errorf("failed to list tags: %w", err)
+				}
+				if len(set2.Tags) != 9 {
+					return fmt.Errorf("expected list 2 to have 9, got %v", len(set2.Tags))
 				}
 
 				return nil
