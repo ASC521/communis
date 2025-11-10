@@ -8,20 +8,20 @@ import (
 	"github.com/ASC521/communis/models"
 )
 
-type notebookRepository struct {
+type sectionRepository struct {
 	db  *sqlitex.SQLiteDB
 	ctx context.Context
 }
 
-func NewNotebookRepository(db *sqlitex.SQLiteDB, ctx context.Context) *notebookRepository {
-	return &notebookRepository{db: db, ctx: ctx}
+func NewSectionRepository(db *sqlitex.SQLiteDB, ctx context.Context) *sectionRepository {
+	return &sectionRepository{db: db, ctx: ctx}
 }
 
-func (r *notebookRepository) Create(n *models.Notebook) (int64, error) {
+func (r *sectionRepository) Create(s *models.Section) (int64, error) {
 
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
 	defer cancel()
-	res, err := r.db.Write.ExecContext(ctxWTO, "INSERT INTO notebooks (name) VALUES (?);", n.Name)
+	res, err := r.db.Write.ExecContext(ctxWTO, "INSERT INTO sections (name) VALUES (?);", s.Name)
 	if err != nil {
 		return 0, err
 	}
@@ -29,12 +29,12 @@ func (r *notebookRepository) Create(n *models.Notebook) (int64, error) {
 
 }
 
-func (r *notebookRepository) FindById(id int64) (*models.Notebook, error) {
-	sql := "SELECT id, name FROM notebooks WHERE id = ?;"
+func (r *sectionRepository) FindById(id int64) (*models.Section, error) {
+	sql := "SELECT id, name FROM sections WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
 	defer cancel()
 
-	nb := models.Notebook{}
+	nb := models.Section{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&nb.Id, &nb.Name)
 	if err != nil {
 		return nil, err
@@ -42,13 +42,13 @@ func (r *notebookRepository) FindById(id int64) (*models.Notebook, error) {
 	return &nb, nil
 }
 
-func (r *notebookRepository) Update(n *models.Notebook) error {
+func (r *sectionRepository) Update(s *models.Section) error {
 
-	sql := "UPDATE notebooks SET name = ? WHERE id = ?;"
+	sql := "UPDATE sections SET name = ? WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
 	defer cancel()
 
-	_, err := r.db.Write.ExecContext(ctxWTO, sql, n.Name, n.Id)
+	_, err := r.db.Write.ExecContext(ctxWTO, sql, s.Name, s.Id)
 	if err != nil {
 		return err
 	}
@@ -56,9 +56,9 @@ func (r *notebookRepository) Update(n *models.Notebook) error {
 	return nil
 }
 
-func (r *notebookRepository) Delete(id int64) error {
+func (r *sectionRepository) Delete(id int64) error {
 
-	sql := "DELETE FROM notebooks WHERE id = ?;"
+	sql := "DELETE FROM sections WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
 	defer cancel()
 
@@ -69,7 +69,7 @@ func (r *notebookRepository) Delete(id int64) error {
 	return nil
 }
 
-func (r *notebookRepository) List(limit, offset int) (*models.PaginatedNotebooks, error) {
+func (r *sectionRepository) List(limit, offset int) (*models.PaginatedSections, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -78,7 +78,7 @@ func (r *notebookRepository) List(limit, offset int) (*models.PaginatedNotebooks
 		offset = 0
 	}
 
-	query := `SELECT id, name FROM notebooks ORDER BY id ASC LIMIT ? OFFSET ?;`
+	query := `SELECT id, name FROM sections ORDER BY id ASC LIMIT ? OFFSET ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
 	defer cancel()
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
@@ -87,9 +87,9 @@ func (r *notebookRepository) List(limit, offset int) (*models.PaginatedNotebooks
 	}
 	defer rows.Close()
 
-	nbs := make([]*models.Notebook, 0, limit)
+	nbs := make([]*models.Section, 0, limit)
 	for rows.Next() {
-		nb := &models.Notebook{}
+		nb := &models.Section{}
 		err = rows.Scan(&nb.Id, &nb.Name)
 		if err != nil {
 			return nil, err
@@ -110,5 +110,5 @@ func (r *notebookRepository) List(limit, offset int) (*models.PaginatedNotebooks
 		nextOffset = &next
 	}
 
-	return &models.PaginatedNotebooks{Notebooks: nbs, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
+	return &models.PaginatedSections{Sections: nbs, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
 }

@@ -24,7 +24,7 @@ func NewNoteRepository(db *sqlitex.SQLiteDB, ctx context.Context) *noteRepositor
 
 func (r *noteRepository) Create(n *models.Note) (int64, error) {
 	return sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int64, error) {
-		res, err := tx.Exec("INSERT INTO notes (title, content, notebook) VALUES (?, ?, ?);", n.Title, n.Content, n.Notebook.Id)
+		res, err := tx.Exec("INSERT INTO notes (title, content, section) VALUES (?, ?, ?);", n.Title, n.Content, n.Section.Id)
 		if err != nil {
 			return 0, fmt.Errorf("failed to insert new note: %w", err)
 		}
@@ -51,7 +51,7 @@ func (r *noteRepository) Create(n *models.Note) (int64, error) {
 
 func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 	q := `
-             SELECT id, notebook_id, notebook_name, title, content, created_at_utc, last_updated_at_utc, tags
+             SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
              FROM notes_details
              WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
@@ -59,7 +59,7 @@ func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 
 	var n models.Note
 	var tagJSON, createdStr, updatedStr string
-	err := r.db.Read.QueryRowContext(ctxWTO, q, id).Scan(&n.Id, &n.Notebook.Id, &n.Notebook.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
+	err := r.db.Read.QueryRowContext(ctxWTO, q, id).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan row for note: %w", err)
 	}
@@ -86,8 +86,8 @@ func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 
 func (r *noteRepository) Update(n *models.Note) error {
 	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
-		s := `UPDATE notes SET title = ?, content = ?, notebook = ?, last_updated_at_utc = datetime('now') WHERE id = ?`
-		_, err := tx.Exec(s, n.Title, n.Content, n.Notebook.Id, n.Id)
+		s := `UPDATE notes SET title = ?, content = ?, section = ?, last_updated_at_utc = datetime('now') WHERE id = ?`
+		_, err := tx.Exec(s, n.Title, n.Content, n.Section.Id, n.Id)
 		if err != nil {
 			return -1, fmt.Errorf("failed to update note %v: %w", n.Id, err)
 		}
@@ -131,7 +131,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 		offset = 0
 	}
 
-	query := "SELECT id, notebook_id, notebook_name, title, content, created_at_utc, last_updated_at_utc, tags FROM notes_details ORDER BY id ASC LIMIT ? OFFSET ?;"
+	query := "SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags FROM notes_details ORDER BY id ASC LIMIT ? OFFSET ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
 	defer cancel()
 
@@ -145,7 +145,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 	for rows.Next() {
 		n := &models.Note{}
 		var tagJSON, createdStr, updatedStr string
-		err = rows.Scan(&n.Id, &n.Notebook.Id, &n.Notebook.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
+		err = rows.Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan rows for note: %w", err)
 		}

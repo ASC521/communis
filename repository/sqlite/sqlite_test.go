@@ -54,11 +54,11 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 
 }
 
-func TestSQLiteNotebookRepository(t *testing.T) {
+func TestSQLiteSectionRepository(t *testing.T) {
 
-	nbs := make([]*models.Notebook, 0, 20)
+	nbs := make([]*models.Section, 0, 20)
 	for i := range 20 {
-		nbs = append(nbs, &models.Notebook{Name: fmt.Sprintf("notebook-%v", i+1)})
+		nbs = append(nbs, &models.Section{Name: fmt.Sprintf("notebook-%v", i+1)})
 	}
 
 	ctx := context.Background()
@@ -69,19 +69,19 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	nbRepo := sqlite.NewNotebookRepository(db, ctx)
+	sRepo := sqlite.NewSectionRepository(db, ctx)
 
 	tcs := []struct {
 		Name  string
-		TFunc func(models.NotebookRepository) error
+		TFunc func(models.SectionRepository) error
 	}{
 		{
 			Name: "Create",
-			TFunc: func(nr models.NotebookRepository) error {
+			TFunc: func(nr models.SectionRepository) error {
 				for _, nb := range nbs {
 					id, err := nr.Create(nb)
 					if err != nil {
-						return fmt.Errorf("failed to create notebook %s: %w", nb.Name, err)
+						return fmt.Errorf("failed to create section %s: %w", nb.Name, err)
 					}
 					if id == 0 {
 						return fmt.Errorf("id not returned for %s", nb.Name)
@@ -94,14 +94,14 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 		},
 		{
 			Name: "FindById",
-			TFunc: func(nr models.NotebookRepository) error {
+			TFunc: func(nr models.SectionRepository) error {
 				nb := nbs[2]
 				nbQ, err := nr.FindById(nb.Id)
 				if err != nil {
-					return fmt.Errorf("failed to find notebook by id: %w", err)
+					return fmt.Errorf("failed to find section by id: %w", err)
 				}
 				if nbQ.Name != nbs[2].Name {
-					return fmt.Errorf("find by id returned an unexpected notebook, got %v, want %v", nbQ, nbs[2])
+					return fmt.Errorf("find by id returned an unexpected section, got %v, want %v", nbQ, nbs[2])
 				}
 
 				return nil
@@ -109,36 +109,36 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 		},
 		{
 			Name: "Update",
-			TFunc: func(nr models.NotebookRepository) error {
+			TFunc: func(nr models.SectionRepository) error {
 				onb := nbs[10]
-				nnb := &models.Notebook{Id: onb.Id, Name: onb.Name}
+				nnb := &models.Section{Id: onb.Id, Name: onb.Name}
 				nnb.Name = "notebook-25"
 				err := nr.Update(nnb)
 				if err != nil {
-					return fmt.Errorf("failed to update notebook: %w", err)
+					return fmt.Errorf("failed to update section: %w", err)
 				}
 				qnb, err := nr.FindById(onb.Id)
 				if err != nil {
-					return fmt.Errorf("failed to find updated notebook by id: %w", err)
+					return fmt.Errorf("failed to find updated section by id: %w", err)
 				}
 				if qnb.Name != nnb.Name {
-					return fmt.Errorf("notebook update failed: got %v, want %v", qnb.Name, nnb.Name)
+					return fmt.Errorf("section update failed: got %v, want %v", qnb.Name, nnb.Name)
 				}
 				return nil
 			},
 		},
 		{
 			Name: "Delete",
-			TFunc: func(nr models.NotebookRepository) error {
+			TFunc: func(nr models.SectionRepository) error {
 				nb := nbs[12]
 				err := nr.Delete(nb.Id)
 				if err != nil {
-					return fmt.Errorf("notebook delete failed: %w", err)
+					return fmt.Errorf("section delete failed: %w", err)
 				}
 
 				dnb, _ := nr.FindById(nb.Id)
 				if dnb != nil {
-					return fmt.Errorf("deleted notebook id was returned")
+					return fmt.Errorf("deleted section id was returned")
 				}
 
 				return nil
@@ -146,13 +146,13 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 		},
 		{
 			Name: "List",
-			TFunc: func(nr models.NotebookRepository) error {
+			TFunc: func(nr models.SectionRepository) error {
 				set1, err := nr.List(10, 0)
 				if err != nil {
-					return fmt.Errorf("failed to list notebooks: %w", err)
+					return fmt.Errorf("failed to list section: %w", err)
 				}
-				if len(set1.Notebooks) != 10 {
-					return fmt.Errorf("expected list 1 to have 10, got %v", len(set1.Notebooks))
+				if len(set1.Sections) != 10 {
+					return fmt.Errorf("expected list 1 to have 10, got %v", len(set1.Sections))
 				}
 
 				if !set1.HasMore {
@@ -164,10 +164,10 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 				}
 				set2, err := nr.List(set1.Limit, *set1.NextOffset)
 				if err != nil {
-					return fmt.Errorf("failed to list notebooks: %w", err)
+					return fmt.Errorf("failed to list sections: %w", err)
 				}
-				if len(set2.Notebooks) != 9 {
-					return fmt.Errorf("expected list 2 to have 9, got %v", len(set2.Notebooks))
+				if len(set2.Sections) != 9 {
+					return fmt.Errorf("expected list 2 to have 9, got %v", len(set2.Sections))
 				}
 
 				return nil
@@ -177,7 +177,7 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {
-			err := tc.TFunc(nbRepo)
+			err := tc.TFunc(sRepo)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -324,20 +324,20 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag-%v", i+1)})
 	}
 
-	nbs := make([]*models.Notebook, 0, 19)
+	nbs := make([]*models.Section, 0, 19)
 	for i := range 20 {
-		nbs = append(nbs, &models.Notebook{Name: fmt.Sprintf("notebook-%v", i+1)})
+		nbs = append(nbs, &models.Section{Name: fmt.Sprintf("section-%v", i+1)})
 	}
 
 	ctx := context.Background()
-	db, err, cleanUp := bootstrapInMemoryDB(ctx)
+	db, err, _ := bootstrapInMemoryDB(ctx)
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
 	defer db.Close()
-	defer cleanUp()
+	// defer cleanUp()
 
-	nbRepo := sqlite.NewNotebookRepository(db, ctx)
+	nbRepo := sqlite.NewSectionRepository(db, ctx)
 	tRepo := sqlite.NewTagRepository(db, ctx)
 	nRepo := sqlite.NewNoteRepository(db, ctx)
 
@@ -362,10 +362,10 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	for i := range 20 {
 
 		n := &models.Note{
-			Title:    fmt.Sprintf("title-%v", i+1),
-			Content:  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-			Notebook: *nbs[8],
-			Tags:     []models.Tag{*ts[2], *ts[4], *ts[12], *ts[17]},
+			Title:   fmt.Sprintf("title-%v", i+1),
+			Content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+			Section: *nbs[8],
+			Tags:    []models.Tag{*ts[2], *ts[4], *ts[12], *ts[17]},
 		}
 		ns = append(ns, n)
 	}

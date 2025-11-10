@@ -23,32 +23,32 @@ type TagRepository interface {
 	List(limit, offset int) (*PaginatedTags, error)
 }
 
-type Notebook struct {
+type Section struct {
 	Id   int64
 	Name string
 }
 
-type PaginatedNotebooks struct {
-	Notebooks  []*Notebook
+type PaginatedSections struct {
+	Sections   []*Section
 	Limit      int
 	Offset     int
 	HasMore    bool
 	NextOffset *int
 }
 
-type NotebookRepository interface {
-	Create(n *Notebook) (int64, error)
-	FindById(id int64) (*Notebook, error)
-	Update(n *Notebook) error
+type SectionRepository interface {
+	Create(s *Section) (int64, error)
+	FindById(id int64) (*Section, error)
+	Update(s *Section) error
 	Delete(id int64) error
-	List(limit, offset int) (*PaginatedNotebooks, error)
+	List(limit, offset int) (*PaginatedSections, error)
 }
 
 type Note struct {
 	Id            int64
 	Title         string
 	Content       string
-	Notebook      Notebook
+	Section       Section
 	Tags          []Tag
 	CreatedAt     time.Time
 	LastUpdatedAt time.Time

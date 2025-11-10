@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS notebooks (
+CREATE TABLE IF NOT EXISTS sections (
        id INTEGER PRIMARY KEY,
        name TEXT NOT NULL
 ) strict;
@@ -12,10 +12,10 @@ CREATE TABLE IF NOT EXISTS notes (
        id INTEGER PRIMARY KEY,
        title TEXT UNIQUE NOT NULL,
        content TEXT,
-       notebook INTEGER NOT NULL,
+       section INTEGER NOT NULL,
        created_at_utc TEXT DEFAULT (datetime('now')),
        last_updated_at_utc TEXT DEFAULT (datetime('now')),
-       FOREIGN KEY(notebook) REFERENCES notebooks(id) ON DELETE RESTRICT
+       FOREIGN KEY(section) REFERENCES sections(id) ON DELETE RESTRICT
 ) strict;
 
 CREATE TABLE IF NOT EXISTS notes_tags (
