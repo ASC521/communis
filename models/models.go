@@ -3,8 +3,8 @@ package models
 import "time"
 
 type Tag struct {
-	Id   int64
-	Name string
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type PaginatedTags struct {
@@ -63,9 +63,9 @@ type PaginatedNotes struct {
 }
 
 type NoteRepository interface {
-	Create(t *Note) (int64, error)
+	Create(n *Note) (int64, error)
 	FindById(id int64) (*Note, error)
-	Update(t *Note) error
+	Update(n *Note) error
 	Delete(id int64) error
 	List(limit, offset int) (*PaginatedNotes, error)
 }

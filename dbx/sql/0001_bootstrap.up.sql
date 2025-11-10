@@ -10,18 +10,18 @@ CREATE TABLE IF NOT EXISTS tags (
 
 CREATE TABLE IF NOT EXISTS notes (
        id INTEGER PRIMARY KEY,
-       title TEXT NOT NULL,
+       title TEXT UNIQUE NOT NULL,
        content TEXT,
        notebook INTEGER NOT NULL,
        created_at_utc TEXT DEFAULT (datetime('now')),
        last_updated_at_utc TEXT DEFAULT (datetime('now')),
-       FOREIGN KEY(notebook) REFERENCES notebooks(id)
+       FOREIGN KEY(notebook) REFERENCES notebooks(id) ON DELETE RESTRICT
 ) strict;
 
-CREATE TABLE IF NOT EXISTS note_tags (
+CREATE TABLE IF NOT EXISTS notes_tags (
        note_id INTEGER NOT NULL,
        tag_id INTEGER NOT NULL,
        PRIMARY KEY (note_id, tag_id)
-       FOREIGN KEY (note_id) REFERENCES notes(id),
-       FOREIGN KEY (tag_id) REFERENCES tags(id)
+       FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+       FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 ) strict;

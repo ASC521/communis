@@ -19,7 +19,9 @@ func NewNotebookRepository(db *sqlitex.SQLiteDB, ctx context.Context) *notebookR
 
 func (r *notebookRepository) Create(n *models.Notebook) (int64, error) {
 
-	res, err := sqlitex.Exec(r.db, r.ctx, "INSERT INTO notebooks (name) VALUES (?);", n.Name)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+	res, err := r.db.Write.ExecContext(ctxWTO, "INSERT INTO notebooks (name) VALUES (?);", n.Name)
 	if err != nil {
 		return 0, err
 	}
@@ -29,9 +31,11 @@ func (r *notebookRepository) Create(n *models.Notebook) (int64, error) {
 
 func (r *notebookRepository) FindById(id int64) (*models.Notebook, error) {
 	sql := "SELECT id, name FROM notebooks WHERE id = ?;"
-	row := sqlitex.QueryRow(r.db, r.ctx, sql, id)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
 	nb := models.Notebook{}
-	err := row.Scan(&nb.Id, &nb.Name)
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&nb.Id, &nb.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +43,12 @@ func (r *notebookRepository) FindById(id int64) (*models.Notebook, error) {
 }
 
 func (r *notebookRepository) Update(n *models.Notebook) error {
-	_, err := sqlitex.Exec(r.db, r.ctx, "UPDATE notebooks SET name = ? WHERE id = ?;", n.Name, n.Id)
+
+	sql := "UPDATE notebooks SET name = ? WHERE id = ?;"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
+	_, err := r.db.Write.ExecContext(ctxWTO, sql, n.Name, n.Id)
 	if err != nil {
 		return err
 	}
@@ -49,7 +58,11 @@ func (r *notebookRepository) Update(n *models.Notebook) error {
 
 func (r *notebookRepository) Delete(id int64) error {
 
-	_, err := sqlitex.Exec(r.db, r.ctx, "DELETE FROM notebooks WHERE id = ?;", id)
+	sql := "DELETE FROM notebooks WHERE id = ?;"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
+	_, err := r.db.Write.ExecContext(ctxWTO, sql, id)
 	if err != nil {
 		return err
 	}
@@ -66,7 +79,9 @@ func (r *notebookRepository) List(limit, offset int) (*models.PaginatedNotebooks
 	}
 
 	query := `SELECT id, name FROM notebooks ORDER BY id ASC LIMIT ? OFFSET ?;`
-	rows, err := sqlitex.Query(r.db, r.ctx, query, limit+1, offset)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query notebooks: %w", err)
 	}

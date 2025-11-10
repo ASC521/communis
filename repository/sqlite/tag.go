@@ -19,7 +19,11 @@ func NewTagRepository(db *sqlitex.SQLiteDB, ctx context.Context) *tagRepository 
 
 func (r *tagRepository) Create(t *models.Tag) (int64, error) {
 
-	res, err := sqlitex.Exec(r.db, r.ctx, "INSERT INTO tags (name) VALUES (?);", t.Name)
+	sql := "INSERT INTO tags (name) VALUES (?);"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
+	res, err := r.db.Write.ExecContext(ctxWTO, sql, t.Name)
 	if err != nil {
 		return 0, err
 	}
@@ -29,9 +33,11 @@ func (r *tagRepository) Create(t *models.Tag) (int64, error) {
 
 func (r *tagRepository) FindById(id int64) (*models.Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE id = ?;"
-	row := sqlitex.QueryRow(r.db, r.ctx, sql, id)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
 	t := models.Tag{}
-	err := row.Scan(&t.Id, &t.Name)
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&t.Id, &t.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +45,12 @@ func (r *tagRepository) FindById(id int64) (*models.Tag, error) {
 }
 
 func (r *tagRepository) Update(t *models.Tag) error {
-	_, err := sqlitex.Exec(r.db, r.ctx, "UPDATE tags SET name = ? WHERE id = ?;", t.Name, t.Id)
+
+	sql := "UPDATE tags SET name = ? WHERE id = ?;"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
+	_, err := r.db.Write.ExecContext(ctxWTO, sql, t.Name, t.Id)
 	if err != nil {
 		return err
 	}
@@ -49,7 +60,11 @@ func (r *tagRepository) Update(t *models.Tag) error {
 
 func (r *tagRepository) Delete(id int64) error {
 
-	_, err := sqlitex.Exec(r.db, r.ctx, "DELETE FROM tags WHERE id = ?;", id)
+	sql := "DELETE FROM tags WHERE id = ?;"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
+	_, err := r.db.Write.ExecContext(ctxWTO, sql, id)
 	if err != nil {
 		return err
 	}
@@ -68,9 +83,12 @@ func (r *tagRepository) List(limit, offset int) (*models.PaginatedTags, error) {
 	}
 
 	query := `SELECT id, name FROM tags ORDER BY id ASC LIMIT ? OFFSET ?;`
-	rows, err := sqlitex.Query(r.db, r.ctx, query, limit+1, offset)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query notebooks: %w", err)
+		return nil, fmt.Errorf("failed to query tags: %w", err)
 	}
 	defer rows.Close()
 
@@ -86,7 +104,7 @@ func (r *tagRepository) List(limit, offset int) (*models.PaginatedTags, error) {
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating notebooks: %w", err)
+		return nil, fmt.Errorf("error iterating tags: %w", err)
 	}
 
 	var nextOffset *int

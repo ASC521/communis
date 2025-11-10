@@ -163,9 +163,9 @@ func (o sqliteOptions) pragmaStatements() []string {
 
 type SQLiteDB struct {
 	dbPath string
-	read   *sql.DB
-	write  *sql.DB
-	opts   sqliteOptions
+	Read   *sql.DB
+	Write  *sql.DB
+	Opts   sqliteOptions
 }
 
 func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
@@ -178,7 +178,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 		CacheSize:      2000,
 		ForeignKeys:    true,
 		MaxReaderConns: 100,
-		QueryTimeout:   5 * time.Second,
+		QueryTimeout:   10 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -188,7 +188,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 		}
 	}
 
-	db := &SQLiteDB{dbPath: dbPath, opts: sopts}
+	db := &SQLiteDB{dbPath: dbPath, Opts: sopts}
 
 	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
 		for _, p := range sopts.pragmaStatements() {
@@ -215,14 +215,14 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 	read.SetMaxOpenConns(sopts.MaxReaderConns)
 	read.SetConnMaxIdleTime(time.Minute)
 
-	db.read = read
-	db.write = write
+	db.Read = read
+	db.Write = write
 	return db, nil
 }
 
 func (d *SQLiteDB) Close() error {
-	readErr := d.read.Close()
-	writeErr := d.write.Close()
+	readErr := d.Read.Close()
+	writeErr := d.Write.Close()
 	if readErr != nil && writeErr != nil {
 		return fmt.Errorf("error closing read and write connections:  read error - %w   write error - %w", readErr, writeErr)
 	} else if readErr != nil {
@@ -238,7 +238,7 @@ func WithTransaction[R any](db *SQLiteDB, ctx context.Context, txIn func(context
 	ctxWTO, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	tx, err := db.write.BeginTx(ctxWTO, nil)
+	tx, err := db.Write.BeginTx(ctxWTO, nil)
 	if err != nil {
 		return result, err
 	}
@@ -275,27 +275,6 @@ func WithTransaction[R any](db *SQLiteDB, ctx context.Context, txIn func(context
 
 }
 
-func Query(db *SQLiteDB, ctx context.Context, q string, args ...any) (*sql.Rows, error) {
-	ctxWTO, cancel := context.WithTimeout(ctx, db.opts.QueryTimeout)
-	defer cancel()
-
-	return db.read.QueryContext(ctxWTO, q, args...)
-}
-
-func QueryRow(db *SQLiteDB, ctx context.Context, q string, args ...any) *sql.Row {
-	ctxWTO, cancel := context.WithTimeout(ctx, db.opts.QueryTimeout)
-	defer cancel()
-
-	return db.read.QueryRowContext(ctxWTO, q, args...)
-}
-
-func Exec(db *SQLiteDB, ctx context.Context, sql string, args ...any) (sql.Result, error) {
-	ctxWTO, cancel := context.WithTimeout(ctx, db.opts.QueryTimeout)
-	defer cancel()
-
-	return db.write.ExecContext(ctxWTO, sql, args...)
-}
-
 type SQLiteMigrationDriver struct {
 	db  *SQLiteDB
 	ctx context.Context
@@ -306,7 +285,7 @@ func NewSQLiteMigrationDriver(db *SQLiteDB, ctx context.Context) (*SQLiteMigrati
 }
 
 func (s *SQLiteMigrationDriver) AddVersionTable() error {
-	_, err := WithTransaction[any](s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
+	_, err := WithTransaction(s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
 		_, err := tx.Exec("CREATE TABLE IF NOT EXISTS schema_version (id INTEGER PRIMARY KEY, version INTEGER, dirty TEXT) strict;")
 		if err != nil {
 			return nil, err
@@ -322,7 +301,7 @@ func (s *SQLiteMigrationDriver) AddVersionTable() error {
 }
 
 func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error {
-	_, err := WithTransaction[any](s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
+	_, err := WithTransaction(s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
 		_, err := tx.Exec(sqlMig)
 		if err != nil {
 			return nil, err
@@ -347,10 +326,13 @@ func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error 
 
 func (s *SQLiteMigrationDriver) Version() (uint, error) {
 	sql := "SELECT version from schema_version;"
-	row := QueryRow(s.db, s.ctx, sql)
+
+	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.Opts.QueryTimeout)
+	defer cancel()
 
 	var ver uint
-	err := row.Scan(&ver)
+	err := s.db.Read.QueryRowContext(ctxWTO, sql).Scan(&ver)
+
 	if err != nil {
 		return 0, err
 	}

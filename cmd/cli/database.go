@@ -136,10 +136,9 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 		return mig.Bootstrap()
 
 	case "migrate":
-		MigrateCMD(conf, subArgs)
+		return MigrateCMD(conf, subArgs)
 	default:
 		return fmt.Errorf("command %s is not supported", cmd)
 	}
 
-	return nil
 }
