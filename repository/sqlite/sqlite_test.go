@@ -66,6 +66,7 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
+	defer db.Close()
 	defer cleanUp()
 
 	nbRepo := sqlite.NewNotebookRepository(db, ctx)
@@ -183,7 +184,6 @@ func TestSQLiteNotebookRepository(t *testing.T) {
 		})
 	}
 
-	db.Close()
 }
 
 func TestSQLiteTagRepository(t *testing.T) {
@@ -198,6 +198,7 @@ func TestSQLiteTagRepository(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
+	defer db.Close()
 	defer cleanUp()
 
 	nbRepo := sqlite.NewTagRepository(db, ctx)
@@ -315,7 +316,6 @@ func TestSQLiteTagRepository(t *testing.T) {
 		})
 	}
 
-	db.Close()
 }
 
 func TestSQLiteNoteRepository(t *testing.T) {
@@ -330,12 +330,12 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err, _ := bootstrapInMemoryDB(ctx)
+	db, err, cleanUp := bootstrapInMemoryDB(ctx)
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
 	defer db.Close()
-	// defer cleanUp()
+	defer cleanUp()
 
 	nbRepo := sqlite.NewNotebookRepository(db, ctx)
 	tRepo := sqlite.NewTagRepository(db, ctx)
