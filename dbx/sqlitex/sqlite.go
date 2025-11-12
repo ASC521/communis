@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,20 +166,6 @@ func (o sqliteOptions) pragmaStatements() []string {
 	}
 }
 
-func (o sqliteOptions) String() string {
-	s := []string{
-		fmt.Sprintf("journal_mode = %s", o.journalMode),
-		fmt.Sprintf("synchronous = %s", o.synchronous),
-		fmt.Sprintf("temp_store = %s", o.tempStore),
-		fmt.Sprintf("busy_timeout = %d", o.busyTimeout),
-		fmt.Sprintf("cache_size = %d", o.cacheSize),
-		fmt.Sprintf("foreign_keys = %t", o.foreignKeys),
-		fmt.Sprintf("max-reader-conns = %v", o.maxReaderConns),
-		fmt.Sprintf("query-timeout = %v", o.queryTimeout),
-	}
-	return strings.Join(s, "\n")
-}
-
 type SQLiteDB struct {
 	dbPath       string
 	Read         *sql.DB
@@ -256,8 +243,18 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 	return db, nil
 }
 
-func (d *SQLiteDB) PrintConfig() string {
-	return d.opts.String()
+func (d *SQLiteDB) LogDBConfig() slog.Value {
+	return slog.GroupValue(
+		slog.String("file-location", d.dbPath),
+		slog.String("journal_mode", string(d.opts.journalMode)),
+		slog.String("synchronous", string(d.opts.synchronous)),
+		slog.String("temp_store", string(d.opts.tempStore)),
+		slog.Int("busy_timeout", d.opts.busyTimeout),
+		slog.Int("cache_size", d.opts.cacheSize),
+		slog.Bool("foreign_keys", d.opts.foreignKeys),
+		slog.Int("max-reader-conns", d.opts.maxReaderConns),
+		slog.String("query-timeout", d.QueryTimeout.String()),
+	)
 }
 
 func (d *SQLiteDB) Close() error {

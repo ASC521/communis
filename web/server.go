@@ -102,6 +102,8 @@ func connectToDatabase(c *config.Config, ctx context.Context, logger *slog.Logge
 
 	logger.Info("database on latest version - leaving it be")
 
+	logger.Info("database configured", slog.Any("config", db.LogDBConfig()))
+
 	return db, nil
 
 }
