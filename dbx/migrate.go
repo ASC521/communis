@@ -24,6 +24,7 @@ type MigrationDriver interface {
 	AddVersionTable() error
 	RunMigration(sql string, version uint) error
 	Version() (uint, error)
+	IsEmpty() (bool, error)
 }
 
 type migration struct {
@@ -118,6 +119,14 @@ func (m *Migrator) First() (uint, error) {
 	}
 
 	return m.Migrations[0].Version, nil
+}
+
+func (m *Migrator) Last() (uint, error) {
+	if len(m.Migrations) == 0 {
+		return 0, os.ErrNotExist
+	}
+
+	return m.Migrations[len(m.Migrations)-1].Version, nil
 }
 
 func (m *Migrator) Prev(currVersion uint) (uint, error) {
@@ -274,4 +283,23 @@ func (m *Migrator) ReadDown(version uint) (migration, string, error) {
 
 func (m *Migrator) Version() (uint, error) {
 	return m.driver.Version()
+}
+
+func (m *Migrator) IsLatest() (bool, error) {
+	dbv, err := m.Version()
+	if err != nil {
+		return false, fmt.Errorf("failed to find database version: %w", err)
+	}
+
+	lv, err := m.Last()
+	if err != nil {
+		return false, fmt.Errorf("failed to find last configured migration: %w", err)
+	}
+
+	return dbv == lv, nil
+
+}
+
+func (m *Migrator) IsEmpty() (bool, error) {
+	return m.driver.IsEmpty()
 }

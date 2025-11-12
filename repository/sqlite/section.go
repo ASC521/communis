@@ -19,7 +19,7 @@ func NewSectionRepository(db *sqlitex.SQLiteDB, ctx context.Context) *sectionRep
 
 func (r *sectionRepository) Create(s *models.Section) (int64, error) {
 
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 	res, err := r.db.Write.ExecContext(ctxWTO, "INSERT INTO sections (name) VALUES (?);", s.Name)
 	if err != nil {
@@ -31,7 +31,7 @@ func (r *sectionRepository) Create(s *models.Section) (int64, error) {
 
 func (r *sectionRepository) FindById(id int64) (*models.Section, error) {
 	sql := "SELECT id, name FROM sections WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	nb := models.Section{}
@@ -45,7 +45,7 @@ func (r *sectionRepository) FindById(id int64) (*models.Section, error) {
 func (r *sectionRepository) Update(s *models.Section) error {
 
 	sql := "UPDATE sections SET name = ? WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, sql, s.Name, s.Id)
@@ -59,7 +59,7 @@ func (r *sectionRepository) Update(s *models.Section) error {
 func (r *sectionRepository) Delete(id int64) error {
 
 	sql := "DELETE FROM sections WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, sql, id)
@@ -79,7 +79,7 @@ func (r *sectionRepository) List(limit, offset int) (*models.PaginatedSections, 
 	}
 
 	query := `SELECT id, name FROM sections ORDER BY id ASC LIMIT ? OFFSET ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {

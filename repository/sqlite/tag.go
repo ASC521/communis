@@ -20,7 +20,7 @@ func NewTagRepository(db *sqlitex.SQLiteDB, ctx context.Context) *tagRepository 
 func (r *tagRepository) Create(t *models.Tag) (int64, error) {
 
 	sql := "INSERT INTO tags (name) VALUES (?);"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	res, err := r.db.Write.ExecContext(ctxWTO, sql, t.Name)
@@ -33,7 +33,7 @@ func (r *tagRepository) Create(t *models.Tag) (int64, error) {
 
 func (r *tagRepository) FindById(id int64) (*models.Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	t := models.Tag{}
@@ -47,7 +47,7 @@ func (r *tagRepository) FindById(id int64) (*models.Tag, error) {
 func (r *tagRepository) Update(t *models.Tag) error {
 
 	sql := "UPDATE tags SET name = ? WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, sql, t.Name, t.Id)
@@ -61,7 +61,7 @@ func (r *tagRepository) Update(t *models.Tag) error {
 func (r *tagRepository) Delete(id int64) error {
 
 	sql := "DELETE FROM tags WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, sql, id)
@@ -83,7 +83,7 @@ func (r *tagRepository) List(limit, offset int) (*models.PaginatedTags, error) {
 	}
 
 	query := `SELECT id, name FROM tags ORDER BY id ASC LIMIT ? OFFSET ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)

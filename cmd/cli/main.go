@@ -16,13 +16,13 @@ func main() {
 	globalFlags := flag.NewFlagSet("global", flag.ExitOnError)
 	cfp := globalFlags.String("config-file", "./communis.toml", "location of configuration toml file")
 	verboseLogF := globalFlags.Bool("verbose-logging", false, "enable verbose logging")
-	sqliteBT := globalFlags.Int("sqlite-busy-timeout", 5000, "busy_timeout pragma setting")
-	sqliteCS := globalFlags.Int("sqlite-cache-size", 2000, "cache_size pragma setting")
+	sqliteBT := globalFlags.Int("sqlite-busy-timeout", 0, "busy_timeout pragma setting (default 5000)")
+	sqliteCS := globalFlags.Int("sqlite-cache-size", 0, "cache_size pragma setting (default 2000)")
 	sqliteFP := globalFlags.String("sqlite-file-path", "", "location of database file")
-	sqliteFK := globalFlags.Bool("sqlite-foreign-keys", true, "foreign_keys pragma setting")
-	sqliteJM := globalFlags.String("sqlite-journal-mode", "WAL", "journal_mode pragma setting - options: DELETE | TRUNCATE | PERSIST | MEMORY | WAL | OFF")
-	sqliteSync := globalFlags.String("sqlite-synchronous", "NORMAL", "synchronous pragma setting - options: OFF | NORMAL | FULL | EXTRA")
-	sqliteTS := globalFlags.String("sqlite-temp-store", "MEMORY", "temp_store pragma setting - options: DEFAULT | FILE | MEMORY")
+	sqliteFK := globalFlags.Bool("sqlite-foreign-keys", false, "foreign_keys pragma setting (default true)")
+	sqliteJM := globalFlags.String("sqlite-journal-mode", "", "journal_mode pragma setting - options: DELETE | TRUNCATE | PERSIST | MEMORY | WAL | OFF (default \"WAL\")")
+	sqliteSync := globalFlags.String("sqlite-synchronous", "", "synchronous pragma setting - options: OFF | NORMAL | FULL | EXTRA (default\"NORMAL\")")
+	sqliteTS := globalFlags.String("sqlite-temp-store", "", "temp_store pragma setting - options: DEFAULT | FILE | MEMORY (default \"MEMORY\")")
 
 	globalFlags.Usage = func() {
 		fmt.Fprint(os.Stdout, "Usage: communis [global options] <command> [command options]\n\n")
@@ -41,14 +41,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	var conf config.Config
+	conf := config.DefaultConfig()
 	_, err := os.Stat(*cfp)
 	if errors.Is(err, os.ErrNotExist) {
 		slog.Debug(fmt.Sprintf("config file does not exist at %s, skipping loading", *cfp), "config-location", *cfp)
 	} else if err != nil {
 		fmt.Fprintf(os.Stderr, "error occured finding config file: %v\n", err)
 	} else {
-		md, err := toml.DecodeFile(*cfp, &conf)
+		md, err := toml.DecodeFile(*cfp, conf)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to parse toml file: %v", err.Error())
 			os.Exit(1)
@@ -60,38 +60,35 @@ func main() {
 		}
 	}
 
-	if verboseLogF != nil {
-		conf.VerboseLogging = *verboseLogF
-	}
-
-	if sqliteBT != nil {
-		conf.SQLite.BusyTimeout = *sqliteBT
-	}
-	if sqliteCS != nil {
-		conf.SQLite.CacheSize = *sqliteCS
-	}
-	if sqliteFP != nil {
-		conf.SQLite.FilePath = *sqliteFP
-	}
-	if sqliteFK != nil {
-		conf.SQLite.ForeignKeys = *sqliteFK
-	}
-	if sqliteJM != nil {
-		conf.SQLite.JournalMode = *sqliteJM
-	}
-	if sqliteSync != nil {
-		conf.SQLite.Synchronous = *sqliteSync
-	}
-	if sqliteTS != nil {
-		conf.SQLite.TempStore = *sqliteTS
-	}
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "verbose-logging":
+			conf.VerboseLogging = *verboseLogF
+		case "sqlite-busy-timeout":
+			conf.SQLite.BusyTimeout = *sqliteBT
+		case "sqlite-cache-size":
+			conf.SQLite.CacheSize = *sqliteCS
+		case "sqlite-file-path":
+			conf.SQLite.FilePath = *sqliteFP
+		case "sqlite-foreign-keys":
+			conf.SQLite.ForeignKeys = *sqliteFK
+		case "sqlite-synchronous":
+			conf.SQLite.Synchronous = *sqliteSync
+		case "sqlite-temp-store":
+			conf.SQLite.TempStore = *sqliteTS
+		case "sqlite-journal-mode":
+			conf.SQLite.JournalMode = *sqliteJM
+		default:
+			fmt.Fprintf(os.Stdout, "cli flag %s ignored", f.Name)
+		}
+	})
 
 	cmd, subArgs := args[0], args[1:]
 	switch cmd {
 	case "database":
-		err = DatabaseCMD(&conf, subArgs)
+		err = DatabaseCMD(conf, subArgs)
 	case "web":
-		err = WebCMD(&conf, subArgs)
+		err = WebCMD(conf, subArgs)
 	default:
 		fmt.Fprintln(os.Stderr, fmt.Errorf("%s is not a valid command", cmd))
 		os.Exit(1)
