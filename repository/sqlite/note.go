@@ -54,7 +54,7 @@ func (r *noteRepository) FindById(id int64) (*models.Note, error) {
              SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
              FROM notes_details
              WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	var n models.Note
@@ -114,7 +114,7 @@ func (r *noteRepository) Update(n *models.Note) error {
 
 func (r *noteRepository) Delete(id int64) error {
 	s := `DELETE FROM notes WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, s, id)
@@ -132,7 +132,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 	}
 
 	query := "SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags FROM notes_details ORDER BY id ASC LIMIT ? OFFSET ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)

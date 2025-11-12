@@ -3,10 +3,15 @@ package sqlitex
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/mitchellh/go-homedir"
 	"modernc.org/sqlite"
 )
 
@@ -31,7 +36,7 @@ const (
 	TempStoreMemory     tempStore   = "MEMORY"
 )
 
-func SQLiteJournalModeFromString(m string) (journalMode, error) {
+func JournalModeFromString(m string) (journalMode, error) {
 	switch strings.ToUpper(m) {
 	case "DELETE":
 		return JournalModeDelete, nil
@@ -48,7 +53,7 @@ func SQLiteJournalModeFromString(m string) (journalMode, error) {
 	}
 }
 
-func SQLiteSynchronousFromString(s string) (synchronous, error) {
+func SynchronousFromString(s string) (synchronous, error) {
 	switch strings.ToUpper(s) {
 	case "OFF":
 		return SynchronousOff, nil
@@ -63,7 +68,7 @@ func SQLiteSynchronousFromString(s string) (synchronous, error) {
 	}
 }
 
-func SQLiteTempStoreFromString(t string) (tempStore, error) {
+func TempStoreFromString(t string) (tempStore, error) {
 	switch strings.ToUpper(t) {
 	case "DEFAULT":
 		return TempStoreDefault, nil
@@ -77,108 +82,109 @@ func SQLiteTempStoreFromString(t string) (tempStore, error) {
 }
 
 type sqliteOptions struct {
-	JournalMode    journalMode
-	Synchronous    synchronous
-	TempStore      tempStore
-	BusyTimeout    int
-	CacheSize      int
-	ForeignKeys    bool
-	MaxReaderConns int
-	QueryTimeout   time.Duration
+	journalMode    journalMode
+	synchronous    synchronous
+	tempStore      tempStore
+	busyTimeout    int
+	cacheSize      int
+	foreignKeys    bool
+	maxReaderConns int
+	queryTimeout   time.Duration
 }
 
 type SQLiteOption func(so *sqliteOptions) error
 
 func WithJournalMode(js string) SQLiteOption {
 	return func(o *sqliteOptions) error {
-		j, err := SQLiteJournalModeFromString(js)
+		j, err := JournalModeFromString(js)
 		if err != nil {
 			return err
 		}
-		o.JournalMode = j
+		o.journalMode = j
 		return nil
 	}
 }
 
 func WithSynchronous(ss string) SQLiteOption {
 	return func(o *sqliteOptions) error {
-		s, err := SQLiteSynchronousFromString(ss)
+		s, err := SynchronousFromString(ss)
 		if err != nil {
 			return err
 		}
-		o.Synchronous = s
+		o.synchronous = s
 		return nil
 	}
 }
 
 func WithTempStore(tss string) SQLiteOption {
 	return func(o *sqliteOptions) error {
-		ts, err := SQLiteTempStoreFromString(tss)
+		ts, err := TempStoreFromString(tss)
 		if err != nil {
 			return err
 		}
-		o.TempStore = ts
+		o.tempStore = ts
 		return nil
 	}
 }
 
 func WithBusyTimeout(bt int) SQLiteOption {
 	return func(o *sqliteOptions) error {
-		o.BusyTimeout = bt
+		o.busyTimeout = bt
 		return nil
 	}
 }
 
 func WithCacheSize(cs int) SQLiteOption {
 	return func(o *sqliteOptions) error {
-		o.CacheSize = cs
+		o.cacheSize = cs
 		return nil
 	}
 }
 
 func WithForeignKeys(fk bool) SQLiteOption {
 	return func(o *sqliteOptions) error {
-		o.ForeignKeys = fk
+		o.foreignKeys = fk
 		return nil
 	}
 }
 
 func WithMaxReaderConns(c int) SQLiteOption {
 	return func(o *sqliteOptions) error {
-		o.MaxReaderConns = c
+		o.maxReaderConns = c
 		return nil
 	}
 }
 
 func (o sqliteOptions) pragmaStatements() []string {
 	return []string{
-		fmt.Sprintf("PRAGMA journal_mode = %s;", o.JournalMode),
-		fmt.Sprintf("PRAGMA synchronous = %s;", o.Synchronous),
-		fmt.Sprintf("PRAGMA temp_store = %s;", o.TempStore),
-		fmt.Sprintf("PRAGMA busy_timeout = %d;", o.BusyTimeout),
-		fmt.Sprintf("PRAGMA cache_size = %d;", o.CacheSize),
-		fmt.Sprintf("PRAGMA foreign_keys = %t;", o.ForeignKeys),
+		fmt.Sprintf("PRAGMA journal_mode = %s;", o.journalMode),
+		fmt.Sprintf("PRAGMA synchronous = %s;", o.synchronous),
+		fmt.Sprintf("PRAGMA temp_store = %s;", o.tempStore),
+		fmt.Sprintf("PRAGMA busy_timeout = %d;", o.busyTimeout),
+		fmt.Sprintf("PRAGMA cache_size = %d;", o.cacheSize),
+		fmt.Sprintf("PRAGMA foreign_keys = %t;", o.foreignKeys),
 	}
 }
 
 type SQLiteDB struct {
-	dbPath string
-	Read   *sql.DB
-	Write  *sql.DB
-	Opts   sqliteOptions
+	dbPath       string
+	Read         *sql.DB
+	Write        *sql.DB
+	QueryTimeout time.Duration
+	opts         *sqliteOptions
 }
 
 func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
 
 	sopts := sqliteOptions{
-		JournalMode:    JournalModeWAL,
-		Synchronous:    SynchronousNormal,
-		TempStore:      TempStoreMemory,
-		BusyTimeout:    5000,
-		CacheSize:      2000,
-		ForeignKeys:    true,
-		MaxReaderConns: 100,
-		QueryTimeout:   10 * time.Second,
+		journalMode:    JournalModeWAL,
+		synchronous:    SynchronousNormal,
+		tempStore:      TempStoreMemory,
+		busyTimeout:    5000,
+		cacheSize:      2000,
+		foreignKeys:    true,
+		maxReaderConns: 100,
+		queryTimeout:   10 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -188,7 +194,24 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 		}
 	}
 
-	db := &SQLiteDB{dbPath: dbPath, Opts: sopts}
+	dbp, err := homedir.Expand(dbPath)
+	if err != nil {
+		return nil, err
+	}
+	fi, err := os.Stat(dbp)
+	if errors.Is(err, os.ErrNotExist) {
+		dir := filepath.Dir(dbp)
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create directory to create sqlite database file: %w", err)
+		}
+	} else if err != nil {
+		return nil, err
+	} else if fi.IsDir() {
+		return nil, fmt.Errorf("%s references to a directory not a database file", dbPath)
+	}
+
+	db := &SQLiteDB{dbPath: dbp, QueryTimeout: sopts.queryTimeout, opts: &sopts}
 
 	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
 		for _, p := range sopts.pragmaStatements() {
@@ -212,12 +235,26 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 	if err != nil {
 		return nil, err
 	}
-	read.SetMaxOpenConns(sopts.MaxReaderConns)
+	read.SetMaxOpenConns(sopts.maxReaderConns)
 	read.SetConnMaxIdleTime(time.Minute)
 
 	db.Read = read
 	db.Write = write
 	return db, nil
+}
+
+func (d *SQLiteDB) LogDBConfig() slog.Value {
+	return slog.GroupValue(
+		slog.String("file-location", d.dbPath),
+		slog.String("journal_mode", string(d.opts.journalMode)),
+		slog.String("synchronous", string(d.opts.synchronous)),
+		slog.String("temp_store", string(d.opts.tempStore)),
+		slog.Int("busy_timeout", d.opts.busyTimeout),
+		slog.Int("cache_size", d.opts.cacheSize),
+		slog.Bool("foreign_keys", d.opts.foreignKeys),
+		slog.Int("max-reader-conns", d.opts.maxReaderConns),
+		slog.String("query-timeout", d.QueryTimeout.String()),
+	)
 }
 
 func (d *SQLiteDB) Close() error {
@@ -284,6 +321,18 @@ func NewSQLiteMigrationDriver(db *SQLiteDB, ctx context.Context) (*SQLiteMigrati
 	return &SQLiteMigrationDriver{db: db, ctx: ctx}, nil
 }
 
+func (s *SQLiteMigrationDriver) IsEmpty() (bool, error) {
+	var count int
+	q := "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
+	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.QueryTimeout)
+	defer cancel()
+	err := s.db.Read.QueryRowContext(ctxWTO, q).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
 func (s *SQLiteMigrationDriver) AddVersionTable() error {
 	_, err := WithTransaction(s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
 		_, err := tx.Exec("CREATE TABLE IF NOT EXISTS schema_version (id INTEGER PRIMARY KEY, version INTEGER, dirty TEXT) strict;")
@@ -327,7 +376,7 @@ func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error 
 func (s *SQLiteMigrationDriver) Version() (uint, error) {
 	sql := "SELECT version from schema_version;"
 
-	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.Opts.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.QueryTimeout)
 	defer cancel()
 
 	var ver uint

@@ -1,0 +1,25 @@
+{{define "base"}}
+<!doctype html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+    <title>{{template "title" . }}</title>
+    <link rel="stylesheet" href="/static/css/writ_v1-0-4.css" type="text/css">
+  </head>
+  <body>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/index">Index</a>
+    </nav>
+    <header>
+      <h1><a href='/'></a>Notes</h1>
+    </header>
+    <main>
+      {{template "main" . }}
+    </main>
+    <script src="/static/js/htmx_v2-0-7.js"></script>
+  </body>
+
+</html>
+
+{{end}}

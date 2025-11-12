@@ -29,6 +29,15 @@ func WebCMD(conf *config.Config, args []string) error {
 			return err
 		}
 
+		runFlags.Visit(func(f *flag.Flag) {
+			switch f.Name {
+			case "host":
+				conf.Web.Host = *hostF
+			case "port":
+				conf.Web.Port = *portF
+			}
+		})
+
 		if hostF != nil {
 			conf.Web.Host = *hostF
 		}

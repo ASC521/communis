@@ -53,7 +53,7 @@ func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handle
 	for _, re := range ignoreRE {
 		regex, err := regexp.Compile(re)
 		if err != nil {
-			slog.Warn(fmt.Sprintf("Unable to exclude url path pattern %s - it is not a valid regex", re), "errMsg", err.Error())
+			logger.Warn(fmt.Sprintf("Unable to exclude url path pattern %s - it is not a valid regex", re), "errMsg", err.Error())
 			continue
 		}
 		ignore = append(ignore, regex)
@@ -74,7 +74,7 @@ func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handle
 			}
 
 			if !exclude {
-				slog.Info(
+				logger.Info(
 					fmt.Sprintf("%s %s from %s", r.Method, r.URL.EscapedPath(), r.RemoteAddr),
 					"respStatus", wrw.Status(),
 					"method", r.Method,
