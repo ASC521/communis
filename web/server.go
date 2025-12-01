@@ -168,12 +168,11 @@ func RunServer(conf *config.Config) error {
 	tr := sqlite.NewTagRepository(db, ctx)
 	sr := sqlite.NewSectionRepository(db, ctx)
 
-	mux := http.NewServeMux()
-	addRoutes(mux, logger, tc, nr, tr, sr)
+	handler := routes(logger, tc, nr, tr, sr)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),
-		Handler: mux,
+		Handler: handler,
 	}
 
 	wg := sync.WaitGroup{}

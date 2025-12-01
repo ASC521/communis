@@ -6,22 +6,13 @@ import (
 	"net/http"
 
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/web/handlers"
 )
 
 func handleHome(
 	tc map[string]*template.Template,
 	logger *slog.Logger,
-	nr models.NoteRepository,
-	tr models.TagRepository,
-	sr models.SectionRepository,
 ) http.Handler {
-
-	type tempData struct {
-		notes    []models.Note
-		tags     []models.Tag
-		sections []models.Section
-	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		ts, ok := tc["home.tmpl"]
@@ -41,19 +32,23 @@ func handleHome(
 
 }
 
-func addRoutes(
-	mux *http.ServeMux,
+func routes(
 	logger *slog.Logger,
 	tc map[string]*template.Template,
 	nr models.NoteRepository,
 	tr models.TagRepository,
 	sr models.SectionRepository,
-) {
+) http.Handler {
 
+	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
 
-	baseChain := chain{RequestLogger([]string{}, logger)}
+	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
 
-	mux.Handle("GET /{$}", baseChain.then(handleHome(tc, logger, nr, tr, sr)))
+	mux.Handle("GET /note/create", handlers.NoteCreateGet(tc, logger, tr, sr))
+	mux.Handle("POST /note/create", handlers.NoteCreatePost(tc, logger, nr, sr, tr))
 
+	mux.Handle("GET /{$}", handleHome(tc, logger))
+
+	return baseChain.then(mux)
 }

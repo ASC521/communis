@@ -20,7 +20,9 @@ type TagRepository interface {
 	FindById(id int64) (*Tag, error)
 	Update(t *Tag) error
 	Delete(id int64) error
+	ListAll() ([]*Tag, error)
 	List(limit, offset int) (*PaginatedTags, error)
+	Query(names []string) (found []Tag, missing []string, err error)
 }
 
 type Section struct {
@@ -39,8 +41,10 @@ type PaginatedSections struct {
 type SectionRepository interface {
 	Create(s *Section) (int64, error)
 	FindById(id int64) (*Section, error)
+	FindByName(name string) (*Section, error)
 	Update(s *Section) error
 	Delete(id int64) error
+	ListAll() ([]*Section, error)
 	List(limit, offset int) (*PaginatedSections, error)
 }
 
@@ -64,7 +68,7 @@ type PaginatedNotes struct {
 
 type NoteRepository interface {
 	Create(n *Note) (int64, error)
-	FindById(id int64) (*Note, error)
+	FindByTitle(title string) (*Note, error)
 	Update(n *Note) error
 	Delete(id int64) error
 	List(limit, offset int) (*PaginatedNotes, error)

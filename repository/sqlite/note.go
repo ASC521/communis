@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -49,18 +50,21 @@ func (r *noteRepository) Create(n *models.Note) (int64, error) {
 	})
 }
 
-func (r *noteRepository) FindById(id int64) (*models.Note, error) {
+func (r *noteRepository) FindByTitle(title string) (*models.Note, error) {
 	q := `
              SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
              FROM notes_details
-             WHERE id = ?;`
+             WHERE title = ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	var n models.Note
 	var tagJSON, createdStr, updatedStr string
-	err := r.db.Read.QueryRowContext(ctxWTO, q, id).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
+	err := r.db.Read.QueryRowContext(ctxWTO, q, title).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("failed to scan row for note: %w", err)
 	}
 
@@ -95,7 +99,7 @@ func (r *noteRepository) Update(n *models.Note) error {
 		ds := `DELETE FROM notes_tags WHERE note_id = ?;`
 		_, err = tx.Exec(ds, n.Id)
 		if err != nil {
-			return -1, fmt.Errorf("failed to remove tags assocaited with note: %w", err)
+			return -1, fmt.Errorf("failed to remove tags associated with note: %w", err)
 		}
 		ts := `INSERT INTO notes_tags (note_id, tag_id) VALUES (?, ?);`
 		for _, tag := range n.Tags {

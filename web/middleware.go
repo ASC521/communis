@@ -47,7 +47,7 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.wroteHeader = true
 }
 
-func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
+func requestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
 
 	var ignore []*regexp.Regexp
 	for _, re := range ignoreRE {
@@ -85,5 +85,23 @@ func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handle
 		}
 
 		return http.HandlerFunc(fn)
+	}
+}
+
+func recoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer func() {
+				pv := recover()
+
+				if pv != nil {
+					w.Header().Set("Connection", "close")
+					logger.Error(fmt.Sprintf("%v", pv), "method", r.Method, "uri", r.URL.RequestURI())
+					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				}
+			}()
+
+			next.ServeHTTP(w, r)
+		})
 	}
 }
