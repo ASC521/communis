@@ -42,6 +42,19 @@ func (r *sectionRepository) FindById(id int64) (*models.Section, error) {
 	return &nb, nil
 }
 
+func (r *sectionRepository) FindByName(name string) (*models.Section, error) {
+	sql := "SELECT id, name FROM sections WHERE name = ?;"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	nb := models.Section{}
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&nb.Id, &nb.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &nb, nil
+}
+
 func (r *sectionRepository) Update(s *models.Section) error {
 
 	sql := "UPDATE sections SET name = ? WHERE id = ?;"
@@ -69,6 +82,34 @@ func (r *sectionRepository) Delete(id int64) error {
 	return nil
 }
 
+func (r *sectionRepository) ListAll() ([]*models.Section, error) {
+	query := "SELECT id, name FROM sections ORDER BY id ASC"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+	rows, err := r.db.Read.QueryContext(ctxWTO, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query sections: %w", err)
+	}
+	defer rows.Close()
+
+	secs := []*models.Section{}
+	for rows.Next() {
+		sec := &models.Section{}
+		err = rows.Scan(&sec.Id, &sec.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		secs = append(secs, sec)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating sections: %w", err)
+	}
+
+	return secs, nil
+}
+
 func (r *sectionRepository) List(limit, offset int) (*models.PaginatedSections, error) {
 	if limit <= 0 {
 		limit = 10
@@ -83,32 +124,32 @@ func (r *sectionRepository) List(limit, offset int) (*models.PaginatedSections, 
 	defer cancel()
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query notebooks: %w", err)
+		return nil, fmt.Errorf("failed to query sections: %w", err)
 	}
 	defer rows.Close()
 
-	nbs := make([]*models.Section, 0, limit)
+	secs := make([]*models.Section, 0, limit)
 	for rows.Next() {
-		nb := &models.Section{}
-		err = rows.Scan(&nb.Id, &nb.Name)
+		sec := &models.Section{}
+		err = rows.Scan(&sec.Id, &sec.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		nbs = append(nbs, nb)
+		secs = append(secs, sec)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating notebooks: %w", err)
+		return nil, fmt.Errorf("error iterating sections: %w", err)
 	}
 
 	var nextOffset *int
-	hasMore := len(nbs) > limit
+	hasMore := len(secs) > limit
 	if hasMore {
-		nbs = nbs[:limit]
+		secs = secs[:limit]
 		next := offset + limit
 		nextOffset = &next
 	}
 
-	return &models.PaginatedSections{Sections: nbs, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
+	return &models.PaginatedSections{Sections: secs, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
 }

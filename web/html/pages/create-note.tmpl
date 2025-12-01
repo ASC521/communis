@@ -1,0 +1,70 @@
+{{define "title"}} New Note {{end}}
+
+{{define "main"}}
+
+<form action="/note/create" method="POST">
+
+  <label for="title">Title: </label>
+  <input type="text" id="title" name="title" value="{{ .Title }}"/><br>
+
+  {{ with .FieldErrors.title  }}
+  <label class="error">{{.}}</label>
+  {{ end }}
+
+
+  <div id="editor"></div>
+
+  <label for="section">Section: </label>
+  <select list="section-list" id="section" name="section">
+    {{ range .AllSections }}
+      {{ if eq .Name $.Section }}
+      <option value="{{ .Name }}" selected>{{ .Name }}</option>
+      {{ else }}
+      <option value="{{ .Name }}">{{ .Name }}</option>
+      {{ end }}
+    {{ end }}
+  </select>
+
+  {{ with .FieldErrors.section }}
+    <label class="error">{{ . }}</label>
+  {{ end }}
+  
+  <br>
+    <br>
+
+  <label for="tags">Tags: </label>
+  {{ with .FieldErrors.tags }}
+  <label>{{ . }}</label>
+  {{ end }}
+  <select id="tags" name="tags" multiple>
+    {{range .AllTags }}
+      {{ if index $.Tags .Name }}
+      <option value="{{ .Name }}" selected>{{ .Name }}</option>
+      {{ else }}
+      <option value="{{ .Name }}">{{ .Name }}</option>
+      {{ end }}
+    {{ end }}
+   <select/>
+
+    <br>
+  <div>
+    <input type="submit" value="Save" />
+  </div>
+</form>
+
+
+{{end}}
+
+
+{{define "scripts"}}
+  <script src="/static/js/overtype_v2-0-5.min.js"></script>
+  <script>
+    const [editor] = new OverType('#editor', {
+        value: '{{ .Content }}',
+        toolbar: true,
+        textareaProps: {
+           name: 'content'
+        }
+    });
+  </script>
+{{end}}
