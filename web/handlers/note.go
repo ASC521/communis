@@ -7,10 +7,12 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/ASC521/communis/models"
+	"github.com/yuin/goldmark"
 )
 
 type createNoteForm struct {
@@ -173,13 +175,62 @@ func NoteCreatePost(
 			Tags:    selectedTags,
 		}
 
-		_, err = nr.Create(&note)
+		id, err := nr.Create(&note)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, slugify(note.Title)), http.StatusSeeOther)
+
+	})
+}
+
+func NoteViewGet(
+	tc map[string]*template.Template,
+	logger *slog.Logger,
+	nr models.NoteRepository,
+) http.Handler {
+
+	type viewNoteData struct {
+		Note        models.Note
+		HTMLContent template.HTML
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.Atoi(r.PathValue("id"))
+		if err != nil || id < 1 {
+			http.NotFound(w, r)
+			return
+		}
+
+		n, err := nr.FindById(id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+
+			serverError(logger, w, r, err)
+			return
+		}
+
+		expSlug := slugify(n.Title)
+		actualSlug := r.PathValue("slug")
+		if expSlug != actualSlug {
+			http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, expSlug), http.StatusMovedPermanently)
+			return
+		}
+
+		b := new(strings.Builder)
+		err = goldmark.Convert([]byte(n.Content), b)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		vnd := viewNoteData{Note: *n, HTMLContent: template.HTML(b.String())}
+		renderTemplate(tc, logger, w, r, http.StatusOK, "view-note.tmpl", vnd)
 
 	})
 }
