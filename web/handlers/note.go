@@ -14,6 +14,7 @@ import (
 
 	"github.com/ASC521/communis/models"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
 type createNoteForm struct {
@@ -223,8 +224,15 @@ func NoteViewGet(
 			return
 		}
 
+		md := goldmark.New(
+			goldmark.WithExtensions(
+				highlighting.NewHighlighting(
+					highlighting.WithStyle("dracula"),
+				),
+			),
+		)
 		b := new(bytes.Buffer)
-		err = goldmark.Convert([]byte(n.Content), b)
+		err = md.Convert([]byte(n.Content), b)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
