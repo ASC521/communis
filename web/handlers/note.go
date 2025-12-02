@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -85,14 +86,14 @@ func NoteCreatePost(
 		} else if utf8.RuneCountInString(title) > 100 {
 			nf.FieldErrors["title"] = "This field cannot be more than 100 characters long"
 		} else {
-			_, err := nr.FindByTitle(title)
-			if err == nil {
+			exists, err := nr.Exists(title)
+			if err != nil {
+				serverError(logger, w, r, err)
+				return
+			}
+			if exists {
 				nf.FieldErrors["title"] = fmt.Sprintf("Title %s already exists", title)
-			} else {
-				if !errors.Is(err, sql.ErrNoRows) {
-					serverError(logger, w, r, err)
-					return
-				}
+
 			}
 		}
 
@@ -198,7 +199,7 @@ func NoteViewGet(
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.Atoi(r.PathValue("id"))
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		if err != nil || id < 1 {
 			http.NotFound(w, r)
 			return
@@ -222,7 +223,7 @@ func NoteViewGet(
 			return
 		}
 
-		b := new(strings.Builder)
+		b := new(bytes.Buffer)
 		err = goldmark.Convert([]byte(n.Content), b)
 		if err != nil {
 			serverError(logger, w, r, err)

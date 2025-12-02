@@ -50,45 +50,24 @@ func (r *noteRepository) Create(n *models.Note) (int64, error) {
 	})
 }
 
-func (r *noteRepository) FindByTitle(title string) (*models.Note, error) {
-	q := `
-             SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
-             FROM notes_details
-             WHERE title = ?;`
+func (r *noteRepository) Exists(title string) (bool, error) {
+	q := `SELECT id FROM notes WHERE title = ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	var n models.Note
-	var tagJSON, createdStr, updatedStr string
-	err := r.db.Read.QueryRowContext(ctxWTO, q, title).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
+	var id string
+	err := r.db.Read.QueryRowContext(ctxWTO, q, title).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return false, nil
 		}
-		return nil, fmt.Errorf("failed to scan row for note: %w", err)
+		return false, err
 	}
 
-	err = json.Unmarshal([]byte(tagJSON), &n.Tags)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse tags json: %w", err)
-	}
-
-	created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse created at time: %w", err)
-	}
-	n.CreatedAt = created
-
-	updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse updated at time: %w", err)
-	}
-	n.LastUpdatedAt = updated
-
-	return &n, nil
+	return true, nil
 }
 
-func (r *noteRepository) FindById(id int) (*models.Note, error) {
+func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 	q := `
      SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
      FROM notes_details
