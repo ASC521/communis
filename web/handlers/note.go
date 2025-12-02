@@ -1,16 +1,20 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/ASC521/communis/models"
+	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
 type createNoteForm struct {
@@ -83,14 +87,14 @@ func NoteCreatePost(
 		} else if utf8.RuneCountInString(title) > 100 {
 			nf.FieldErrors["title"] = "This field cannot be more than 100 characters long"
 		} else {
-			_, err := nr.FindByTitle(title)
-			if err == nil {
+			exists, err := nr.Exists(title)
+			if err != nil {
+				serverError(logger, w, r, err)
+				return
+			}
+			if exists {
 				nf.FieldErrors["title"] = fmt.Sprintf("Title %s already exists", title)
-			} else {
-				if !errors.Is(err, sql.ErrNoRows) {
-					serverError(logger, w, r, err)
-					return
-				}
+
 			}
 		}
 
@@ -173,13 +177,69 @@ func NoteCreatePost(
 			Tags:    selectedTags,
 		}
 
-		_, err = nr.Create(&note)
+		id, err := nr.Create(&note)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, slugify(note.Title)), http.StatusSeeOther)
+
+	})
+}
+
+func NoteViewGet(
+	tc map[string]*template.Template,
+	logger *slog.Logger,
+	nr models.NoteRepository,
+) http.Handler {
+
+	type viewNoteData struct {
+		Note        models.Note
+		HTMLContent template.HTML
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if err != nil || id < 1 {
+			http.NotFound(w, r)
+			return
+		}
+
+		n, err := nr.FindById(id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.NotFound(w, r)
+				return
+			}
+
+			serverError(logger, w, r, err)
+			return
+		}
+
+		expSlug := slugify(n.Title)
+		actualSlug := r.PathValue("slug")
+		if expSlug != actualSlug {
+			http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, expSlug), http.StatusMovedPermanently)
+			return
+		}
+
+		md := goldmark.New(
+			goldmark.WithExtensions(
+				highlighting.NewHighlighting(
+					highlighting.WithStyle("dracula"),
+				),
+			),
+		)
+		b := new(bytes.Buffer)
+		err = md.Convert([]byte(n.Content), b)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		vnd := viewNoteData{Note: *n, HTMLContent: template.HTML(b.String())}
+		renderTemplate(tc, logger, w, r, http.StatusOK, "view-note.tmpl", vnd)
 
 	})
 }

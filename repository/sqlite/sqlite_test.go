@@ -360,9 +360,9 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag-%v", i+1)})
 	}
 
-	nbs := make([]*models.Section, 0, 19)
+	secs := make([]*models.Section, 0, 19)
 	for i := range 20 {
-		nbs = append(nbs, &models.Section{Name: fmt.Sprintf("section-%v", i+1)})
+		secs = append(secs, &models.Section{Name: fmt.Sprintf("section-%v", i+1)})
 	}
 
 	ctx := context.Background()
@@ -373,7 +373,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	nbRepo := sqlite.NewSectionRepository(db, ctx)
+	secRepo := sqlite.NewSectionRepository(db, ctx)
 	tRepo := sqlite.NewTagRepository(db, ctx)
 	nRepo := sqlite.NewNoteRepository(db, ctx)
 
@@ -386,8 +386,8 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		tag.Id = tid
 	}
 
-	for _, nb := range nbs {
-		nid, err := nbRepo.Create(nb)
+	for _, nb := range secs {
+		nid, err := secRepo.Create(nb)
 		if err != nil {
 			t.Fatalf("failed preppering database with notebooks: %v", err.Error())
 		}
@@ -400,7 +400,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		n := &models.Note{
 			Title:   fmt.Sprintf("title-%v", i+1),
 			Content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-			Section: *nbs[8],
+			Section: *secs[8],
 			Tags:    []models.Tag{*ts[2], *ts[4], *ts[12], *ts[17]},
 		}
 		ns = append(ns, n)
@@ -430,20 +430,23 @@ func TestSQLiteNoteRepository(t *testing.T) {
 			},
 		},
 		{
-			Name: "FindByTitle",
+			Name: "Exists",
 			TFunc: func(nr models.NoteRepository) error {
-				n := ns[5]
-				nq, err := nr.FindByTitle(n.Title)
+
+				se, err := nr.Exists("title-3")
 				if err != nil {
-					return fmt.Errorf("failed to find note by title: %w", err)
+					return err
+				}
+				if !se {
+					return fmt.Errorf("expected title-3 to exist in the database, query returned it is missing")
 				}
 
-				if nq.Id != n.Id {
-					return fmt.Errorf("queried note title doesn't match expected; got %v, want %v", nq.Id, n.Id)
+				ne, err := nr.Exists("i am not here")
+				if err != nil {
+					return err
 				}
-
-				if len(nq.Tags) != len(n.Tags) {
-					return fmt.Errorf("queried note does not have the expected number of tags: got %v, want %v", len(nq.Tags), len(n.Tags))
+				if ne {
+					return fmt.Errorf("expected 'i am not here' to not exist in the database, query returned it is there")
 				}
 				return nil
 			},
@@ -461,7 +464,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
 
-				un, err := nr.FindByTitle(n.Title)
+				un, err := nr.FindById(n.Id)
 				if err != nil {
 					return fmt.Errorf("failed to query updated note: %w", err)
 				}
@@ -481,7 +484,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 					return fmt.Errorf("failed to delete note: %w", err)
 				}
 
-				dnb, _ := nr.FindByTitle(n.Title)
+				dnb, _ := nr.FindById(n.Id)
 				if dnb != nil {
 					return fmt.Errorf("deleted note id was returned")
 				}

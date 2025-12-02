@@ -68,7 +68,8 @@ type PaginatedNotes struct {
 
 type NoteRepository interface {
 	Create(n *Note) (int64, error)
-	FindByTitle(title string) (*Note, error)
+	Exists(title string) (bool, error)
+	FindById(id int64) (*Note, error)
 	Update(n *Note) error
 	Delete(id int64) error
 	List(limit, offset int) (*PaginatedNotes, error)

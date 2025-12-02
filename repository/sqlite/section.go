@@ -92,7 +92,7 @@ func (r *sectionRepository) ListAll() ([]*models.Section, error) {
 	}
 	defer rows.Close()
 
-	secs := []*models.Section{}
+	var secs []*models.Section
 	for rows.Next() {
 		sec := &models.Section{}
 		err = rows.Scan(&sec.Id, &sec.Name)

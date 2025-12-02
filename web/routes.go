@@ -47,6 +47,7 @@ func routes(
 
 	mux.Handle("GET /note/create", handlers.NoteCreateGet(tc, logger, tr, sr))
 	mux.Handle("POST /note/create", handlers.NoteCreatePost(tc, logger, nr, sr, tr))
+	mux.Handle("GET /note/{id}/{slug}", handlers.NoteViewGet(tc, logger, nr))
 
 	mux.Handle("GET /{$}", handleHome(tc, logger))
 

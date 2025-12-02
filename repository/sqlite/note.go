@@ -50,17 +50,34 @@ func (r *noteRepository) Create(n *models.Note) (int64, error) {
 	})
 }
 
-func (r *noteRepository) FindByTitle(title string) (*models.Note, error) {
+func (r *noteRepository) Exists(title string) (bool, error) {
+	q := `SELECT id FROM notes WHERE title = ?;`
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	var id string
+	err := r.db.Read.QueryRowContext(ctxWTO, q, title).Scan(&id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 	q := `
-             SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
-             FROM notes_details
-             WHERE title = ?;`
+     SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
+     FROM notes_details
+     WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	var n models.Note
 	var tagJSON, createdStr, updatedStr string
-	err := r.db.Read.QueryRowContext(ctxWTO, q, title).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
+	err := r.db.Read.QueryRowContext(ctxWTO, q, id).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, err
