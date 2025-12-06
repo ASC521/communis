@@ -50,6 +50,7 @@ func routes(
 	mux.Handle("GET /note/{id}/{slug}", handlers.NoteViewGet(tc, logger, nr))
 	mux.Handle("GET /edit/{id}/{slug}", handlers.NoteEditGet(tc, logger, nr, sr, tr))
 	mux.Handle("POST /edit/{id}/{slug}", handlers.NoteEditPost(tc, logger, nr, sr, tr))
+	mux.Handle("GET /section", handlers.SectionGet(tc, logger, sr))
 
 	mux.Handle("GET /{$}", handleHome(tc, logger))
 

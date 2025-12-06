@@ -110,7 +110,7 @@ func NoteCreateGet(
 		}
 
 		nf := createNoteForm{AllSections: sec, AllTags: tags, ActionDest: "/note/create"}
-		renderTemplate(tc, logger, w, r, http.StatusOK, "create-note-tmpl", nf)
+		renderTemplate(tc, logger, w, r, http.StatusOK, "create-note.tmpl", nf)
 	})
 }
 
