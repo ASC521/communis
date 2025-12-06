@@ -2,10 +2,10 @@
 
 {{define "main"}}
 
-<form action="/note/create" method="POST">
+<form action="{{ .ActionDest }}" method="POST">
 
   <label for="title">Title: </label>
-  <input type="text" id="title" name="title" value="{{ .Title }}"/><br>
+  <input type="text" id="title" name="title" value="{{ .Note.Title }}"/><br>
 
   {{ with .FieldErrors.title  }}
   <label class="error">{{.}}</label>
@@ -17,7 +17,7 @@
   <label for="section">Section: </label>
   <select list="section-list" id="section" name="section">
     {{ range .AllSections }}
-      {{ if eq .Name $.Section }}
+      {{ if eq .Name $.Note.Section.Name }}
       <option value="{{ .Name }}" selected>{{ .Name }}</option>
       {{ else }}
       <option value="{{ .Name }}">{{ .Name }}</option>
@@ -32,20 +32,22 @@
   <br>
     <br>
 
-  <label for="tags">Tags: </label>
-  {{ with .FieldErrors.tags }}
-  <label>{{ . }}</label>
-  {{ end }}
-  <select id="tags" name="tags" multiple>
-    {{range .AllTags }}
-      {{ if index $.Tags .Name }}
-      <option value="{{ .Name }}" selected>{{ .Name }}</option>
-      {{ else }}
-      <option value="{{ .Name }}">{{ .Name }}</option>
+    <fieldset>
+      <legend>Tags:</legend>
+      {{ with .FieldErrors.tags }}
+      <label>{{ . }}</label>
       {{ end }}
-    {{ end }}
-   <select/>
 
+      <div id="tags-container">
+	{{ range .Note.Tags }}
+	<div class="input-group">
+	  <input type="text" name="tags-list" value="{{ .Name }}">
+	  <button type="button" class="remove-tag-btn">X</button>
+	</div>
+	{{ end }}
+      </div>
+      <button type="button" onClick="addTag()">+ Add Tag</button>
+    </fieldset>
     <br>
   <div>
     <input type="submit" value="Save" />
@@ -60,11 +62,38 @@
   <script src="/static/js/overtype_v2-0-5.min.js"></script>
   <script>
     const [editor] = new OverType('#editor', {
-        value: '{{ .Content }}',
+        value: '{{ .Note.Content }}',
         toolbar: true,
         textareaProps: {
            name: 'content'
         }
+    });
+    function addTag() {
+	const tagContainer = document.getElementById('tags-container');
+	const div = document.createElement('div');
+	div.class = "input-group"
+
+	const input = document.createElement('input')
+	input.type = "text";
+	input.name = "tags-list";
+	input.placeholder = "Tag " + (tagContainer.children.length + 1);
+	div.appendChild(input);
+	
+	const button = document.createElement('button')
+	button.type = "button"
+	button.classList.add("remove-tag-btn");
+	button.textContent = "X";
+	div.appendChild(button);
+
+	tagContainer.appendChild(div);
+    }
+
+    const container = document.getElementById('tags-container');
+
+    container.addEventListener('click', function(event) {
+	if (event.target.classList.contains('remove-tag-btn')) {
+	    event.target.parentElement.remove();
+	}
     });
   </script>
 {{end}}
