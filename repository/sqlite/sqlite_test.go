@@ -433,19 +433,22 @@ func TestSQLiteNoteRepository(t *testing.T) {
 			Name: "Exists",
 			TFunc: func(nr models.NoteRepository) error {
 
-				se, err := nr.Exists("title-3")
+				ide, err := nr.Exists("title-3")
 				if err != nil {
 					return err
 				}
-				if !se {
+				if ide == -1 {
 					return fmt.Errorf("expected title-3 to exist in the database, query returned it is missing")
 				}
+				if ide != 3 {
+					return fmt.Errorf("expected title-3 id to be 3 in the database, query returned %v", ide)
+				}
 
-				ne, err := nr.Exists("i am not here")
+				idne, err := nr.Exists("i am not here")
 				if err != nil {
 					return err
 				}
-				if ne {
+				if idne != -1 {
 					return fmt.Errorf("expected 'i am not here' to not exist in the database, query returned it is there")
 				}
 				return nil

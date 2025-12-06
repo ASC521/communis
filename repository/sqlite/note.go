@@ -50,21 +50,21 @@ func (r *noteRepository) Create(n *models.Note) (int64, error) {
 	})
 }
 
-func (r *noteRepository) Exists(title string) (bool, error) {
+func (r *noteRepository) Exists(title string) (int64, error) {
 	q := `SELECT id FROM notes WHERE title = ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	var id string
+	var id int64
 	err := r.db.Read.QueryRowContext(ctxWTO, q, title).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return false, nil
+			return -1, nil
 		}
-		return false, err
+		return -1, err
 	}
 
-	return true, nil
+	return id, nil
 }
 
 func (r *noteRepository) FindById(id int64) (*models.Note, error) {
