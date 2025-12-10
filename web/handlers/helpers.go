@@ -37,7 +37,7 @@ func renderTemplate(
 
 	buf := new(bytes.Buffer)
 
-	err := ts.ExecuteTemplate(buf, "base", data)
+	err := ts.ExecuteTemplate(buf, "layout", data)
 	if err != nil {
 		serverError(logger, w, r, err)
 		return
