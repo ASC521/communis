@@ -31,13 +31,11 @@ var staticFiles embed.FS
 var htmlFiles embed.FS
 
 func setupLogging(c *config.Config) *slog.Logger {
-	opt := &slog.HandlerOptions{}
-
+	opts := slog.HandlerOptions{AddSource: true}
 	if c.VerboseLogging {
-		opt.Level = slog.LevelDebug
+		opts.Level = slog.LevelDebug
 	}
-
-	h := slog.NewTextHandler(os.Stdout, opt)
+	h := slog.NewTextHandler(os.Stdout, &opts)
 
 	return slog.New(h)
 }
@@ -108,19 +106,23 @@ func connectToDatabase(c *config.Config, ctx context.Context, logger *slog.Logge
 
 }
 
-func newTemplateCache() (map[string]*template.Template, error) {
+func newTemplateCache(logger *slog.Logger) (map[string]*template.Template, error) {
 	cache := map[string]*template.Template{}
 
-	pages, err := fs.Glob(htmlFiles, "html/pages/*.tmpl")
+	pages, err := fs.Glob(htmlFiles, "html/*/*.tmpl")
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Debug(fmt.Sprintf("found %v templates to load", len(pages)))
 	for _, page := range pages {
-		name := filepath.Base(page)
-
+		name, err := filepath.Rel("html", page)
+		if err != nil {
+			return nil, err
+		}
+		logger.Debug("loaded template", "name", name)
 		files := []string{
-			"html/base.tmpl",
+			"html/layout.tmpl",
 			page,
 		}
 
@@ -137,15 +139,9 @@ func newTemplateCache() (map[string]*template.Template, error) {
 }
 
 func RunServer(conf *config.Config) error {
+	logger := setupLogging(conf)
 
 	ctx := context.Background()
-
-	tc, err := newTemplateCache()
-	if err != nil {
-		return err
-	}
-
-	logger := setupLogging(conf)
 
 	fmt.Fprint(os.Stdout, `
 ------------------------------------------
@@ -158,6 +154,10 @@ func RunServer(conf *config.Config) error {
 
 `)
 
+	tc, err := newTemplateCache(logger)
+	if err != nil {
+		return err
+	}
 	db, err := connectToDatabase(conf, ctx, logger)
 	if err != nil {
 		return err

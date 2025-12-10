@@ -110,7 +110,7 @@ func NoteCreateGet(
 		}
 
 		nf := createNoteForm{AllSections: sec, AllTags: tags, ActionDest: "/note/create"}
-		renderTemplate(tc, logger, w, r, http.StatusOK, "create-note.tmpl", nf)
+		renderTemplate(tc, logger, w, r, http.StatusOK, "notes/create-note.tmpl", nf)
 	})
 }
 
@@ -207,7 +207,7 @@ func NoteEditGet(
 			ActionDest:  fmt.Sprintf("/edit/%v/%s", id, slugify(n.Title)),
 		}
 
-		renderTemplate(tc, logger, w, r, http.StatusOK, "create-note.tmpl", nf)
+		renderTemplate(tc, logger, w, r, http.StatusOK, "notes/create-note.tmpl", nf)
 
 	})
 }
@@ -246,7 +246,7 @@ func NoteEditPost(
 			vnf.AllSections = secs
 			vnf.ActionDest = fmt.Sprintf("/edit/%v/%s", id, r.PathValue("slug"))
 
-			renderTemplate(tc, logger, w, r, http.StatusUnprocessableEntity, "create-note.tmpl", vnf)
+			renderTemplate(tc, logger, w, r, http.StatusUnprocessableEntity, "notes/create-note.tmpl", vnf)
 			return
 
 		}
@@ -313,7 +313,7 @@ func NoteViewGet(
 		}
 
 		vnd := viewNoteData{Note: *n, HTMLContent: template.HTML(b.String())}
-		renderTemplate(tc, logger, w, r, http.StatusOK, "view-note.tmpl", vnd)
+		renderTemplate(tc, logger, w, r, http.StatusOK, "notes/view-note.tmpl", vnd)
 
 	})
 }

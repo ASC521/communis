@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/ASC521/communis/config"
 	"github.com/BurntSushi/toml"
+	"github.com/mitchellh/go-homedir"
 )
 
 func main() {
@@ -41,14 +43,25 @@ func main() {
 		os.Exit(0)
 	}
 
+	resCFP, err := homedir.Expand(*cfp)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to resolve home directory path for config file")
+		os.Exit(1)
+	}
+	resCFP, err = filepath.Abs(resCFP)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to resolve relative path of the config file")
+	}
 	conf := config.DefaultConfig()
-	_, err := os.Stat(*cfp)
+	_, err = os.Stat(resCFP)
 	if errors.Is(err, os.ErrNotExist) {
-		slog.Debug(fmt.Sprintf("config file does not exist at %s, skipping loading", *cfp), "config-location", *cfp)
+		slog.Info(fmt.Sprintf("config file does not exist at %s, skipping loading", resCFP), "config-location", resCFP)
+		fmt.Fprintf(os.Stdout, "config file does not exist at %s, skipping loading", resCFP)
 	} else if err != nil {
 		fmt.Fprintf(os.Stderr, "error occured finding config file: %v\n", err)
 	} else {
-		md, err := toml.DecodeFile(*cfp, conf)
+		fmt.Fprintf(os.Stdout, "loading config file from %s", resCFP)
+		md, err := toml.DecodeFile(resCFP, conf)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to parse toml file: %v", err.Error())
 			os.Exit(1)

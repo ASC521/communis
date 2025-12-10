@@ -38,13 +38,6 @@ func WebCMD(conf *config.Config, args []string) error {
 			}
 		})
 
-		if hostF != nil {
-			conf.Web.Host = *hostF
-		}
-		if portF != nil {
-			conf.Web.Port = *portF
-		}
-
 		return web.RunServer(conf)
 	}
 

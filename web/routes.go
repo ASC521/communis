@@ -9,13 +9,14 @@ import (
 	"github.com/ASC521/communis/web/handlers"
 )
 
+// TODO: Move this handler to the handlers package
 func handleHome(
 	tc map[string]*template.Template,
 	logger *slog.Logger,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		ts, ok := tc["home.tmpl"]
+		ts, ok := tc["home/home.tmpl"]
 		if !ok {
 			logger.Error("template home does not exist", "method", r.Method, "uri", r.URL.RequestURI())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -23,7 +24,7 @@ func handleHome(
 		}
 
 		w.WriteHeader(http.StatusOK)
-		err := ts.ExecuteTemplate(w, "base", nil)
+		err := ts.ExecuteTemplate(w, "layout", nil)
 		if err != nil {
 			logger.Error("failed to execute template", "errMsg", err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

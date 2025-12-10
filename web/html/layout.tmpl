@@ -1,8 +1,9 @@
-{{define "base"}}
+{{define "layout"}}
 <!doctype html>
 <html lang='en'>
   <head>
     <meta charset='utf-8'>
+    <script src="/static/vendor/js/htmx_v2-0-7.js"></script>
     <title>{{template "title" . }}</title>
   </head>
   <body>
@@ -15,7 +16,6 @@
       {{template "main" . }}
     </main>
     {{template "scripts" . }}
-    <script src="/static/js/htmx_v2-0-7.js"></script>
   </body>
 
 </html>
