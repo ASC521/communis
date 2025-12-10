@@ -1,1 +1,2 @@
 web/static/vendor/js/** linguist-vendored
+*.tmpl linguist-language=HTML
