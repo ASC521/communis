@@ -1,9 +1,6 @@
 package handlers
 
 import (
-	"bytes"
-	"fmt"
-	"html/template"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -16,35 +13,6 @@ import (
 func serverError(logger *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-}
-
-// The renderTemplate helper will execute and write out named template.
-// Template is executed in a two stage process to catch any run time template execution errors.
-func renderTemplate(
-	tc map[string]*template.Template,
-	logger *slog.Logger,
-	w http.ResponseWriter,
-	r *http.Request,
-	status int,
-	page string,
-	data any,
-) {
-	ts, ok := tc[page]
-	if !ok {
-		serverError(logger, w, r, fmt.Errorf("the template %s does not exist", page))
-		return
-	}
-
-	buf := new(bytes.Buffer)
-
-	err := ts.ExecuteTemplate(buf, "layout", data)
-	if err != nil {
-		serverError(logger, w, r, err)
-		return
-	}
-
-	w.WriteHeader(status)
-	buf.WriteTo(w)
 }
 
 func slugify(s string) string {

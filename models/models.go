@@ -58,8 +58,16 @@ type Note struct {
 	LastUpdatedAt time.Time
 }
 
+type NoteDetail struct {
+	Id            int64
+	Title         string
+	Section       Section
+	CreatedAt     time.Time
+	LastUpdatedAt time.Time
+}
+
 type PaginatedNotes struct {
-	Notes      []*Note
+	Notes      []*NoteDetail
 	Limit      int
 	Offset     int
 	HasMore    bool

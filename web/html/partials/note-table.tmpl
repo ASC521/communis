@@ -1,0 +1,7 @@
+{{ range .Notes }}
+
+<tr>
+<td><a href="/note/{{.Id}}/{{ slugify .Title }}">{{ .Title }}</a></td>
+</tr>
+
+{{ end }}

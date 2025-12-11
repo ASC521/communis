@@ -152,7 +152,12 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 		offset = 0
 	}
 
-	query := "SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags FROM notes_details ORDER BY id ASC LIMIT ? OFFSET ?;"
+	query := `
+	SELECT n.id, n.section as section_id, s.name as section_name, n.title, n.created_at_utc, n.last_updated_at_utc
+	FROM notes AS n
+	INNER JOIN sections AS s
+	ON n.section = s.id
+	ORDER BY n.id ASC LIMIT ? OFFSET ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
@@ -162,18 +167,13 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 	}
 	defer rows.Close()
 
-	ns := make([]*models.Note, 0, limit)
+	ns := make([]*models.NoteDetail, 0, limit)
 	for rows.Next() {
-		n := &models.Note{}
-		var tagJSON, createdStr, updatedStr string
-		err = rows.Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
+		n := &models.NoteDetail{}
+		var createdStr, updatedStr string
+		err = rows.Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &createdStr, &updatedStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan rows for note: %w", err)
-		}
-
-		err = json.Unmarshal([]byte(tagJSON), &n.Tags)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse tags json: %w", err)
 		}
 
 		created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)

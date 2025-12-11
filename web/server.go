@@ -5,14 +5,11 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"html/template"
-	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
@@ -22,6 +19,7 @@ import (
 	"github.com/ASC521/communis/dbx"
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/repository/sqlite"
+	"github.com/ASC521/communis/web/handlers"
 )
 
 //go:embed "static"
@@ -106,38 +104,6 @@ func connectToDatabase(c *config.Config, ctx context.Context, logger *slog.Logge
 
 }
 
-func newTemplateCache(logger *slog.Logger) (map[string]*template.Template, error) {
-	cache := map[string]*template.Template{}
-
-	pages, err := fs.Glob(htmlFiles, "html/*/*.tmpl")
-	if err != nil {
-		return nil, err
-	}
-
-	logger.Debug(fmt.Sprintf("found %v templates to load", len(pages)))
-	for _, page := range pages {
-		name, err := filepath.Rel("html", page)
-		if err != nil {
-			return nil, err
-		}
-		logger.Debug("loaded template", "name", name)
-		files := []string{
-			"html/layout.tmpl",
-			page,
-		}
-
-		ts, err := template.New(name).ParseFS(htmlFiles, files...)
-		if err != nil {
-			return nil, err
-		}
-
-		cache[name] = ts
-
-	}
-
-	return cache, nil
-}
-
 func RunServer(conf *config.Config) error {
 	logger := setupLogging(conf)
 
@@ -154,7 +120,7 @@ func RunServer(conf *config.Config) error {
 
 `)
 
-	tc, err := newTemplateCache(logger)
+	tc, err := handlers.NewTemplateCache(htmlFiles)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"html/template"
 	"log/slog"
 	"net/http"
 
@@ -9,7 +8,7 @@ import (
 )
 
 func SectionGet(
-	tc map[string]*template.Template,
+	tc *TemplateCache,
 	logger *slog.Logger,
 	sr models.SectionRepository,
 ) http.Handler {
@@ -22,6 +21,6 @@ func SectionGet(
 			return
 		}
 
-		renderTemplate(tc, logger, w, r, http.StatusOK, "section.tmpl", sections)
+		tc.RenderPage(logger, w, r, http.StatusOK, "section-list.tmpl", sections)
 	})
 }
