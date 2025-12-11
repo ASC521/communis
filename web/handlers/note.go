@@ -89,7 +89,7 @@ func validCreateNoteForm(r *http.Request, nr models.NoteRepository, sr models.Se
 }
 
 func NoteCreateGet(
-	tc map[string]*template.Template,
+	tc *TemplateCache,
 	logger *slog.Logger,
 	tr models.TagRepository,
 	sr models.SectionRepository,
@@ -110,12 +110,12 @@ func NoteCreateGet(
 		}
 
 		nf := createNoteForm{AllSections: sec, AllTags: tags, ActionDest: "/note/create"}
-		renderTemplate(tc, logger, w, r, http.StatusOK, "notes/create-note.tmpl", nf)
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", nf)
 	})
 }
 
 func NoteCreatePost(
-	tc map[string]*template.Template,
+	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
 	sr models.SectionRepository,
@@ -146,7 +146,7 @@ func NoteCreatePost(
 			vnf.AllTags = allTags
 			vnf.AllSections = secs
 			vnf.ActionDest = "/note/create"
-			renderTemplate(tc, logger, w, r, http.StatusUnprocessableEntity, "create-note.tmpl", vnf)
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "create-note.tmpl", vnf)
 			return
 		}
 
@@ -162,7 +162,7 @@ func NoteCreatePost(
 }
 
 func NoteEditGet(
-	tc map[string]*template.Template,
+	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
 	sr models.SectionRepository,
@@ -207,13 +207,12 @@ func NoteEditGet(
 			ActionDest:  fmt.Sprintf("/edit/%v/%s", id, slugify(n.Title)),
 		}
 
-		renderTemplate(tc, logger, w, r, http.StatusOK, "notes/create-note.tmpl", nf)
-
+		tc.RenderPage(logger, w, r, http.StatusOK, "create-note.tmpl", nf)
 	})
 }
 
 func NoteEditPost(
-	tc map[string]*template.Template,
+	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
 	sr models.SectionRepository,
@@ -246,7 +245,7 @@ func NoteEditPost(
 			vnf.AllSections = secs
 			vnf.ActionDest = fmt.Sprintf("/edit/%v/%s", id, r.PathValue("slug"))
 
-			renderTemplate(tc, logger, w, r, http.StatusUnprocessableEntity, "notes/create-note.tmpl", vnf)
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "create-note.tmpl", vnf)
 			return
 
 		}
@@ -263,7 +262,7 @@ func NoteEditPost(
 }
 
 func NoteViewGet(
-	tc map[string]*template.Template,
+	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
 ) http.Handler {
@@ -313,7 +312,32 @@ func NoteViewGet(
 		}
 
 		vnd := viewNoteData{Note: *n, HTMLContent: template.HTML(b.String())}
-		renderTemplate(tc, logger, w, r, http.StatusOK, "notes/view-note.tmpl", vnd)
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", vnd)
+	})
+}
+
+func NoteListGet(
+	tc map[string]*template.Template,
+	logger *slog.Logger,
+	nr models.NoteRepository,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		o := r.URL.Query().Get("o")
+		offset := 0
+		if o != "" {
+			var err error
+			offset, err = strconv.Atoi(o)
+			if err != nil {
+				http.Error(w, "Invalid offset", http.StatusBadRequest)
+				return
+			}
+		}
+
+		_, err := nr.List(50, offset)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
 
 	})
 }

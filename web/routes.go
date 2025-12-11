@@ -1,7 +1,6 @@
 package web
 
 import (
-	"html/template"
 	"log/slog"
 	"net/http"
 
@@ -11,31 +10,17 @@ import (
 
 // TODO: Move this handler to the handlers package
 func handleHome(
-	tc map[string]*template.Template,
+	tc *handlers.TemplateCache,
 	logger *slog.Logger,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		ts, ok := tc["home/home.tmpl"]
-		if !ok {
-			logger.Error("template home does not exist", "method", r.Method, "uri", r.URL.RequestURI())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		err := ts.ExecuteTemplate(w, "layout", nil)
-		if err != nil {
-			logger.Error("failed to execute template", "errMsg", err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
+		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", nil)
 	})
-
 }
 
 func routes(
 	logger *slog.Logger,
-	tc map[string]*template.Template,
+	tc *handlers.TemplateCache,
 	nr models.NoteRepository,
 	tr models.TagRepository,
 	sr models.SectionRepository,
