@@ -129,13 +129,13 @@ func (m *Migrator) Last() (uint, error) {
 	return m.Migrations[len(m.Migrations)-1].Version, nil
 }
 
-func (m *Migrator) Prev(currVersion uint) (uint, error) {
+func (m *Migrator) Prev(currVersion uint) (migration, error) {
 	i := findVersionIndex(m.Migrations, currVersion)
 	if i <= 0 {
-		return 0, os.ErrNotExist
+		return migration{}, os.ErrNotExist
 	}
 
-	return m.Migrations[i-1].Version, nil
+	return m.Migrations[i-1], nil
 }
 
 func (m *Migrator) Next(currVersion uint) (uint, error) {
@@ -222,33 +222,40 @@ func (m *Migrator) Up() error {
 }
 
 func (m *Migrator) Down() error {
-	currVer, err := m.driver.Version()
+	cv, err := m.driver.Version()
 	if err != nil {
 		return err
 	}
 
 	for {
 
-		prevVer, prevErr := m.Prev(currVer)
-		mig, sql, err := m.ReadDown(currVer)
+		pm, pErr := m.Prev(cv)
+		if pErr != nil && errors.Is(pErr, os.ErrNotExist) {
+			pm = migration{
+				Version: 0,
+				Name:    "Empty Database",
+			}
+		}
+		mig, sql, err := m.ReadDown(cv)
 		if err != nil {
 			return err
 		}
-		err = m.driver.RunMigration(sql, prevVer)
+		err = m.driver.RunMigration(sql, pm.Version)
 		if err != nil {
 			return fmt.Errorf("migration %s failed: %w", mig.Name, err)
 		}
-		slog.Info(fmt.Sprintf("database migrated to version %v - %s", prevVer, mig.Name), "version", prevVer, "name", mig.Name)
-		if errors.Is(prevErr, os.ErrNotExist) {
-			break
-		}
-		if prevErr != nil {
+		slog.Info(fmt.Sprintf("database migrated to version %v - %s", pm.Version, pm.Name), "version", pm.Version, "name", pm.Name)
+
+		if pErr != nil {
+			if errors.Is(pErr, os.ErrNotExist) {
+				return nil
+			}
 			return err
 		}
+		cv = pm.Version
 
 	}
 
-	return nil
 }
 
 func (m *Migrator) ReadUp(version uint) (migration, string, error) {

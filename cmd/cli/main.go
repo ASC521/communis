@@ -60,7 +60,7 @@ func main() {
 	} else if err != nil {
 		fmt.Fprintf(os.Stderr, "error occured finding config file: %v\n", err)
 	} else {
-		fmt.Fprintf(os.Stdout, "loading config file from %s", resCFP)
+		fmt.Fprintf(os.Stdout, "loading config file from %s\n", resCFP)
 		md, err := toml.DecodeFile(resCFP, conf)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to parse toml file: %v", err.Error())
