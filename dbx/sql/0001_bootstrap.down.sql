@@ -1,4 +1,4 @@
-DROP TABLE notes;
-DROP TABLE sections;
-DROP TABLE tags;
-DROP TABLE note_tags;
+DROP TABLE IF EXISTS notes_tags;
+DROP TABLE IF EXISTS sections;
+DROP TABLE IF EXISTS tags;
+DROP TABLE IF EXISTS notes;
