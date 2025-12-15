@@ -16,9 +16,11 @@ func MigrateCMD(conf *config.Config, args []string) error {
 	migFlags.Usage = func() {
 		fmt.Fprint(os.Stdout, "Usage: communis [global options] database migrate <subcommand>\n\n")
 		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
-		fmt.Fprint(os.Stdout, "down    migrate database down to an empty database\n")
-		fmt.Fprint(os.Stdout, "list    list all migrations\n")
-		fmt.Fprint(os.Stdout, "up      migrate database up to latest version\n\n")
+		fmt.Fprint(os.Stdout, "down        migrate database down to an empty database\n")
+		fmt.Fprint(os.Stdout, "list        list all migrations\n")
+		fmt.Fprint(os.Stdout, "step-down   migrate database to previous version\n")
+		fmt.Fprint(os.Stdout, "step-up     migrate database to next version\n")
+		fmt.Fprint(os.Stdout, "up          migrate database up to latest version\n\n")
 	}
 	err := migFlags.Parse(args)
 	if err != nil {
@@ -30,48 +32,39 @@ func MigrateCMD(conf *config.Config, args []string) error {
 		return nil
 	}
 
+	ctx := context.Background()
+	db, err := sqlitex.NewSQLiteDB(ctx, conf.SQLite.FilePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	mig, err := dbx.NewSQLiteMigrator(ctx, db)
+	if err != nil {
+		return err
+	}
+
 	cmd, _ := args[0], args[1:]
 	switch cmd {
 	case "down":
-		ctx := context.Background()
-		db, err := sqlitex.NewSQLiteDB(ctx, conf.SQLite.FilePath)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-
-		mig, err := dbx.NewSQLiteMigrator(ctx, db)
-		if err != nil {
-			return err
-		}
-
 		return mig.Down()
+	case "step-down":
+		pm, err := mig.StepDown()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", pm.Version, pm.Name)
+		return nil
+	case "step-up":
+		nm, err := mig.StepUp()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", nm.Version, nm.Name)
+		return nil
 	case "up":
-		ctx := context.Background()
-		db, err := sqlitex.NewSQLiteDB(ctx, conf.SQLite.FilePath)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-
-		mig, err := dbx.NewSQLiteMigrator(ctx, db)
-		if err != nil {
-			return err
-		}
-
 		return mig.Up()
 	case "list":
-		ctx := context.Background()
-		db, err := sqlitex.NewSQLiteDB(ctx, conf.SQLite.FilePath)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-
-		mig, err := dbx.NewSQLiteMigrator(ctx, db)
-		if err != nil {
-			return err
-		}
 
 		cv, err := mig.Version()
 		if err != nil {

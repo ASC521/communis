@@ -5,7 +5,6 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -113,20 +112,20 @@ func NewSQLiteMigrator(ctx context.Context, db *sqlitex.SQLiteDB) (*Migrator, er
 	return &Migrator{driver: sd, embeddedRoot: "sql", Migrations: migs}, nil
 }
 
-func (m *Migrator) First() (uint, error) {
+func (m *Migrator) First() (migration, error) {
 	if len(m.Migrations) == 0 {
-		return 0, os.ErrNotExist
+		return migration{}, os.ErrNotExist
 	}
 
-	return m.Migrations[0].Version, nil
+	return m.Migrations[0], nil
 }
 
-func (m *Migrator) Last() (uint, error) {
+func (m *Migrator) Latest() (migration, error) {
 	if len(m.Migrations) == 0 {
-		return 0, os.ErrNotExist
+		return migration{}, os.ErrNotExist
 	}
 
-	return m.Migrations[len(m.Migrations)-1].Version, nil
+	return m.Migrations[len(m.Migrations)-1], nil
 }
 
 func (m *Migrator) Prev(currVersion uint) (migration, error) {
@@ -138,142 +137,148 @@ func (m *Migrator) Prev(currVersion uint) (migration, error) {
 	return m.Migrations[i-1], nil
 }
 
-func (m *Migrator) Next(currVersion uint) (uint, error) {
-	i := findVersionIndex(m.Migrations, currVersion)
-	if i == len(m.Migrations)-1 || i == -1 {
-		return 0, os.ErrNotExist
+func (m *Migrator) Next(currVersion uint) (migration, error) {
+	if currVersion == 0 {
+		return m.First()
 	}
 
-	return m.Migrations[i+1].Version, nil
+	i := findVersionIndex(m.Migrations, currVersion)
+	if i == len(m.Migrations)-1 || i == -1 {
+		return migration{}, os.ErrNotExist
+	}
+
+	return m.Migrations[i+1], nil
 }
 
+// Bootstrap configures an migration controlled database and migrates it to the latest version
 func (m *Migrator) Bootstrap() error {
 	err := m.driver.AddVersionTable()
 	if err != nil {
 		return err
 	}
 
-	currVer, err := m.First()
-	if err != nil {
-		return err
-	}
-
-	for {
-		mig, sql, err := m.ReadUp(currVer)
-		if err != nil {
-			return err
-		}
-
-		err = m.driver.RunMigration(sql, currVer)
-		if err != nil {
-			return fmt.Errorf("migration %s failed: %w", mig.Name, err)
-		}
-
-		currVer, err = m.Next(currVer)
-		if errors.Is(err, os.ErrNotExist) {
-			break
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return m.Up()
 }
 
+// Up migrates a database to it's latest version
 func (m *Migrator) Up() error {
 
-	cv, err := m.driver.Version()
+	lv, err := m.Latest()
 	if err != nil {
 		return err
 	}
-
 	for {
-		if cv == 0 {
-			cv, err = m.First()
-			if err != nil {
-				return err
-			}
-
-		} else {
-			cv, err = m.Next(cv)
-			if errors.Is(err, os.ErrNotExist) {
-				break
-			}
-			if err != nil {
-				return err
-			}
-		}
-
-		mig, sql, err := m.ReadUp(cv)
-		if err != nil {
-			return fmt.Errorf("migration %s failed: %w", mig.Name, err)
-		}
-
-		err = m.driver.RunMigration(sql, cv)
+		mig, err := m.StepUp()
 		if err != nil {
 			return err
 		}
-		slog.Info(fmt.Sprintf("database migrated to version %v - %s", cv, mig.Name), "version", cv, "name", mig.Name)
-	}
 
-	return nil
+		if mig.Version == lv.Version {
+			return nil
+		}
+	}
 
 }
 
+// Down migrates a database to an 'Empty Database' state
 func (m *Migrator) Down() error {
-	cv, err := m.driver.Version()
-	if err != nil {
-		return err
-	}
 
 	for {
+		mig, err := m.StepDown()
+		if err != nil {
+			return err
+		}
+		if mig.Version == 0 {
+			return nil
+		}
+	}
 
-		pm, pErr := m.Prev(cv)
-		if pErr != nil && errors.Is(pErr, os.ErrNotExist) {
-			pm = migration{
+}
+
+// StepDown executes the current version's down.sql file and returns the resulting current migration.
+func (m *Migrator) StepDown() (migration, error) {
+	cv, err := m.driver.Version()
+	if err != nil {
+		return migration{}, err
+	}
+
+	if cv == 0 {
+		return migration{}, errors.New("empty database - cannot migrate down any further")
+	}
+
+	pvm, err := m.Prev(cv)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			pvm = migration{
 				Version: 0,
 				Name:    "Empty Database",
 			}
+		} else {
+			return migration{}, err
 		}
-		mig, sql, err := m.ReadDown(cv)
-		if err != nil {
-			return err
-		}
-		err = m.driver.RunMigration(sql, pm.Version)
-		if err != nil {
-			return fmt.Errorf("migration %s failed: %w", mig.Name, err)
-		}
-		slog.Info(fmt.Sprintf("database migrated to version %v - %s", pm.Version, pm.Name), "version", pm.Version, "name", pm.Name)
-
-		if pErr != nil {
-			if errors.Is(pErr, os.ErrNotExist) {
-				return nil
-			}
-			return err
-		}
-		cv = pm.Version
-
 	}
 
+	_, sql, err := m.readDown(cv)
+	if err != nil {
+		return migration{}, err
+	}
+
+	err = m.driver.RunMigration(sql, pvm.Version)
+	if err != nil {
+		return migration{}, err
+	}
+
+	return pvm, nil
 }
 
-func (m *Migrator) ReadUp(version uint) (migration, string, error) {
-	i := findVersionIndex(m.Migrations, version)
-	if i == -1 {
-		return migration{}, "", os.ErrNotExist
+// StepUp execute the current version's up.sql file and returns the resulting current migration
+func (m *Migrator) StepUp() (migration, error) {
+	isLatest, err := m.IsLatest()
+	if err != nil {
+		return migration{}, err
 	}
 
-	mig := m.Migrations[i]
+	if isLatest {
+		lm, err := m.Latest()
+		if err != nil {
+			return migration{}, err
+		}
+		return lm, nil
+	}
+
+	cv, err := m.driver.Version()
+	if err != nil {
+		return migration{}, nil
+	}
+
+	nm, err := m.Next(cv)
+	if err != nil {
+		return migration{}, err
+	}
+
+	sql, err := m.readUp(nm)
+	if err != nil {
+		return migration{}, err
+	}
+
+	err = m.driver.RunMigration(sql, nm.Version)
+	if err != nil {
+		return migration{}, err
+	}
+
+	return nm, err
+}
+
+func (m *Migrator) readUp(mig migration) (string, error) {
 	path := filepath.Join(m.embeddedRoot, mig.upFile)
 	data, err := embeddedMigrationsFS.ReadFile(path)
 	if err != nil {
-		return migration{}, "", err
+		return "", err
 	}
-	return mig, string(data), nil
+	return string(data), nil
 }
 
-func (m *Migrator) ReadDown(version uint) (migration, string, error) {
+func (m *Migrator) readDown(version uint) (migration, string, error) {
 	i := findVersionIndex(m.Migrations, version)
 	if i == -1 {
 		return migration{}, "", os.ErrNotExist
@@ -298,12 +303,12 @@ func (m *Migrator) IsLatest() (bool, error) {
 		return false, fmt.Errorf("failed to find database version: %w", err)
 	}
 
-	lv, err := m.Last()
+	lv, err := m.Latest()
 	if err != nil {
 		return false, fmt.Errorf("failed to find last configured migration: %w", err)
 	}
 
-	return dbv == lv, nil
+	return dbv == lv.Version, nil
 
 }
 
