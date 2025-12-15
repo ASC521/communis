@@ -33,6 +33,8 @@ type migration struct {
 	Name     string
 }
 
+var emptyMigration = migration{Version: 0, Name: "Empty Database"}
+
 func findVersionIndex(migrations []migration, version uint) int {
 	for i, m := range migrations {
 		if m.Version == version {
@@ -150,6 +152,24 @@ func (m *Migrator) Next(currVersion uint) (migration, error) {
 	return m.Migrations[i+1], nil
 }
 
+func (m *Migrator) Curr() (migration, error) {
+	cvn, err := m.Version()
+	if err != nil {
+		return migration{}, err
+	}
+
+	if cvn == 0 {
+		return emptyMigration, nil
+	}
+
+	i := findVersionIndex(m.Migrations, cvn)
+	if i == -1 {
+		return migration{}, os.ErrNotExist
+	}
+
+	return m.Migrations[i], nil
+}
+
 // Bootstrap configures an migration controlled database and migrates it to the latest version
 func (m *Migrator) Bootstrap() error {
 	err := m.driver.AddVersionTable()
@@ -197,28 +217,25 @@ func (m *Migrator) Down() error {
 
 // StepDown executes the current version's down.sql file and returns the resulting current migration.
 func (m *Migrator) StepDown() (migration, error) {
-	cv, err := m.driver.Version()
+	cm, err := m.Curr()
 	if err != nil {
 		return migration{}, err
 	}
 
-	if cv == 0 {
+	if cm.Version == 0 {
 		return migration{}, errors.New("empty database - cannot migrate down any further")
 	}
 
-	pvm, err := m.Prev(cv)
+	pvm, err := m.Prev(cm.Version)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			pvm = migration{
-				Version: 0,
-				Name:    "Empty Database",
-			}
+			pvm = emptyMigration
 		} else {
 			return migration{}, err
 		}
 	}
 
-	_, sql, err := m.readDown(cv)
+	_, sql, err := m.readDown(cm)
 	if err != nil {
 		return migration{}, err
 	}
@@ -246,7 +263,7 @@ func (m *Migrator) StepUp() (migration, error) {
 		return lm, nil
 	}
 
-	cv, err := m.driver.Version()
+	cv, err := m.Version()
 	if err != nil {
 		return migration{}, nil
 	}
@@ -278,13 +295,7 @@ func (m *Migrator) readUp(mig migration) (string, error) {
 	return string(data), nil
 }
 
-func (m *Migrator) readDown(version uint) (migration, string, error) {
-	i := findVersionIndex(m.Migrations, version)
-	if i == -1 {
-		return migration{}, "", os.ErrNotExist
-	}
-
-	mig := m.Migrations[i]
+func (m *Migrator) readDown(mig migration) (migration, string, error) {
 	path := filepath.Join(m.embeddedRoot, mig.downFile)
 	data, err := embeddedMigrationsFS.ReadFile(path)
 	if err != nil {
