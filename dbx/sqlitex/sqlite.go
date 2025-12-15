@@ -15,8 +15,6 @@ import (
 	"modernc.org/sqlite"
 )
 
-// SELECT name FROM sqlite_master WHERE type='table' AND name='your_table_name';
-
 type journalMode string
 type synchronous string
 type tempStore string
@@ -334,19 +332,9 @@ func (s *SQLiteMigrationDriver) IsEmpty() (bool, error) {
 }
 
 func (s *SQLiteMigrationDriver) AddVersionTable() error {
-	_, err := WithTransaction(s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
-		_, err := tx.Exec("CREATE TABLE IF NOT EXISTS schema_version (id INTEGER PRIMARY KEY, version INTEGER, dirty TEXT) strict;")
-		if err != nil {
-			return nil, err
-		}
-		_, err = tx.Exec("INSERT INTO schema_version (version, dirty) VALUES (0, 'N');")
-		if err != nil {
-			return nil, err
-		}
-		return nil, nil
-	})
-
-	return err
+	// SQLite has a built in pragma 'user_version' that can be used to track versioning of a database.
+	// That pragma will be leveraged so there is no need to a new table to the database so this is a no op.
+	return nil
 }
 
 func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error {
@@ -356,12 +344,7 @@ func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error 
 			return nil, err
 		}
 
-		var verID int
-		err = tx.QueryRow("SELECT id from schema_version;").Scan(&verID)
-		if err != nil {
-			return nil, err
-		}
-		_, err = tx.Exec("UPDATE schema_version SET version = ? WHERE id = ?;", version, verID)
+		_, err = tx.Exec(fmt.Sprintf("PRAGMA user_version = %d;", version))
 
 		if err != nil {
 			return nil, err
@@ -374,7 +357,7 @@ func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error 
 }
 
 func (s *SQLiteMigrationDriver) Version() (uint, error) {
-	sql := "SELECT version from schema_version;"
+	sql := "PRAGMA user_version;"
 
 	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.QueryTimeout)
 	defer cancel()
