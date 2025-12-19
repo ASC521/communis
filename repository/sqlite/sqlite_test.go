@@ -260,7 +260,7 @@ func TestSQLiteTagRepository(t *testing.T) {
 			TFunc: func(tr models.TagRepository) error {
 				ot := ts[10]
 				nt := &models.Tag{Id: ot.Id, Name: ot.Name}
-				nt.Name = "notebook-25"
+				nt.Name = "updatedtag"
 				err := tr.Update(nt)
 				if err != nil {
 					return fmt.Errorf("failed to update tag: %w", err)
@@ -272,6 +272,7 @@ func TestSQLiteTagRepository(t *testing.T) {
 				if qt.Name != nt.Name {
 					return fmt.Errorf("tag update failed: got %v, want %v", qt.Name, nt.Name)
 				}
+
 				return nil
 			},
 		},
@@ -357,7 +358,7 @@ func TestSQLiteTagRepository(t *testing.T) {
 func TestSQLiteNoteRepository(t *testing.T) {
 	ts := make([]*models.Tag, 0, 19)
 	for i := range 20 {
-		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag-%v", i+1)})
+		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag%v", i+1)})
 	}
 
 	secs := make([]*models.Section, 0, 19)
@@ -366,12 +367,12 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err, cleanUp := bootstrapInMemoryDB(ctx)
+	db, err, _ := bootstrapInMemoryDB(ctx)
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
 	defer db.Close()
-	defer cleanUp()
+	//defer cleanUp()
 
 	secRepo := sqlite.NewSectionRepository(db, ctx)
 	tRepo := sqlite.NewTagRepository(db, ctx)
@@ -426,6 +427,23 @@ func TestSQLiteNoteRepository(t *testing.T) {
 					n.Id = id
 				}
 
+				srs, err := nr.Search(`"Title-17"`)
+				if err != nil {
+					return fmt.Errorf("failed to search for created notes: %w", err)
+				}
+
+				var found bool
+				for _, sr := range srs {
+					if sr.Id == 17 {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					return fmt.Errorf("failed to find expected note")
+				}
+
 				return nil
 			},
 		},
@@ -474,6 +492,23 @@ func TestSQLiteNoteRepository(t *testing.T) {
 
 				if len(un.Tags) != 3 {
 					return errors.New("updated note has 4 tags, expected 3")
+				}
+
+				srs, err := nr.Search(`"Updated Title"`)
+				if err != nil {
+					return errors.New("failed to search notes database for updated title")
+				}
+
+				var found bool
+				for _, sr := range srs {
+					if sr.Id == n.Id {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					return errors.New("search failed to find Update Title note")
 				}
 				return nil
 			},
@@ -525,6 +560,36 @@ func TestSQLiteNoteRepository(t *testing.T) {
 				}
 
 				return nil
+			},
+		},
+		{
+			Name: "Search",
+			TFunc: func(nr models.NoteRepository) error {
+				on := ns[12]
+				on.Content = on.Content + "FTS FIND ME"
+				err := nr.Update(on)
+				if err != nil {
+					return fmt.Errorf("failed to update note: %w", err)
+				}
+				srs, err := nr.Search("FTS FIND ME")
+				if err != nil {
+					return fmt.Errorf("failed to search notes: %w", err)
+				}
+
+				var found bool
+				for _, sr := range srs {
+					if sr.Id == 13 {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					return fmt.Errorf("search did return expected note")
+				}
+
+				return nil
+
 			},
 		},
 	}

@@ -13,6 +13,14 @@ import (
 )
 
 const sqliteTimeFmt = "2006-01-02 15:04:05"
+const insNoteFTSSql = `INSERT INTO notes_details_fts(rowid, title, content, tags_txt)
+		       SELECT notes_details.id, notes_details.title, notes_details.content, notes_details.tags_txt
+		       FROM notes_details
+		       WHERE notes_details.id = ?;`
+const delNoteFTSSql = `INSERT INTO notes_details_fts(notes_details_fts, rowid, title, content, tags_txt)
+		       SELECT 'delete', notes_details.id, notes_details.title, notes_details.content, notes_details.tags_txt
+		       FROM notes_details
+		       WHERE notes_details.id = ?;`
 
 type noteRepository struct {
 	db  *sqlitex.SQLiteDB
@@ -45,6 +53,11 @@ func (r *noteRepository) Create(n *models.Note) (int64, error) {
 			}
 		}
 
+		_, err = tx.Exec(insNoteFTSSql, nid)
+		if err != nil {
+			return -1, err
+		}
+
 		return nid, nil
 
 	})
@@ -69,7 +82,7 @@ func (r *noteRepository) Exists(title string) (int64, error) {
 
 func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 	q := `
-     SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags
+     SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags_json
      FROM notes_details
      WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
@@ -107,8 +120,14 @@ func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 
 func (r *noteRepository) Update(n *models.Note) error {
 	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+
+		_, err := tx.Exec(delNoteFTSSql, n.Id)
+		if err != nil {
+			return -1, err
+		}
+
 		s := `UPDATE notes SET title = ?, content = ?, section = ?, last_updated_at_utc = datetime('now') WHERE id = ?`
-		_, err := tx.Exec(s, n.Title, n.Content, n.Section.Id, n.Id)
+		_, err = tx.Exec(s, n.Title, n.Content, n.Section.Id, n.Id)
 		if err != nil {
 			return -1, fmt.Errorf("failed to update note %v: %w", n.Id, err)
 		}
@@ -122,8 +141,13 @@ func (r *noteRepository) Update(n *models.Note) error {
 		for _, tag := range n.Tags {
 			_, err := tx.Exec(ts, n.Id, tag.Id)
 			if err != nil {
-				return -1, fmt.Errorf("failed to upsert tag %v: %w", tag.Id, err)
+				return -1, fmt.Errorf("failed to insert note %v tag %v: %w", n.Id, tag.Id, err)
 			}
+		}
+
+		_, err = tx.Exec(insNoteFTSSql, n.Id)
+		if err != nil {
+			return -1, err
 		}
 
 		return 1, nil
@@ -134,11 +158,23 @@ func (r *noteRepository) Update(n *models.Note) error {
 }
 
 func (r *noteRepository) Delete(id int64) error {
-	s := `DELETE FROM notes WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
-	defer cancel()
+	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
-	_, err := r.db.Write.ExecContext(ctxWTO, s, id)
+		_, err := tx.Exec(delNoteFTSSql, id)
+		if err != nil {
+			return -1, err
+		}
+
+		s := `DELETE FROM notes WHERE id = ?;`
+		_, err = tx.Exec(s, id)
+		if err != nil {
+			return -1, fmt.Errorf("failed to delete note %v: %w", id, err)
+		}
+
+		return 1, nil
+
+	})
+
 	return err
 }
 
@@ -210,5 +246,40 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 		HasMore:    hasMore,
 		NextOffset: nextOffset,
 	}, nil
+
+}
+
+func (r *noteRepository) Search(q string) ([]*models.NoteSearchResult, error) {
+
+	sql := `SELECT nd.id, fts.title, fts.content, fts.tags_txt
+		FROM notes_details_fts AS fts
+		INNER JOIN notes_details AS nd
+		ON fts.rowid = nd.id
+		WHERE notes_details_fts MATCH ?
+		ORDER BY rank
+		LIMIT 50;`
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, q)
+	if err != nil {
+		return nil, err
+	}
+
+	srs := []*models.NoteSearchResult{}
+	for rows.Next() {
+		sr := &models.NoteSearchResult{}
+		err = rows.Scan(&sr.Id, &sr.Title, &sr.ContentSnippet, &sr.TagNames)
+		if err != nil {
+			return nil, err
+		}
+		srs = append(srs, sr)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating search results: %w", err)
+	}
+
+	return srs, nil
 
 }

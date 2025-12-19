@@ -74,6 +74,13 @@ type PaginatedNotes struct {
 	NextOffset *int
 }
 
+type NoteSearchResult struct {
+	Id             int64
+	Title          string
+	ContentSnippet string
+	TagNames       string
+}
+
 type NoteRepository interface {
 	Create(n *Note) (int64, error)
 	Exists(title string) (int64, error)
@@ -81,4 +88,5 @@ type NoteRepository interface {
 	Update(n *Note) error
 	Delete(id int64) error
 	List(limit, offset int) (*PaginatedNotes, error)
+	Search(q string) ([]*NoteSearchResult, error)
 }
