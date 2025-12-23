@@ -1,7 +1,13 @@
+{{ define "note-table" }}
 {{ range .Notes }}
 
 <tr>
-<td><a href="/note/{{.Id}}/{{ slugify .Title }}">{{ .Title }}</a></td>
+  <td>
+    <a href="/note/{{.Id}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
+    <p>{{ safeHTML .ContentSnippet }}</p>
+    <p>{{safeHTML .TagNames }}</p>
+  </td>
 </tr>
 
+{{ end }}
 {{ end }}

@@ -28,9 +28,6 @@
   {{ with .FieldErrors.section }}
     <label class="error">{{ . }}</label>
   {{ end }}
-  
-  <br>
-    <br>
 
     <fieldset>
       <legend>Tags:</legend>
@@ -38,15 +35,17 @@
       <label>{{ . }}</label>
       {{ end }}
 
-      <div id="tags-container">
+      <div id="tags-container" data-tags>
+	<div data-tags-list>
 	{{ range .Note.Tags }}
 	<div class="input-group">
 	  <input type="text" name="tags-list" value="{{ .Name }}">
-	  <button type="button" class="remove-tag-btn">X</button>
+	  <button type="button" data-tags-remove>X</button>
 	</div>
 	{{ end }}
+	</div>
+      <button type="button" data-tags-add>+ Add Tag</button>
       </div>
-      <button type="button" onClick="addTag()">+ Add Tag</button>
     </fieldset>
     <br>
   <div>
@@ -59,7 +58,8 @@
 
 
 {{define "scripts"}}
-  <script src="/static/vendor/js/overtype_v2-0-5.min.js"></script>
+<script src="/static/vendor/js/overtype_v2-0-5.min.js"></script>
+<script src="/static/js/add-tags.js"></script>
   <script>
     const [editor] = new OverType('#editor', {
         value: '{{ .Note.Content }}',
@@ -67,33 +67,6 @@
         textareaProps: {
            name: 'content'
         }
-    });
-    function addTag() {
-	const tagContainer = document.getElementById('tags-container');
-	const div = document.createElement('div');
-	div.class = "input-group"
-
-	const input = document.createElement('input')
-	input.type = "text";
-	input.name = "tags-list";
-	input.placeholder = "Tag " + (tagContainer.children.length + 1);
-	div.appendChild(input);
-	
-	const button = document.createElement('button')
-	button.type = "button"
-	button.classList.add("remove-tag-btn");
-	button.textContent = "X";
-	div.appendChild(button);
-
-	tagContainer.appendChild(div);
-    }
-
-    const container = document.getElementById('tags-container');
-
-    container.addEventListener('click', function(event) {
-	if (event.target.classList.contains('remove-tag-btn')) {
-	    event.target.parentElement.remove();
-	}
     });
   </script>
 {{end}}

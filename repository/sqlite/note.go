@@ -251,7 +251,12 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 
 func (r *noteRepository) Search(q string) ([]*models.NoteSearchResult, error) {
 
-	sql := `SELECT nd.id, fts.title, fts.content, fts.tags_txt
+	sql := `SELECT
+		  nd.id,
+		  nd.title,
+		  highlight(notes_details_fts, 0, '<mark>', '</mark>') as title_highlight,
+		  snippet(notes_details_fts, 1, '<mark>', '</mark>', '...', 40) as content_snippet,
+		  IFNULL(highlight(notes_details_fts, 2, '<mark>', '</mark>'), '') AS tags_txt
 		FROM notes_details_fts AS fts
 		INNER JOIN notes_details AS nd
 		ON fts.rowid = nd.id
@@ -269,7 +274,7 @@ func (r *noteRepository) Search(q string) ([]*models.NoteSearchResult, error) {
 	srs := []*models.NoteSearchResult{}
 	for rows.Next() {
 		sr := &models.NoteSearchResult{}
-		err = rows.Scan(&sr.Id, &sr.Title, &sr.ContentSnippet, &sr.TagNames)
+		err = rows.Scan(&sr.Id, &sr.Title, &sr.TitleHighlight, &sr.ContentSnippet, &sr.TagNames)
 		if err != nil {
 			return nil, err
 		}

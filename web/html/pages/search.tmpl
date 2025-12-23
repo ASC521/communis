@@ -1,0 +1,31 @@
+{{ define "title"}}Search{{end}}
+
+{{ define "main" }}
+
+<form action="/search" method="GET">
+  <div class="search-container">
+    <img class="search-icon" src="/static/vendor/svg/lucide-book-search.svg">
+    <input class="search-input" id="search" type="text" name="q" placeholder="Search..."
+	   autofocus
+	   value="{{ .Query }}"
+	   hx-get="/search"
+	   hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+	   hx-target="#search-results"
+	   hx-push-url="true">
+  </div>
+</form>
+<br>
+<table>
+  <tbody id="search-results">
+    {{ template "note-table" . }}
+  </tbody>
+
+</table>
+
+{{ end }}
+
+
+{{ define "scripts" }}
+
+
+{{ end }}

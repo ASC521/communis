@@ -77,6 +77,7 @@ type PaginatedNotes struct {
 type NoteSearchResult struct {
 	Id             int64
 	Title          string
+	TitleHighlight string
 	ContentSnippet string
 	TagNames       string
 }

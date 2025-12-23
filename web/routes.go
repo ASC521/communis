@@ -27,18 +27,21 @@ func routes(
 ) http.Handler {
 
 	mux := http.NewServeMux()
+
 	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
 
-	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
+	mux.Handle("GET /new", handlers.NoteNewGet(tc, logger, tr, sr))
+	mux.Handle("POST /new", handlers.NoteNewPost(tc, logger, nr, sr, tr))
 
-	mux.Handle("GET /note/create", handlers.NoteCreateGet(tc, logger, tr, sr))
-	mux.Handle("POST /note/create", handlers.NoteCreatePost(tc, logger, nr, sr, tr))
 	mux.Handle("GET /note/{id}/{slug}", handlers.NoteViewGet(tc, logger, nr))
+
 	mux.Handle("GET /edit/{id}/{slug}", handlers.NoteEditGet(tc, logger, nr, sr, tr))
 	mux.Handle("POST /edit/{id}/{slug}", handlers.NoteEditPost(tc, logger, nr, sr, tr))
+
 	mux.Handle("GET /section", handlers.SectionGet(tc, logger, sr))
+	mux.Handle("GET /search", handlers.NoteSearchGet(tc, logger, nr))
 
 	mux.Handle("GET /{$}", handleHome(tc, logger))
-
+	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
 	return baseChain.then(mux)
 }
