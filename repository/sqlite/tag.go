@@ -2,12 +2,23 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
 )
+
+const delTagFTSSql = `INSERT INTO notes_details_fts(notes_details_fts, rowid, title, content, tags_txt)
+		   SELECT 'delete', notes_details.id,  title, content, tags_txt
+		   FROM notes_details, json_each(notes_details.tags_json)
+		   WHERE json_extract(value, '$.id') = ?;`
+
+const insTagFTSSql = `INSERT INTO notes_details_fts(rowid, title, content, tags_txt)
+		   SELECT notes_details.id, notes_details.title, notes_details.content, notes_details.tags_txt
+		   FROM notes_details, json_each(notes_details.tags_json)
+		   WHERE json_extract(value, '$.id') = ?;`
 
 type tagRepository struct {
 	db  *sqlitex.SQLiteDB
@@ -91,29 +102,48 @@ func (r *tagRepository) FindById(id int64) (*models.Tag, error) {
 
 func (r *tagRepository) Update(t *models.Tag) error {
 
-	sql := "UPDATE tags SET name = ? WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
-	defer cancel()
+	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
-	_, err := r.db.Write.ExecContext(ctxWTO, sql, t.Name, t.Id)
-	if err != nil {
-		return err
-	}
+		_, err := tx.Exec(delTagFTSSql, t.Id)
+		if err != nil {
+			return -1, err
+		}
 
-	return nil
+		sql := "UPDATE tags SET name = ? WHERE id = ?;"
+		_, err = tx.Exec(sql, t.Name, t.Id)
+		if err != nil {
+			return -1, err
+		}
+
+		_, err = tx.Exec(insTagFTSSql, t.Id)
+		if err != nil {
+			return -1, err
+		}
+		return 1, nil
+	})
+	return err
 }
 
 func (r *tagRepository) Delete(id int64) error {
+	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
-	sql := "DELETE FROM tags WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
-	defer cancel()
+		_, err := tx.Exec(delTagFTSSql, id)
+		if err != nil {
+			return -1, err
+		}
+		sql := "DELETE FROM tags WHERE id = ?;"
+		_, err = tx.Exec(sql, id)
+		if err != nil {
+			return -1, err
+		}
+		_, err = tx.Exec(insTagFTSSql, id)
+		if err != nil {
+			return -1, err
+		}
+		return 1, nil
+	})
 
-	_, err := r.db.Write.ExecContext(ctxWTO, sql, id)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 
 }
 

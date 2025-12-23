@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"html/template"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -41,4 +42,8 @@ func slugify(s string) string {
 	}
 
 	return s
+}
+
+func safeHTML(s string) template.HTML {
+	return template.HTML(s)
 }

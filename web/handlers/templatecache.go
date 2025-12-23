@@ -23,7 +23,8 @@ func NewTemplateCache(files fs.FS) (*TemplateCache, error) {
 	}
 
 	funcMap := template.FuncMap{
-		"slugify": slugify,
+		"slugify":  slugify,
+		"safeHTML": safeHTML,
 	}
 
 	partialFiles, err := fs.Glob(files, "html/partials/*.tmpl")
@@ -63,23 +64,6 @@ func NewTemplateCache(files fs.FS) (*TemplateCache, error) {
 
 }
 
-func (t *TemplateCache) render(
-	ts *template.Template,
-	logger *slog.Logger,
-	w http.ResponseWriter,
-	r *http.Request,
-	status int,
-	data any,
-) {
-	buf := new(bytes.Buffer)
-	err := ts.ExecuteTemplate(buf, "layout", data)
-	if err != nil {
-		serverError(logger, w, r, err)
-	}
-	w.WriteHeader(status)
-	buf.WriteTo(w)
-}
-
 func (t *TemplateCache) RenderPage(
 	logger *slog.Logger,
 	w http.ResponseWriter,
@@ -116,11 +100,10 @@ func (t *TemplateCache) RenderPartial(
 		return
 	}
 	buf := new(bytes.Buffer)
-	err := ts.ExecuteTemplate(buf, tempName, data)
+	err := ts.ExecuteTemplate(buf, "note-table", data)
 	if err != nil {
 		serverError(logger, w, r, err)
 	}
 	w.WriteHeader(status)
 	buf.WriteTo(w)
-
 }

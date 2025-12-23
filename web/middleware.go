@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
+	"runtime/debug"
 	"slices"
 	"time"
 )
@@ -96,8 +98,15 @@ func recoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 
 				if pv != nil {
 					w.Header().Set("Connection", "close")
-					logger.Error(fmt.Sprintf("%v", pv), "method", r.Method, "uri", r.URL.RequestURI())
+					st := string(debug.Stack())
+					logger.Error(
+						fmt.Sprintf("%v", pv),
+						"method", r.Method,
+						"uri", r.URL.RequestURI(),
+						"stacktrace", string(debug.Stack()))
+					fmt.Fprint(os.Stderr, st+"\n")
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+
 				}
 			}()
 

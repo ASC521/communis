@@ -66,8 +66,9 @@ func validCreateNoteForm(r *http.Request, nr models.NoteRepository, sr models.Se
 		} else {
 			return createNoteForm{}, err
 		}
+	} else {
+		nf.Note.Section = *section
 	}
-	nf.Note.Section = *section
 
 	tagsForm := r.PostForm["tags-list"]
 	if len(tagsForm) > 0 {
@@ -88,7 +89,7 @@ func validCreateNoteForm(r *http.Request, nr models.NoteRepository, sr models.Se
 
 }
 
-func NoteCreateGet(
+func NoteNewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	tr models.TagRepository,
@@ -109,12 +110,12 @@ func NoteCreateGet(
 			return
 		}
 
-		nf := createNoteForm{AllSections: sec, AllTags: tags, ActionDest: "/note/create"}
+		nf := createNoteForm{AllSections: sec, AllTags: tags, ActionDest: "/new"}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", nf)
 	})
 }
 
-func NoteCreatePost(
+func NoteNewPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
@@ -145,8 +146,8 @@ func NoteCreatePost(
 
 			vnf.AllTags = allTags
 			vnf.AllSections = secs
-			vnf.ActionDest = "/note/create"
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "create-note.tmpl", vnf)
+			vnf.ActionDest = "/new"
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", vnf)
 			return
 		}
 
@@ -207,7 +208,7 @@ func NoteEditGet(
 			ActionDest:  fmt.Sprintf("/edit/%v/%s", id, slugify(n.Title)),
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "create-note.tmpl", nf)
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", nf)
 	})
 }
 
@@ -245,7 +246,7 @@ func NoteEditPost(
 			vnf.AllSections = secs
 			vnf.ActionDest = fmt.Sprintf("/edit/%v/%s", id, r.PathValue("slug"))
 
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "create-note.tmpl", vnf)
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", vnf)
 			return
 
 		}
@@ -316,28 +317,40 @@ func NoteViewGet(
 	})
 }
 
-func NoteListGet(
-	tc map[string]*template.Template,
+func NoteSearchGet(
+	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
 ) http.Handler {
+
+	type templateData struct {
+		Notes []*models.NoteSearchResult
+		Query string
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		o := r.URL.Query().Get("o")
-		offset := 0
-		if o != "" {
-			var err error
-			offset, err = strconv.Atoi(o)
+
+		td := templateData{}
+		q := r.URL.Query().Get("q")
+
+		if q != "" {
+			srs, err := nr.Search(`"` + q + `"`)
 			if err != nil {
-				http.Error(w, "Invalid offset", http.StatusBadRequest)
+				serverError(logger, w, r, err)
 				return
 			}
+			td.Notes = srs
+			td.Query = q
+		} else {
+			td.Notes = []*models.NoteSearchResult{}
+			td.Query = ""
 		}
 
-		_, err := nr.List(50, offset)
-		if err != nil {
-			serverError(logger, w, r, err)
+		name := r.Header.Get("Hx-Source")
+		if name == "search" {
+			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table.tmpl", td)
 			return
 		}
+		tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", td)
 
 	})
 }
