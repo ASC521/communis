@@ -1,0 +1,11 @@
+(A) Redo Home Screen +v1
+(B) Redo Layout of note editor screen +v1
+(C) Add Preview Note on Edit Screen +v1
+Add advanced query support to search screen +v1
+Build tag index +v1
+Multi-user support +v1
+User authentication +v1
+x Data Model
+x Full Text Search for Notes
+x Implement Repository Pattern for SQLite backend
+x SQLite Migrations and DB Bootstrapping
