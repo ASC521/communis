@@ -1,7 +1,10 @@
 (A) Redo Home Screen +v1
-(B) Redo Layout of note editor screen +v1
-(C) Add Preview Note on Edit Screen +v1
+(B) Fix note edit bug where content isn't populated in the overtype editor +v1
+(C) Redo nav bar +v1
+(D) Redo Layout of note editor screen +v1
+(E) Add Preview Note on Edit Screen +v1
 Add advanced query support to search screen +v1
+Add section view page - list associated notes in section, have links to edit name or delete
 Build tag index +v1
 Multi-user support +v1
 User authentication +v1

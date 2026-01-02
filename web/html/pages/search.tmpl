@@ -3,7 +3,7 @@
 {{ define "main" }}
 
 <form action="/search" method="GET">
-  <div class="search-container">
+  <div class="flex search-container">
     <img class="search-icon" src="/static/vendor/svg/lucide-book-search.svg">
     <input class="search-input" id="search" type="text" name="q" placeholder="Search..."
 	   autofocus
@@ -19,7 +19,6 @@
   <tbody id="search-results">
     {{ template "note-table" . }}
   </tbody>
-
 </table>
 
 {{ end }}

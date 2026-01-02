@@ -61,7 +61,6 @@ type Note struct {
 type NoteDetail struct {
 	Id            int64
 	Title         string
-	Section       Section
 	CreatedAt     time.Time
 	LastUpdatedAt time.Time
 }
@@ -90,4 +89,5 @@ type NoteRepository interface {
 	Delete(id int64) error
 	List(limit, offset int) (*PaginatedNotes, error)
 	Search(q string) ([]*NoteSearchResult, error)
+	RecentUpdates(limit uint) ([]*NoteDetail, error)
 }
