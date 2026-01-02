@@ -4,8 +4,9 @@
 
 <form action="{{ .ActionDest }}" method="POST">
 
-  <label for="title">Title: </label>
-  <input type="text" id="title" name="title" value="{{ .Note.Title }}"/><br>
+  <input type="text" id="title" name="title" value="{{ .Note.Title }}" placeholder="Title"/>
+  
+  <br>
 
   {{ with .FieldErrors.title  }}
   <label class="error">{{.}}</label>
@@ -58,15 +59,31 @@
 
 
 {{define "scripts"}}
-<script src="/static/vendor/js/overtype_v2-0-5.min.js"></script>
 <script src="/static/js/add-tags.js"></script>
-  <script>
-    const [editor] = new OverType('#editor', {
-        value: '{{ .Note.Content }}',
-        toolbar: true,
-        textareaProps: {
-           name: 'content'
-        }
-    });
-  </script>
+<script type="module">
+  import OverType, { toolbarButtons } from '../../static/vendor/js/overtype_v2-1-0.esm.js';
+
+  const [editor] = new OverType('#editor', {
+      value: '{{ .Note.Content }}',
+      toolbar: true,
+      toolbarButtons: [
+	  toolbarButtons.bold,
+	  toolbarButtons.italic,
+          toolbarButtons.code,
+          toolbarButtons.link,
+          toolbarButtons.h1,
+          toolbarButtons.h2,
+	  toolbarButtons.h3,
+	  toolbarButtons.bulletList,
+	  toolbarButtons.orderedList,
+	  toolbarButtons.taskList,
+	  toolbarButtons.quote,
+	  toolbarButtons.separator,
+      ],
+      textareaProps: {
+          name: 'content'
+      },
+      theme: 'cave',
+  });
+</script>
 {{end}}
