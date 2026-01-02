@@ -1,8 +1,34 @@
 {{define "title"}} Home {{end}}
 
 {{define "main"}}
-<h2>Latest Notes</h2>
-<p>Add Recent Notes Here</p>
+
+<div class="flex flex-wrap height-50 items-center justify-center content-center">
+
+  <div class="flex-basis-100">
+    <form action="/search" method="GET" hx-boost="true">
+      <div class="flex items-center search-container">
+	<img class="search-icon" src="/static/vendor/svg/lucide-book-search.svg">
+	<input class="search-input" id="search" type="text" name="q" placeholder="Search...">
+      </div>
+    </form>
+  </div>
+
+  <div class="flex flex-basis-100">
+    <div class="flex-1 flex flex-col items-center">
+      <p>SECTIONS</p>
+      {{ range .Sections }}
+      <a class="flex-1" href="section/{{ .Id }}/{{ .Name }}">{{ .Name }}</a>
+      {{ end }}
+    </div>
+    <div class="flex-1 flex flex-col items-center">
+      <p>RECENTLY MODIFIED</p>
+      {{ range .ModifiedNotes }}
+      <a class="flex-1" href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
+      {{ end }}
+    </div>
+  </div>
+</div>
+
 {{end}}
 
 

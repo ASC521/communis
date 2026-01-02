@@ -1,13 +1,15 @@
 {{ define "note-table" }}
+<div class="article-container">
 {{ range .Notes }}
 
-<tr>
-  <td>
-    <a href="/note/{{.Id}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
+<article>
+  <h2>
+    <a href="/note/{{.Id}}/{{ slugify .Title }}" hx-boost="true">{{ safeHTML .TitleHighlight }}</a>
+  </h2>
     <p>{{ safeHTML .ContentSnippet }}</p>
-    <p>{{safeHTML .TagNames }}</p>
-  </td>
-</tr>
+    <p>{{safeHTML .TagNames }}</p>  
+</article>
 
 {{ end }}
+</div>
 {{ end }}

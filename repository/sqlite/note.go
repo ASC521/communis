@@ -189,10 +189,8 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 	}
 
 	query := `
-	SELECT n.id, n.section as section_id, s.name as section_name, n.title, n.created_at_utc, n.last_updated_at_utc
+	SELECT n.id,  n.title, n.created_at_utc, n.last_updated_at_utc
 	FROM notes AS n
-	INNER JOIN sections AS s
-	ON n.section = s.id
 	ORDER BY n.id ASC LIMIT ? OFFSET ?;`
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -207,7 +205,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 	for rows.Next() {
 		n := &models.NoteDetail{}
 		var createdStr, updatedStr string
-		err = rows.Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &createdStr, &updatedStr)
+		err = rows.Scan(&n.Id, &n.Title, &createdStr, &updatedStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan rows for note: %w", err)
 		}
@@ -287,4 +285,45 @@ func (r *noteRepository) Search(q string) ([]*models.NoteSearchResult, error) {
 
 	return srs, nil
 
+}
+
+func (r *noteRepository) RecentUpdates(limit uint) ([]*models.NoteDetail, error) {
+
+	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
+		FROM notes as n
+		ORDER BY last_updated_at_utc DESC
+		LIMIT ?;`
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, limit)
+	if err != nil {
+		return nil, err
+	}
+	ru := []*models.NoteDetail{}
+	for rows.Next() {
+		nd := models.NoteDetail{}
+		var createdStr, updatedStr string
+		err = rows.Scan(&nd.Id, &nd.Title, &createdStr, &updatedStr)
+		if err != nil {
+			return nil, err
+		}
+		created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
+		if err != nil {
+			return nil, err
+		}
+		nd.CreatedAt = created
+		updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
+		if err != nil {
+			return nil, err
+		}
+		nd.LastUpdatedAt = updated
+		ru = append(ru, &nd)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return ru, nil
 }

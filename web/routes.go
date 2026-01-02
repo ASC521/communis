@@ -8,16 +8,6 @@ import (
 	"github.com/ASC521/communis/web/handlers"
 )
 
-// TODO: Move this handler to the handlers package
-func handleHome(
-	tc *handlers.TemplateCache,
-	logger *slog.Logger,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", nil)
-	})
-}
-
 func routes(
 	logger *slog.Logger,
 	tc *handlers.TemplateCache,
@@ -41,7 +31,7 @@ func routes(
 	mux.Handle("GET /section", handlers.SectionGet(tc, logger, sr))
 	mux.Handle("GET /search", handlers.NoteSearchGet(tc, logger, nr))
 
-	mux.Handle("GET /{$}", handleHome(tc, logger))
+	mux.Handle("GET /{$}", handlers.HomeGet(tc, logger, nr, sr))
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
 	return baseChain.then(mux)
 }
