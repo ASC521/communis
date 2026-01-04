@@ -1,3 +1,7 @@
+body {
+    max-width: 1200px !important;
+}
+
 .flex {
     display: flex;
 }
@@ -31,15 +35,31 @@
 }
 
 .width-full {
-    width: 100vw;
+    width: 100%;
+}
+
+.width-90 {
+    width: 90%;
+}
+
+.width-60 {
+    width: 60%;
 }
 
 .items-center {
     align-items: center;
 }
 
+.margin-auto {
+    margin: auto;
+}
+
 .content-center {
     align-content: center;
+}
+
+.content-start {
+    align-content: start;
 }
 
 .justify-center {
@@ -85,4 +105,14 @@ article {
 
 .search-input:focus {
     box-shadow: none;
+}
+
+nav {
+    margin-bottom: 15px;
+}
+
+nav > a {
+    padding: 10px;
+    color: #ffffff;
+    font-weight: 600;
 }

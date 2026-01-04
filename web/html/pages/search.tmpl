@@ -11,20 +11,17 @@
 	   hx-get="/search"
 	   hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
 	   hx-target="#search-results"
-	   hx-push-url="true">
+	   hx-push-url="true"
+	   hx-indicator=".htmx-indicator">
+    <span class="htmx-indicator"><img src="/static/vendor/svg/lucide-loader.svg" alt=""></span>
   </div>
 </form>
 <br>
-<table>
-  <tbody id="search-results">
-    {{ template "note-table" . }}
-  </tbody>
-</table>
 
+<div id="search-results">
+  {{ template "note-table" . }}
+</div>
 {{ end }}
 
 
-{{ define "scripts" }}
-
-
-{{ end }}
+{{ define "scripts" }}{{ end }}
