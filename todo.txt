@@ -1,13 +1,19 @@
-(A) Redo nav bar +v1
-(B) Redo Layout of note editor screen +v1
-(C) Add Preview Note on Edit Screen +v1
-Add advanced query support to search screen +v1
-Add section view page - list associated notes in section, have links to edit name or delete
-Build tag index +v1
+(A) Redo Layout of note editor screen +v1
+(B) Add Preview Note on Edit Screen +v1
+(D) Add section view page - list associated notes in section, have links to edit name or delete +v1
+(E) Build tag index +v1
+(F) Add way to go to edit screen from view note screen +v1
+(G) Place tags and section into info side panel of view note screen +v1
+(H) Add advanced query support to search screen +v1
+Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
+Link between different notes
 Multi-user support +v1
+Split screen notes
+Tabbed notes
 User authentication +v1
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Redo Home Screen +v1
+x (A) Redo nav bar +v1
 x Data Model
 x Full Text Search for Notes
 x Implement Repository Pattern for SQLite backend

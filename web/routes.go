@@ -31,7 +31,7 @@ func routes(
 	mux.Handle("GET /section", handlers.SectionGet(tc, logger, sr))
 	mux.Handle("GET /search", handlers.NoteSearchGet(tc, logger, nr))
 
-	mux.Handle("GET /{$}", handlers.HomeGet(tc, logger, nr, sr))
+	mux.Handle("GET /{$}", handlers.HomeGet(tc, logger, nr))
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
 	return baseChain.then(mux)
 }
