@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -136,9 +137,12 @@ func TestSQLiteSectionRepository(t *testing.T) {
 					return fmt.Errorf("section delete failed: %w", err)
 				}
 
-				dnb, _ := nr.FindById(nb.Id)
-				if dnb != nil {
-					return fmt.Errorf("deleted section id was returned")
+				_, err = nr.FindById(nb.Id)
+				if !errors.Is(err, sql.ErrNoRows) {
+					if err == nil {
+						return fmt.Errorf("deleted section id was returned")
+					}
+					return fmt.Errorf("failed to query database: %s", err.Error())
 				}
 
 				return nil
@@ -155,35 +159,6 @@ func TestSQLiteSectionRepository(t *testing.T) {
 				// subtracting one because we have deleted a section in the test above
 				if len(secs) != (len(nbs) - 1) {
 					return fmt.Errorf("expected ListAll to return %v sections, but got %v", len(nbs)-1, len(secs))
-				}
-
-				return nil
-			},
-		},
-		{
-			Name: "List",
-			TFunc: func(nr models.SectionRepository) error {
-				set1, err := nr.List(10, 0)
-				if err != nil {
-					return fmt.Errorf("failed to list section: %w", err)
-				}
-				if len(set1.Sections) != 10 {
-					return fmt.Errorf("expected list 1 to have 10, got %v", len(set1.Sections))
-				}
-
-				if !set1.HasMore {
-					return fmt.Errorf("expected list 1 indicates there is no more data, expecting to indicate more data available")
-				}
-
-				if set1.NextOffset == nil {
-					return fmt.Errorf("set 1 next offset is nil but indicates there is more data; expecting NextOffset to be non nil")
-				}
-				set2, err := nr.List(set1.Limit, *set1.NextOffset)
-				if err != nil {
-					return fmt.Errorf("failed to list sections: %w", err)
-				}
-				if len(set2.Sections) != 9 {
-					return fmt.Errorf("expected list 2 to have 9, got %v", len(set2.Sections))
 				}
 
 				return nil
@@ -285,9 +260,12 @@ func TestSQLiteTagRepository(t *testing.T) {
 					return fmt.Errorf("tag delete failed: %w", err)
 				}
 
-				dnb, _ := tr.FindById(t.Id)
-				if dnb != nil {
-					return fmt.Errorf("deleted tag id was returned")
+				_, err = tr.FindById(t.Id)
+				if !errors.Is(err, sql.ErrNoRows) {
+					if err == nil {
+						return fmt.Errorf("deleted section id was returned")
+					}
+					return fmt.Errorf("failed to query database: %s", err.Error())
 				}
 
 				return nil
@@ -325,14 +303,11 @@ func TestSQLiteTagRepository(t *testing.T) {
 		{
 			Name: "Query",
 			TFunc: func(tr models.TagRepository) error {
-				missing1 := "i-do-not-exist"
-				missing2 := "i-also-do-not-exist"
-				tags, missing, err := tr.Query([]string{ts[3].Name, ts[14].Name, ts[17].Name, missing1, missing2})
+				missing1 := int64(120)
+				missing2 := int64(340)
+				tags, err := tr.Query([]int64{ts[3].Id, ts[14].Id, ts[17].Id, missing1, missing2})
 				if err != nil {
 					return err
-				}
-				if len(missing) != 2 {
-					return fmt.Errorf("expected to receive back 2 missing, got %v", len(missing))
 				}
 
 				if len(tags) != 3 {
@@ -395,10 +370,10 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		nb.Id = nid
 	}
 
-	ns := make([]*models.Note, 0, 20)
+	ns := make([]models.Note, 0, 20)
 	for i := range 20 {
 
-		n := &models.Note{
+		n := models.Note{
 			Title:   fmt.Sprintf("title-%v", i+1),
 			Content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
 			Section: *secs[8],
@@ -522,9 +497,12 @@ func TestSQLiteNoteRepository(t *testing.T) {
 					return fmt.Errorf("failed to delete note: %w", err)
 				}
 
-				dnb, _ := nr.FindById(n.Id)
-				if dnb != nil {
-					return fmt.Errorf("deleted note id was returned")
+				_, err = nr.FindById(n.Id)
+				if !errors.Is(err, sql.ErrNoRows) {
+					if err == nil {
+						return fmt.Errorf("deleted section id was returned")
+					}
+					return fmt.Errorf("failed to query database: %s", err.Error())
 				}
 
 				return nil

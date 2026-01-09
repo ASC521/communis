@@ -8,7 +8,7 @@ type Tag struct {
 }
 
 type PaginatedTags struct {
-	Tags       []*Tag
+	Tags       []Tag
 	Limit      int
 	Offset     int
 	HasMore    bool
@@ -17,12 +17,13 @@ type PaginatedTags struct {
 
 type TagRepository interface {
 	Create(t *Tag) (int64, error)
-	FindById(id int64) (*Tag, error)
+	FindById(id int64) (Tag, error)
+	FindByName(name string) (Tag, error)
 	Update(t *Tag) error
 	Delete(id int64) error
-	ListAll() ([]*Tag, error)
-	List(limit, offset int) (*PaginatedTags, error)
-	Query(names []string) (found []Tag, missing []string, err error)
+	ListAll() ([]Tag, error)
+	List(limit, offset int) (PaginatedTags, error)
+	Query(ids []int64) ([]Tag, error)
 }
 
 type Section struct {
@@ -31,7 +32,7 @@ type Section struct {
 }
 
 type PaginatedSections struct {
-	Sections   []*Section
+	Sections   []Section
 	Limit      int
 	Offset     int
 	HasMore    bool
@@ -40,12 +41,11 @@ type PaginatedSections struct {
 
 type SectionRepository interface {
 	Create(s *Section) (int64, error)
-	FindById(id int64) (*Section, error)
-	FindByName(name string) (*Section, error)
+	FindById(id int64) (Section, error)
+	FindByName(name string) (Section, error)
 	Update(s *Section) error
 	Delete(id int64) error
-	ListAll() ([]*Section, error)
-	List(limit, offset int) (*PaginatedSections, error)
+	ListAll() ([]Section, error)
 }
 
 type Note struct {
@@ -82,12 +82,12 @@ type NoteSearchResult struct {
 }
 
 type NoteRepository interface {
-	Create(n *Note) (int64, error)
+	Create(n Note) (int64, error)
 	Exists(title string) (int64, error)
-	FindById(id int64) (*Note, error)
-	Update(n *Note) error
+	FindById(id int64) (Note, error)
+	Update(n Note) error
 	Delete(id int64) error
-	List(limit, offset int) (*PaginatedNotes, error)
-	Search(q string) ([]*NoteSearchResult, error)
-	RecentUpdates(limit uint) ([]*NoteDetail, error)
+	List(limit, offset int) (PaginatedNotes, error)
+	Search(q string) ([]NoteSearchResult, error)
+	RecentUpdates(limit uint) ([]NoteDetail, error)
 }

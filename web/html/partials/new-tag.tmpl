@@ -1,0 +1,12 @@
+{{ define "new-tag" }}
+{{ if ne .ErrMsg "" }}
+<p>{{ .ErrMsg }}</p>
+{{ else }}
+<p>{{ .SuccessMsg }}</p>
+
+<fieldset id="tag-selector" tabindex="0" hx-swap-oob="append:#tag-selector">
+  <input type="checkbox" name="tags" id="tag-{{ .Tag.Id }}" value={{ .Tag.Id }} checked>
+  <label for="tag-{{ .Tag.Id }}">{{ .Tag.Name }}</label>
+</fieldset>
+{{ end }}
+{{ end }}

@@ -6,11 +6,13 @@
 (G) Place tags and section into info side panel of view note screen +v1
 (H) Add advanced query support to search screen +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
+Bug Fix: Executing template is partially writing to screen - should be finding errors when writing first to buffer
 Link between different notes
 Multi-user support +v1
 Split screen notes
 Tabbed notes
 User authentication +v1
+Refactor TemplateCache - don't like having to pass in file name and then defined template name
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1

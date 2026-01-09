@@ -29,7 +29,7 @@ func (r *sectionRepository) Create(s *models.Section) (int64, error) {
 
 }
 
-func (r *sectionRepository) FindById(id int64) (*models.Section, error) {
+func (r *sectionRepository) FindById(id int64) (models.Section, error) {
 	sql := "SELECT id, name FROM sections WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -37,12 +37,12 @@ func (r *sectionRepository) FindById(id int64) (*models.Section, error) {
 	nb := models.Section{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&nb.Id, &nb.Name)
 	if err != nil {
-		return nil, err
+		return models.Section{}, err
 	}
-	return &nb, nil
+	return nb, nil
 }
 
-func (r *sectionRepository) FindByName(name string) (*models.Section, error) {
+func (r *sectionRepository) FindByName(name string) (models.Section, error) {
 	sql := "SELECT id, name FROM sections WHERE name = ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -50,9 +50,9 @@ func (r *sectionRepository) FindByName(name string) (*models.Section, error) {
 	nb := models.Section{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&nb.Id, &nb.Name)
 	if err != nil {
-		return nil, err
+		return models.Section{}, err
 	}
-	return &nb, nil
+	return nb, nil
 }
 
 func (r *sectionRepository) Update(s *models.Section) error {
@@ -82,7 +82,7 @@ func (r *sectionRepository) Delete(id int64) error {
 	return nil
 }
 
-func (r *sectionRepository) ListAll() ([]*models.Section, error) {
+func (r *sectionRepository) ListAll() ([]models.Section, error) {
 	query := "SELECT id, name FROM sections ORDER BY id ASC"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -92,9 +92,9 @@ func (r *sectionRepository) ListAll() ([]*models.Section, error) {
 	}
 	defer rows.Close()
 
-	var secs []*models.Section
+	var secs []models.Section
 	for rows.Next() {
-		sec := &models.Section{}
+		sec := models.Section{}
 		err = rows.Scan(&sec.Id, &sec.Name)
 		if err != nil {
 			return nil, err
@@ -108,48 +108,4 @@ func (r *sectionRepository) ListAll() ([]*models.Section, error) {
 	}
 
 	return secs, nil
-}
-
-func (r *sectionRepository) List(limit, offset int) (*models.PaginatedSections, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-
-	if offset < 0 {
-		offset = 0
-	}
-
-	query := `SELECT id, name FROM sections ORDER BY id ASC LIMIT ? OFFSET ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
-	defer cancel()
-	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query sections: %w", err)
-	}
-	defer rows.Close()
-
-	secs := make([]*models.Section, 0, limit)
-	for rows.Next() {
-		sec := &models.Section{}
-		err = rows.Scan(&sec.Id, &sec.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		secs = append(secs, sec)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating sections: %w", err)
-	}
-
-	var nextOffset *int
-	hasMore := len(secs) > limit
-	if hasMore {
-		secs = secs[:limit]
-		next := offset + limit
-		nextOffset = &next
-	}
-
-	return &models.PaginatedSections{Sections: secs, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
 }

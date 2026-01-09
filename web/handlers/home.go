@@ -15,7 +15,7 @@ func HomeGet(
 
 	type templateData struct {
 		Sections      []*models.Section
-		ModifiedNotes []*models.NoteDetail
+		ModifiedNotes []models.NoteDetail
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

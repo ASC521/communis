@@ -2,55 +2,85 @@
 
 {{define "main"}}
 
-<form action="{{ .ActionDest }}" method="POST">
 
-  <input type="text" id="title" name="title" value="{{ .Note.Title }}" placeholder="Title"/>
-  
+{{ if eq .Type "NEW-NOTE" }}
+<form action="/note" method="POST" hx-boost="true">
+  {{ else }}
+<form action="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}" method="PUT" hx-boost="true">
+ {{ end }}
+  <div class="flex">
+    <input class="flex-100" type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title"/>
+    <button class="flex-1" type="button">Preview</button>
+    <!-- TODO hide delete button if it is a new note since there is nothing to delete -->
+    <button class="flex-1" type="button" hx-target="body" hx-delete="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title }}"  hx-confirm="Delete {{ .FormData.Title }}?">Delete</button>
+    <input class="flex-1" type="submit" value="Save"/>
+  </div>
+
+  <div class="flex">
+    <div class="flex-1">
+      <!-- <label for="section">Section: </label> -->
+      <select list="section-list" id="section" name="section">
+	<option value="-1">Section</option>
+	{{ range .AllSections }}
+		{{ if eq .Id $.FormData.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
+		{{ else }}<option value="{{ .Id }}">{{ .Name }}</option>
+		{{ end }}
+	{{ end }}
+      </select>
+
+      {{ with .FieldErrors.section }}
+      <label class="error">{{ . }}</label>
+      {{ end }}
+    </div>
+
+    <div class="flex-5 flex">
+
+      <dialog id="select-tag-modal" closedBy="any">
+	<div class="flex items-center justify-space-between">
+	<h2>Select Tags</h2>
+	<button class="close-btn" type="button" command="close" commandFor="select-tag-modal">&times;</button>
+	</div>
+	<div class="flex">
+	  <output class="toast" id="new-tag-output"></output>
+	  <input type="text" name="tag-name" id="tag-name" placeholder="Search Tags...">
+	  <button id="note-edit-create-tag-btn" type="button" hx-post="/tag" hx-include="[name='tag-name']" hx-target="#new-tag-output">+</button>
+	  </div>
+      <fieldset id="tag-selector" tabindex="0">
+	<legend>Available Tags</legend>
+	{{ range .AllTags }}
+	{{ if containsInt $.FormData.TagIds .Id }}
+	<input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }} checked>
+	{{ else }}
+	<input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }}>
+	{{ end }}
+	<label for="tag-{{ .Id }}">{{ .Name }}</label>
+	{{ end }}
+      </fieldset>
+      </dialog>
+        <button id="btn-select-tag-modal" type="button" command="show-modal" commandFor="select-tag-modal">
+  	       Tags<span> (</span><span id="checked-tag-count">{{ len .FormData.TagIds }}</span><span>)</span>
+        </button>
+    </div>
+  </div>
+
+
   <br>
 
-  {{ with .FieldErrors.title  }}
-  <label class="error">{{.}}</label>
-  {{ end }}
-
-
-  <div id="overtype-editor" data-init-value="{{ .Note.Content }}"></div>
-
-  <label for="section">Section: </label>
-  <select list="section-list" id="section" name="section">
-    {{ range .AllSections }}
-      {{ if eq .Name $.Note.Section.Name }}
-      <option value="{{ .Name }}" selected>{{ .Name }}</option>
-      {{ else }}
-      <option value="{{ .Name }}">{{ .Name }}</option>
-      {{ end }}
-    {{ end }}
-  </select>
-
-  {{ with .FieldErrors.section }}
-    <label class="error">{{ . }}</label>
-  {{ end }}
-
-    <fieldset>
-      <legend>Tags:</legend>
-      {{ with .FieldErrors.tags }}
-      <label>{{ . }}</label>
-      {{ end }}
-
-      <div id="tags-container" data-tags>
-	<div data-tags-list>
-	{{ range .Note.Tags }}
-	<div class="input-group">
-	  <input type="text" name="tags-list" value="{{ .Name }}">
-	  <button type="button" data-tags-remove>X</button>
-	</div>
-	{{ end }}
-	</div>
-      <button type="button" data-tags-add>+ Add Tag</button>
-      </div>
-    </fieldset>
-    <br>
-  <div>
-    <input type="submit" value="Save" />
+  <div class="md-editor-container">
+    <div class="md-toolbar flex">
+      <button type="button">Bold</button>
+      <button type="button">Italic</button>
+      <button type="button">Inline Code</button>
+      <button type="button">H1</button>
+      <button type="button">H2</button>
+      <button type="button">H3</button>
+      <button type="button">Unordered List</button>
+      <button type="button">Ordered List</button>
+      <button type="button">Quote</button>
+    </div>
+    <div class="md-editor">
+      <textarea name="note-content" class="height-full">{{ .FormData.Content  }}</textarea>
+    </div>
   </div>
 </form>
 {{end}}

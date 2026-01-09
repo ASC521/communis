@@ -87,7 +87,7 @@ func (r *tagRepository) CheckMissing(names []string) ([]string, error) {
 
 }
 
-func (r *tagRepository) FindById(id int64) (*models.Tag, error) {
+func (r *tagRepository) FindById(id int64) (models.Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -95,9 +95,22 @@ func (r *tagRepository) FindById(id int64) (*models.Tag, error) {
 	t := models.Tag{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&t.Id, &t.Name)
 	if err != nil {
-		return nil, err
+		return models.Tag{}, err
 	}
-	return &t, nil
+	return t, nil
+}
+
+func (r *tagRepository) FindByName(name string) (models.Tag, error) {
+	sql := "SELECT id, name FROM tags WHERE name = ?;"
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	t := models.Tag{}
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&t.Id, &t.Name)
+	if err != nil {
+		return models.Tag{}, err
+	}
+	return t, nil
 }
 
 func (r *tagRepository) Update(t *models.Tag) error {
@@ -147,8 +160,8 @@ func (r *tagRepository) Delete(id int64) error {
 
 }
 
-func (r *tagRepository) ListAll() ([]*models.Tag, error) {
-	query := "SELECT id, name FROM tags ORDER BY id ASC"
+func (r *tagRepository) ListAll() ([]models.Tag, error) {
+	query := "SELECT id, name FROM tags ORDER BY name ASC"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 
@@ -158,9 +171,9 @@ func (r *tagRepository) ListAll() ([]*models.Tag, error) {
 	}
 	defer rows.Close()
 
-	ts := []*models.Tag{}
+	ts := []models.Tag{}
 	for rows.Next() {
-		t := &models.Tag{}
+		t := models.Tag{}
 		err = rows.Scan(&t.Id, &t.Name)
 		if err != nil {
 			return nil, err
@@ -177,7 +190,7 @@ func (r *tagRepository) ListAll() ([]*models.Tag, error) {
 
 }
 
-func (r *tagRepository) List(limit, offset int) (*models.PaginatedTags, error) {
+func (r *tagRepository) List(limit, offset int) (models.PaginatedTags, error) {
 
 	if limit <= 0 {
 		limit = 10
@@ -193,23 +206,23 @@ func (r *tagRepository) List(limit, offset int) (*models.PaginatedTags, error) {
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query tags: %w", err)
+		return models.PaginatedTags{}, fmt.Errorf("failed to query tags: %w", err)
 	}
 	defer rows.Close()
 
-	ts := make([]*models.Tag, 0, limit)
+	ts := make([]models.Tag, 0, limit)
 	for rows.Next() {
-		t := &models.Tag{}
+		t := models.Tag{}
 		err = rows.Scan(&t.Id, &t.Name)
 		if err != nil {
-			return nil, err
+			return models.PaginatedTags{}, err
 		}
 
 		ts = append(ts, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating tags: %w", err)
+		return models.PaginatedTags{}, fmt.Errorf("error iterating tags: %w", err)
 	}
 
 	var nextOffset *int
@@ -220,15 +233,15 @@ func (r *tagRepository) List(limit, offset int) (*models.PaginatedTags, error) {
 		nextOffset = &next
 	}
 
-	return &models.PaginatedTags{Tags: ts, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
+	return models.PaginatedTags{Tags: ts, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
 
 }
 
-func (r *tagRepository) Query(names []string) (found []models.Tag, missing []string, err error) {
-	placeholders := make([]string, len(names))
-	args := make([]any, len(names))
+func (r *tagRepository) Query(ids []int64) ([]models.Tag, error) {
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
 
-	for i, n := range names {
+	for i, n := range ids {
 		placeholders[i] = "?"
 		args[i] = n
 	}
@@ -236,7 +249,7 @@ func (r *tagRepository) Query(names []string) (found []models.Tag, missing []str
 	q := fmt.Sprintf(`
 		SELECT id, name
 		FROM tags
-		WHERE name in (%s);
+		WHERE id in (%s);
 		`,
 		strings.Join(placeholders, ","),
 	)
@@ -246,32 +259,22 @@ func (r *tagRepository) Query(names []string) (found []models.Tag, missing []str
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, q, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	fset := map[string]bool{}
+	tags := []models.Tag{}
 	for rows.Next() {
 		var t models.Tag
 		err = rows.Scan(&t.Id, &t.Name)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
-		fset[t.Name] = true
-
-		found = append(found, t)
+		tags = append(tags, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, nil, fmt.Errorf("failed iterating sql rows: %w", err)
+		return nil, fmt.Errorf("failed iterating sql rows: %w", err)
 	}
-
-	for _, n := range names {
-		_, exists := fset[n]
-		if !exists {
-			missing = append(missing, n)
-		}
-	}
-
-	return found, missing, nil
+	return tags, nil
 }

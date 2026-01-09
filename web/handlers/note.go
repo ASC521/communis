@@ -8,8 +8,8 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/web/handlers/validator"
@@ -17,75 +17,138 @@ import (
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
-type createNoteForm struct {
-	ActionDest  string
-	Note        models.Note
-	AllTags     []*models.Tag
-	AllSections []*models.Section
-	validator.Validator
+const newNote = "NEW-NOTE"
+const editNote = "EDIT-NOTE"
+
+type tempDataCreateNote struct {
+	Type        string
+	FormData    noteForm
+	AllTags     []models.Tag
+	AllSections []models.Section
+	FieldErrors map[string]string
 }
 
-func validCreateNoteForm(r *http.Request, nr models.NoteRepository, sr models.SectionRepository, tr models.TagRepository) (createNoteForm, error) {
+type noteForm struct {
+	Id        int64
+	Title     string
+	Content   string
+	TagIds    []int64
+	SectionId int64
+}
 
+func parseNoteForm(r *http.Request) (noteForm, error) {
 	err := r.ParseForm()
 	if err != nil {
-		return createNoteForm{}, err
+		return noteForm{}, err
 	}
 
-	nf := createNoteForm{Note: models.Note{Content: r.PostForm.Get("content")}}
-
+	nf := noteForm{Id: 0}
 	pid := r.PathValue("id")
 	if pid != "" {
 		id, err := strconv.ParseInt(pid, 10, 64)
 		if err != nil {
-			return createNoteForm{}, err
+			return noteForm{}, err
 		}
-		nf.Note.Id = id
+		nf.Id = id
 	}
 
 	title := r.PostForm.Get("title")
-	nf.CheckField(validator.NotBlank(title), "title", "this field cannot be empty")
-	nf.CheckField(validator.MaxChars(title, 100), "title", "this field cannot be more than 100 characters")
-	nid, err := nr.Exists(title)
-	if err != nil {
-		return createNoteForm{}, err
-	}
+	nf.Title = title
 
-	if nf.Note.Id != 0 && nid != nf.Note.Id {
-		nf.CheckField(!validator.Equals(nid, -1), "title", "title already exists")
-	}
+	content := r.PostForm.Get("note-content")
+	nf.Content = content
 
-	nf.Note.Title = title
-
-	secForm := r.PostForm.Get("section")
-	nf.CheckField(validator.NotBlank(secForm), "section", "this field cannot be empty")
-	section, err := sr.FindByName(secForm)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			nf.AddFieldError("section", fmt.Sprintf("section %s does not exist", secForm))
-		} else {
-			return createNoteForm{}, err
-		}
-	} else {
-		nf.Note.Section = *section
-	}
-
-	tagsForm := r.PostForm["tags-list"]
-	if len(tagsForm) > 0 {
-		// TODO: I don't like this API for validating tags.  Update it.
-		validTags, missing, err := tr.Query(tagsForm)
+	tagsF := r.PostForm["tags"]
+	tagIds := make([]int64, len(tagsF))
+	for i, t := range tagsF {
+		tid, err := strconv.ParseInt(t, 10, 64)
 		if err != nil {
-			return createNoteForm{}, err
+			return noteForm{}, err
 		}
+		tagIds[i] = tid
+	}
+	nf.TagIds = tagIds
 
-		if len(missing) > 0 {
-			mstr := strings.Join(missing, ", ")
-			nf.AddFieldError("tags", fmt.Sprintf("tags %s have not been created", mstr))
+	secF := r.PostForm.Get("section")
+	if secF != "" {
+		sid, err := strconv.ParseInt(secF, 10, 64)
+		if err != nil {
+			return noteForm{}, err
 		}
-		nf.Note.Tags = validTags
+		nf.SectionId = sid
 	}
 
 	return nf, nil
+}
+
+func validateNoteForm(nf noteForm, nr models.NoteRepository, sr models.SectionRepository, tr models.TagRepository) (map[string]string, error) {
+	fe := map[string]string{}
+
+	// Note Id Validation
+	if nf.Id > 0 {
+		_, err := nr.FindById(nf.Id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				fe["id"] = fmt.Sprintf("id %d does not exist", nf.Id)
+			}
+			return nil, err
+		}
+	}
+
+	// Title Validation
+	if !validator.NotBlank(nf.Title) {
+		fe["title"] = "title cannot be empty"
+
+	}
+	if !validator.MaxChars(nf.Title, 100) {
+		fe["title"] = "title cannot be more than 100 characters"
+	}
+
+	nid, err := nr.Exists(nf.Title)
+	// Check for database error - filter out sql.ErrNoRows
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if err == nil && nid != nf.Id {
+		fe["title"] = fmt.Sprintf("title %s exists", nf.Title)
+	}
+
+	// Section Validation
+	if nf.SectionId <= 0 {
+		fe["section"] = "section does not exist"
+	} else {
+		_, err = sr.FindById(nf.SectionId)
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return nil, err
+			}
+			fe["section"] = "section does not exist"
+		}
+	}
+
+	// Tag Validation
+	if len(nf.TagIds) > 0 {
+		tags, err := tr.Query(nf.TagIds)
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return nil, err
+			}
+			fe["tags"] = fmt.Sprintf("tag %v does not exist", nf.TagIds)
+		}
+
+		if len(tags) != len(nf.TagIds) {
+			for _, tid := range nf.TagIds {
+				if !slices.ContainsFunc(tags, func(t models.Tag) bool {
+					return t.Id == tid
+				}) {
+					fe["tags"] = fmt.Sprintf("tags %v does not exist", tid)
+				}
+			}
+		}
+
+	}
+
+	return fe, nil
 
 }
 
@@ -110,12 +173,18 @@ func NoteNewGet(
 			return
 		}
 
-		nf := createNoteForm{AllSections: sec, AllTags: tags, ActionDest: "/new"}
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", nf)
+		td := tempDataCreateNote{
+			Type:        newNote,
+			FormData:    noteForm{},
+			AllTags:     tags,
+			AllSections: sec,
+			FieldErrors: map[string]string{},
+		}
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", td)
 	})
 }
 
-func NoteNewPost(
+func NotePost(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
@@ -124,13 +193,20 @@ func NoteNewPost(
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		vnf, err := validCreateNoteForm(r, nr, sr, tr)
+		nf, err := parseNoteForm(r)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		if !vnf.Valid() {
+		fe, err := validateNoteForm(nf, nr, sr, tr)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		if len(fe) > 0 {
+			logger.Debug("Not creation did not pass validation", "fieldErrors", fe)
 
 			allTags, err := tr.ListAll()
 			if err != nil {
@@ -144,20 +220,35 @@ func NoteNewPost(
 				return
 			}
 
-			vnf.AllTags = allTags
-			vnf.AllSections = secs
-			vnf.ActionDest = "/new"
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", vnf)
+			td := tempDataCreateNote{
+				Type:        newNote,
+				FormData:    nf,
+				AllTags:     allTags,
+				AllSections: secs,
+				FieldErrors: fe,
+			}
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", td)
 			return
 		}
 
-		id, err := nr.Create(&vnf.Note)
+		ts := make([]models.Tag, len(nf.TagIds))
+		for i, tid := range nf.TagIds {
+			ts[i] = models.Tag{Id: tid}
+		}
+		n := models.Note{
+			Title:   nf.Title,
+			Content: nf.Content,
+			Section: models.Section{Id: nf.SectionId},
+			Tags:    ts,
+		}
+
+		id, err := nr.Create(n)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, slugify(vnf.Note.Title)), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, slugify(nf.Title)), http.StatusSeeOther)
 
 	})
 }
@@ -201,18 +292,30 @@ func NoteEditGet(
 			return
 		}
 
-		nf := createNoteForm{
-			Note:        *n,
-			AllTags:     tags,
-			AllSections: sec,
-			ActionDest:  fmt.Sprintf("/edit/%v/%s", id, slugify(n.Title)),
+		tids := make([]int64, len(n.Tags)+1)
+		for i, t := range n.Tags {
+			tids[i] = t.Id
+		}
+		nf := noteForm{
+			Id:        id,
+			Title:     n.Title,
+			Content:   n.Content,
+			TagIds:    tids,
+			SectionId: n.Section.Id,
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", nf)
+		td := tempDataCreateNote{
+			Type:        editNote,
+			FormData:    nf,
+			AllTags:     tags,
+			AllSections: sec,
+			FieldErrors: map[string]string{},
+		}
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", td)
 	})
 }
 
-func NoteEditPost(
+func NotePut(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
@@ -221,14 +324,24 @@ func NoteEditPost(
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		vnf, err := validCreateNoteForm(r, nr, sr, tr)
+		nf, err := parseNoteForm(r)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+		fe, err := validateNoteForm(nf, nr, sr, tr)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		id := r.PathValue("id")
-		if !vnf.Valid() {
+		if nf.Id <= 0 {
+			logger.Warn("received a PUT request for a new note")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if len(fe) > 0 {
 
 			allTags, err := tr.ListAll()
 			if err != nil {
@@ -242,22 +355,37 @@ func NoteEditPost(
 				return
 			}
 
-			vnf.AllTags = allTags
-			vnf.AllSections = secs
-			vnf.ActionDest = fmt.Sprintf("/edit/%v/%s", id, r.PathValue("slug"))
+			td := tempDataCreateNote{
+				Type:        editNote,
+				FormData:    nf,
+				AllTags:     allTags,
+				AllSections: secs,
+				FieldErrors: fe,
+			}
 
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", vnf)
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", td)
 			return
 
 		}
 
-		err = nr.Update(&vnf.Note)
+		ts := make([]models.Tag, len(nf.TagIds))
+		for i, tid := range nf.TagIds {
+			ts[i] = models.Tag{Id: tid}
+		}
+		n := models.Note{
+			Id:      nf.Id,
+			Title:   nf.Title,
+			Content: nf.Content,
+			Section: models.Section{Id: nf.SectionId},
+			Tags:    ts,
+		}
+		err = nr.Update(n)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, slugify(vnf.Note.Title)), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", nf.Id, slugify(nf.Title)), http.StatusSeeOther)
 
 	})
 }
@@ -312,7 +440,7 @@ func NoteViewGet(
 			return
 		}
 
-		vnd := viewNoteData{Note: *n, HTMLContent: template.HTML(b.String())}
+		vnd := viewNoteData{Note: n, HTMLContent: template.HTML(b.String())}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", vnd)
 	})
 }
@@ -324,7 +452,7 @@ func NoteSearchGet(
 ) http.Handler {
 
 	type templateData struct {
-		Notes []*models.NoteSearchResult
+		Notes []models.NoteSearchResult
 		Query string
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -341,16 +469,38 @@ func NoteSearchGet(
 			td.Notes = srs
 			td.Query = q
 		} else {
-			td.Notes = []*models.NoteSearchResult{}
+			td.Notes = []models.NoteSearchResult{}
 			td.Query = ""
 		}
 
 		name := r.Header.Get("Hx-Source")
 		if name == "search" {
-			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table.tmpl", td)
+			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table.tmpl", "note-table", td)
 			return
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", td)
 
+	})
+}
+
+func NoteDelete(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	nr models.NoteRepository,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if err != nil || id < 1 {
+			http.NotFound(w, r)
+			return
+		}
+
+		err = nr.Delete(id)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	})
 }

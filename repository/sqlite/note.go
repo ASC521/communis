@@ -31,7 +31,7 @@ func NewNoteRepository(db *sqlitex.SQLiteDB, ctx context.Context) *noteRepositor
 	return &noteRepository{db: db, ctx: ctx}
 }
 
-func (r *noteRepository) Create(n *models.Note) (int64, error) {
+func (r *noteRepository) Create(n models.Note) (int64, error) {
 	return sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int64, error) {
 		res, err := tx.Exec("INSERT INTO notes (title, content, section) VALUES (?, ?, ?);", n.Title, n.Content, n.Section.Id)
 		if err != nil {
@@ -71,16 +71,13 @@ func (r *noteRepository) Exists(title string) (int64, error) {
 	var id int64
 	err := r.db.Read.QueryRowContext(ctxWTO, q, title).Scan(&id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return -1, nil
-		}
 		return -1, err
 	}
 
 	return id, nil
 }
 
-func (r *noteRepository) FindById(id int64) (*models.Note, error) {
+func (r *noteRepository) FindById(id int64) (models.Note, error) {
 	q := `
      SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags_json
      FROM notes_details
@@ -93,32 +90,32 @@ func (r *noteRepository) FindById(id int64) (*models.Note, error) {
 	err := r.db.Read.QueryRowContext(ctxWTO, q, id).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return models.Note{}, err
 		}
-		return nil, fmt.Errorf("failed to scan row for note: %w", err)
+		return models.Note{}, fmt.Errorf("failed to scan row for note: %w", err)
 	}
 
 	err = json.Unmarshal([]byte(tagJSON), &n.Tags)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse tags json: %w", err)
+		return models.Note{}, fmt.Errorf("failed to parse tags json: %w", err)
 	}
 
 	created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse created at time: %w", err)
+		return models.Note{}, fmt.Errorf("failed to parse created at time: %w", err)
 	}
 	n.CreatedAt = created
 
 	updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse updated at time: %w", err)
+		return models.Note{}, fmt.Errorf("failed to parse updated at time: %w", err)
 	}
 	n.LastUpdatedAt = updated
 
-	return &n, nil
+	return n, nil
 }
 
-func (r *noteRepository) Update(n *models.Note) error {
+func (r *noteRepository) Update(n models.Note) error {
 	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delNoteFTSSql, n.Id)
@@ -178,7 +175,7 @@ func (r *noteRepository) Delete(id int64) error {
 	return err
 }
 
-func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error) {
+func (r *noteRepository) List(limit, offset int) (models.PaginatedNotes, error) {
 
 	if limit <= 0 {
 		limit = 10
@@ -197,7 +194,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query notes: %w", err)
+		return models.PaginatedNotes{}, fmt.Errorf("failed to query notes: %w", err)
 	}
 	defer rows.Close()
 
@@ -207,18 +204,18 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 		var createdStr, updatedStr string
 		err = rows.Scan(&n.Id, &n.Title, &createdStr, &updatedStr)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan rows for note: %w", err)
+			return models.PaginatedNotes{}, fmt.Errorf("failed to scan rows for note: %w", err)
 		}
 
 		created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse created at time: %w", err)
+			return models.PaginatedNotes{}, fmt.Errorf("failed to parse created at time: %w", err)
 		}
 		n.CreatedAt = created
 
 		updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse updated at time: %w", err)
+			return models.PaginatedNotes{}, fmt.Errorf("failed to parse updated at time: %w", err)
 		}
 		n.LastUpdatedAt = updated
 
@@ -226,7 +223,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating notes: %w", err)
+		return models.PaginatedNotes{}, fmt.Errorf("error iterating notes: %w", err)
 	}
 
 	var nextOffset *int
@@ -237,7 +234,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 		nextOffset = &next
 	}
 
-	return &models.PaginatedNotes{
+	return models.PaginatedNotes{
 		Notes:      ns,
 		Limit:      limit,
 		Offset:     offset,
@@ -247,7 +244,7 @@ func (r *noteRepository) List(limit, offset int) (*models.PaginatedNotes, error)
 
 }
 
-func (r *noteRepository) Search(q string) ([]*models.NoteSearchResult, error) {
+func (r *noteRepository) Search(q string) ([]models.NoteSearchResult, error) {
 
 	sql := `SELECT
 		  nd.id,
@@ -269,9 +266,9 @@ func (r *noteRepository) Search(q string) ([]*models.NoteSearchResult, error) {
 		return nil, err
 	}
 
-	srs := []*models.NoteSearchResult{}
+	srs := []models.NoteSearchResult{}
 	for rows.Next() {
-		sr := &models.NoteSearchResult{}
+		sr := models.NoteSearchResult{}
 		err = rows.Scan(&sr.Id, &sr.Title, &sr.TitleHighlight, &sr.ContentSnippet, &sr.TagNames)
 		if err != nil {
 			return nil, err
@@ -287,7 +284,7 @@ func (r *noteRepository) Search(q string) ([]*models.NoteSearchResult, error) {
 
 }
 
-func (r *noteRepository) RecentUpdates(limit uint) ([]*models.NoteDetail, error) {
+func (r *noteRepository) RecentUpdates(limit uint) ([]models.NoteDetail, error) {
 
 	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
 		FROM notes as n
@@ -300,7 +297,7 @@ func (r *noteRepository) RecentUpdates(limit uint) ([]*models.NoteDetail, error)
 	if err != nil {
 		return nil, err
 	}
-	ru := []*models.NoteDetail{}
+	ru := []models.NoteDetail{}
 	for rows.Next() {
 		nd := models.NoteDetail{}
 		var createdStr, updatedStr string
@@ -318,7 +315,7 @@ func (r *noteRepository) RecentUpdates(limit uint) ([]*models.NoteDetail, error)
 			return nil, err
 		}
 		nd.LastUpdatedAt = updated
-		ru = append(ru, &nd)
+		ru = append(ru, nd)
 	}
 
 	if err = rows.Err(); err != nil {

@@ -5,8 +5,7 @@
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/static/vendor/js/htmx_v4-0-0_alpha4.js"></script>
-    <script type="module" src="/static/js/event-listeners.js"></script>
-    <script src="/static/js/add-tags.js"></script>
+    <script src="/static/js/fieldset-filter.js"></script>
     <link rel="stylesheet" href="/static/vendor/css/water-dark.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <title>{{template "title" . }}</title>
@@ -15,7 +14,7 @@
 
     <nav class="flex width-full">
       <a href="/" hx-boost="true">Home</a>
-      <a href="/new" hx-boost="true">New Note</a>
+      <a href="/note/new" hx-boost="true">New Note</a>
       <a href="/sections" hx-boost="true">Sections</a>
       <a href="/index" hx-boost="true">Index</a>
     </nav>

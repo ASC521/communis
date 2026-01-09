@@ -20,16 +20,17 @@ func routes(
 
 	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
 
-	mux.Handle("GET /new", handlers.NoteNewGet(tc, logger, tr, sr))
-	mux.Handle("POST /new", handlers.NoteNewPost(tc, logger, nr, sr, tr))
-
 	mux.Handle("GET /note/{id}/{slug}", handlers.NoteViewGet(tc, logger, nr))
-
+	mux.Handle("GET /note/new", handlers.NoteNewGet(tc, logger, tr, sr))
+	mux.Handle("POST /note", handlers.NotePost(tc, logger, nr, sr, tr))
+	mux.Handle("PUT /note/{id}/{slug}", handlers.NotePut(tc, logger, nr, sr, tr))
+	mux.Handle("DELETE /note/{id}/{slug}", handlers.NoteDelete(tc, logger, nr))
 	mux.Handle("GET /edit/{id}/{slug}", handlers.NoteEditGet(tc, logger, nr, sr, tr))
-	mux.Handle("POST /edit/{id}/{slug}", handlers.NoteEditPost(tc, logger, nr, sr, tr))
 
 	mux.Handle("GET /section", handlers.SectionGet(tc, logger, sr))
 	mux.Handle("GET /search", handlers.NoteSearchGet(tc, logger, nr))
+
+	mux.Handle("POST /tag", handlers.TagPost(tc, logger, tr))
 
 	mux.Handle("GET /{$}", handlers.HomeGet(tc, logger, nr))
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}

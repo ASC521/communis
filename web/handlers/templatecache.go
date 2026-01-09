@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"slices"
 )
 
 type TemplateCache struct {
@@ -23,8 +24,9 @@ func NewTemplateCache(files fs.FS) (*TemplateCache, error) {
 	}
 
 	funcMap := template.FuncMap{
-		"slugify":  slugify,
-		"safeHTML": safeHTML,
+		"slugify":     slugify,
+		"safeHTML":    safeHTML,
+		"containsInt": slices.Contains[[]int64],
 	}
 
 	partialFiles, err := fs.Glob(files, "html/partials/*.tmpl")
@@ -81,6 +83,7 @@ func (t *TemplateCache) RenderPage(
 	err := ts.ExecuteTemplate(buf, "layout", data)
 	if err != nil {
 		serverError(logger, w, r, err)
+		return
 	}
 	w.WriteHeader(status)
 	buf.WriteTo(w)
@@ -91,18 +94,20 @@ func (t *TemplateCache) RenderPartial(
 	w http.ResponseWriter,
 	r *http.Request,
 	status int,
+	tempFileName string,
 	tempName string,
 	data any,
 ) {
-	ts, ok := t.partials[tempName]
+	ts, ok := t.partials[tempFileName]
 	if !ok {
-		serverError(logger, w, r, fmt.Errorf("template %s does not exist", tempName))
+		serverError(logger, w, r, fmt.Errorf("template %s does not exist", tempFileName))
 		return
 	}
 	buf := new(bytes.Buffer)
-	err := ts.ExecuteTemplate(buf, "note-table", data)
+	err := ts.ExecuteTemplate(buf, tempName, data)
 	if err != nil {
 		serverError(logger, w, r, err)
+		return
 	}
 	w.WriteHeader(status)
 	buf.WriteTo(w)
