@@ -68,18 +68,20 @@
 
   <div class="md-editor-container">
     <div class="md-toolbar flex">
-      <button type="button">Bold</button>
-      <button type="button">Italic</button>
-      <button type="button">Inline Code</button>
-      <button type="button">H1</button>
-      <button type="button">H2</button>
-      <button type="button">H3</button>
-      <button type="button">Unordered List</button>
-      <button type="button">Ordered List</button>
-      <button type="button">Quote</button>
+      <button type="button" id="mde-bold-btn">Bold</button>
+      <button type="button" id="mde-italic-btn">Italic</button>
+      <button type="button" id="mde-link-btn">Link</button>
+      <button type="button" id="mde-inline-code-btn">Inline Code</button>
+      <button type="button" id="mde-code-block-btn">Code Block</button>
+      <button type="button" id="mde-h1-btn">H1</button>
+      <button type="button" id="mde-h2-btn">H2</button>
+      <button type="button" id="mde-h3-btn">H3</button>
+      <button type="button" id="mde-unordered-list-button">Unordered List</button>
+      <button type="button" id="mde-ordered-list-button">Ordered List</button>
+      <button type="button" id="mde-quote-btn">Quote</button>
     </div>
     <div class="md-editor">
-      <textarea name="note-content" class="height-full">{{ .FormData.Content  }}</textarea>
+      <textarea id="mde-textarea" name="note-content" class="height-full">{{ .FormData.Content  }}</textarea>
     </div>
   </div>
 </form>

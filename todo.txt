@@ -1,5 +1,6 @@
-(A) Redo Layout of note editor screen +v1
-(B) Add Preview Note on Edit Screen +v1
+(A) Add undo/redo to markdown editor +v1 +create-note-work
+(B) Move to icons from text buttons +v1 +create-note-rework
+(C) Add Preview Note on Edit Screen +v1
 (D) Add section view page - list associated notes in section, have links to edit name or delete +v1
 (E) Build tag index +v1
 (F) Add way to go to edit screen from view note screen +v1
@@ -9,14 +10,24 @@ Bug Fix: Entering search from home screen results in querying the server twice o
 Bug Fix: Executing template is partially writing to screen - should be finding errors when writing first to buffer
 Link between different notes
 Multi-user support +v1
-Split screen notes
-Tabbed notes
-User authentication +v1
 Refactor TemplateCache - don't like having to pass in file name and then defined template name
+Split screen notes
+Tabbed notesb
+User authentication +v1
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
+x (A) Markdown Bold Button +v1 +create-note-rework
+x (A) Markdown H1 Button +v1 +create-note-rework
+x (A) Markdown H2 Button +v1 +create-note-rework
+x (A) Markdown H3 Button +v1 +create-note-rework
+x (A) Markdown Inline Code Button +v1 +create-note-rework
+x (A) Markdown Italic Button +v1 +create-note-rework
+x (A) Markdown Ordered List +v1 +create-note-rework
+x (A) Markdown Quote +v1 +create-note-rework
+x (A) Markdown Unordered List Button +v1 +create-note-rework
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
 x Data Model
 x Full Text Search for Notes
 x Implement Repository Pattern for SQLite backend
+x Redo tag selection on create note screen +v1 +create-note-rework
 x SQLite Migrations and DB Bootstrapping
