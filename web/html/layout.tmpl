@@ -5,25 +5,24 @@
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/static/vendor/js/htmx_v4-0-0_alpha6.min.js"></script>
-    <script src="/static/js/fieldset-filter.js"></script>
-    <script src="/static/js/markdown-editor.js"></script>
-    <link rel="stylesheet" href="/static/vendor/css/water-dark.min.css">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/fieldset-filter.js?ver=1"></script>
+    <script src="/static/js/markdown-editor.js?ver=1"></script>
+    <link rel="stylesheet" href="/static/vendor/css/water-dark.min.css?ver=1">
+    <link rel="stylesheet" href="/static/css/style.css?ver=1">
     <title>{{template "title" . }}</title>
   </head>
   <body>
 
     <nav class="flex width-full">
-      <a href="/" hx-boost="true">Home</a>
-      <a href="/note/new" hx-boost="true">New Note</a>
-      <a href="/sections" hx-boost="true">Sections</a>
-      <a href="/index" hx-boost="true">Index</a>
+      <a href="/">Home</a>
+      <a href="/note/new">New Note</a>
+      <a href="/sections">Sections</a>
+      <a href="/index">Index</a>
     </nav>
 
     <div class="width-90 margin-auto">
       {{ template "main" . }}
     </div>
-    {{ template "scripts" . }}
   </body>
 
 </html>

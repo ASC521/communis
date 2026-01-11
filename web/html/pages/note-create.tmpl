@@ -4,9 +4,9 @@
 
 
 {{ if eq .Type "NEW-NOTE" }}
-<form id="note-editor" action="/note" method="POST" hx-boost="true">
+<form id="note-editor" action="/note" method="POST">
   {{ else }}
-<form id="note-editor" action="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}" method="PUT" hx-boost="true">
+<form id="note-editor" hx-put="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}">
  {{ end }}
   <div class="flex">
     <input class="flex-100" type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title"/>
@@ -87,8 +87,4 @@
     </div>
   </div>
 </form>
-{{end}}
-
-
-{{define "scripts"}}
 {{end}}

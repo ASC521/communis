@@ -13,6 +13,7 @@ Refactor TemplateCache - don't like having to pass in file name and then defined
 Split screen notes
 Tabbed notesb
 User authentication +v1
+http cache headers +v1
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Markdown Bold Button +v1 +create-note-rework

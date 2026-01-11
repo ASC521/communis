@@ -5,7 +5,7 @@
 <div class="flex width-60 margin-auto flex-wrap height-50 items-center justify-center content-center">
 
   <div class="flex-basis-100">
-    <form action="/search" method="GET" hx-boost="true">
+    <form action="/search" method="GET">
       <div class="flex items-center search-container">
 	<img class="search-icon" src="/static/vendor/svg/lucide-book-search.svg">
 	<input class="search-input" id="search-home" type="text" name="q" placeholder="Search...">
@@ -25,5 +25,3 @@
 
 {{end}}
 
-
-{{define "scripts"}}{{end}}

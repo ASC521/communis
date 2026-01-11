@@ -385,8 +385,9 @@ func NotePut(
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", nf.Id, slugify(nf.Title)), http.StatusSeeOther)
-
+		ru := fmt.Sprintf("/note/%v/%s", nf.Id, slugify(nf.Title))
+		w.Header().Set("HX-Redirect", ru)
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -474,7 +475,7 @@ func NoteSearchGet(
 		}
 
 		name := r.Header.Get("Hx-Source")
-		if name == "search" {
+		if name == "input#search" {
 			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table.tmpl", "note-table", td)
 			return
 		}
