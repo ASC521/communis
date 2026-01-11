@@ -84,6 +84,59 @@ function mdeHistoryHandleOnInput(event) {
 
 }
 
+function mdeHandleKeyDown(event) {
+    const ta = document.querySelector("#" + mdeTextareaID);
+    if (ta === null) {
+	console.log("markdown editor textarea not found in document");
+	return
+    }
+
+    let h = null;
+    if (mdeHistoryInstances.has(ta)) {
+	h = mdeHistoryInstances.get(ta);
+    } else {
+	h = new MDEHistory(ta.value);
+	mdeHistoryInstances.set(ta, h);
+    }
+
+    let u = null;
+    if (event.ctrlKey || event.metaKey) {
+	switch (event.key) {
+	case "b":
+	    event.preventDefault();
+	    u = mdeInsertWrap(ta, "**");
+	    break;
+	case "i":
+	    event.preventDefault();
+	    u = mdeInsertWrap(ta, "*");
+	    break;
+	case "k":
+	    event.preventDefault();
+	    u = mdeInsertLink(ta);
+	    break;
+	case "z":
+	    event.preventDefault();
+	    mdeUndo(h, ta);
+	    break;
+	case "y":
+	    event.preventDefault();
+	    mdeRedo(h, ta);
+	default:
+	    return
+	}
+    }
+
+    if (u === null) {
+	console.log("update is null");
+	return
+    }
+
+    ta.value = u.value;
+    ta.setSelectionRange(u.selectionStart, u.selectionEnd);
+    mdeAddHistoryEntry(h, ta);
+    ta.focus();
+}
+
 
 class MDEValueUpdate {
     value;
@@ -324,63 +377,6 @@ document.addEventListener("click", (e) => {
     ta.focus();
 });
 
-document.addEventListener("keydown", (e) => {
-    if (e.target.id !== mdeTextareaID) {
-	return
-    }
-
-    const ta = document.querySelector("#" + mdeTextareaID);
-    if (ta === null) {
-	console.log("markdown editor textarea not found in document");
-	return
-    }
-
-    let h = null;
-    if (mdeHistoryInstances.has(ta)) {
-	h = mdeHistoryInstances.get(ta);
-    } else {
-	h = new MDEHistory(ta.value);
-	mdeHistoryInstances.set(ta, h);
-    }
-
-    let u = null;
-    if (e.ctrlKey || e.metaKey) {
-	switch (e.key) {
-	case "b":
-	    e.preventDefault();
-	    u = mdeInsertWrap(ta, "**");
-	    break;
-	case "i":
-	    e.preventDefault();
-	    u = mdeInsertWrap(ta, "*");
-	    break;
-	case "k":
-	    e.preventDefault();
-	    u = mdeInsertLink(ta);
-	    break;
-	case "z":
-	    e.preventDefault();
-	    mdeUndo(h, ta);
-	    break;
-	case "y":
-	    e.preventDefault();
-	    mdeRedo(h, ta);
-	default:
-	    return
-	}
-    }
-
-    if (u === null) {
-	console.log("update is null");
-	return
-    }
-
-    ta.value = u.value;
-    ta.setSelectionRange(u.selectionStart, u.selectionEnd);
-    mdeAddHistoryEntry(h, ta);
-    ta.focus();
-});
-
 document.addEventListener("htmx:after:init", (e) => {
     // console.log("htmx:after:init - ", e);
     if (e.target.id !== "note-editor") {
@@ -393,6 +389,7 @@ document.addEventListener("htmx:after:init", (e) => {
     }
 
     ta.addEventListener("input", mdeHistoryHandleOnInput);
+    ta.addEventListener("keydown", mdeHandleKeyDown);
 });
 
 
@@ -415,6 +412,7 @@ document.addEventListener("htmx:before:cleanup", (e) => {
     }
 
     ta.removeEventListener("input", mdeHistoryHandleOnInput);
+    ta.removeEventListener("keydown", mdeHandleKeyDown);
     mdeHistoryInstances.delete(ta);
 });
 

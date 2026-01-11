@@ -1,6 +1,5 @@
-(A) Add undo/redo to markdown editor +v1 +create-note-work
+(A) Add Preview Note on Edit Screen +v1
 (B) Move to icons from text buttons +v1 +create-note-rework
-(C) Add Preview Note on Edit Screen +v1
 (D) Add section view page - list associated notes in section, have links to edit name or delete +v1
 (E) Build tag index +v1
 (F) Add way to go to edit screen from view note screen +v1
@@ -14,6 +13,7 @@ Refactor TemplateCache - don't like having to pass in file name and then defined
 Split screen notes
 Tabbed notesb
 User authentication +v1
+x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Markdown Bold Button +v1 +create-note-rework
 x (A) Markdown H1 Button +v1 +create-note-rework
