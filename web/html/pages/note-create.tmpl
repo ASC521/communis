@@ -4,9 +4,9 @@
 
 
 {{ if eq .Type "NEW-NOTE" }}
-<form action="/note" method="POST" hx-boost="true">
+<form id="note-editor" action="/note" method="POST" hx-boost="true">
   {{ else }}
-<form action="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}" method="PUT" hx-boost="true">
+<form id="note-editor" action="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}" method="PUT" hx-boost="true">
  {{ end }}
   <div class="flex">
     <input class="flex-100" type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title"/>
@@ -68,17 +68,19 @@
 
   <div class="md-editor-container">
     <div class="md-toolbar flex">
-      <button type="button" id="mde-bold-btn">Bold</button>
-      <button type="button" id="mde-italic-btn">Italic</button>
-      <button type="button" id="mde-link-btn">Link</button>
-      <button type="button" id="mde-inline-code-btn">Inline Code</button>
-      <button type="button" id="mde-code-block-btn">Code Block</button>
-      <button type="button" id="mde-h1-btn">H1</button>
-      <button type="button" id="mde-h2-btn">H2</button>
-      <button type="button" id="mde-h3-btn">H3</button>
-      <button type="button" id="mde-unordered-list-button">Unordered List</button>
-      <button type="button" id="mde-ordered-list-button">Ordered List</button>
-      <button type="button" id="mde-quote-btn">Quote</button>
+      <button class="flex-1" Type="button" id="mde-bold-btn">Bold</button>
+      <button class="flex-1" Type="button" id="mde-italic-btn">Italic</button>
+      <button class="flex-1" type="button" id="mde-link-btn">Link</button>
+      <button class="flex-1" type="button" id="mde-inline-code-btn">Inline Code</button>
+      <button class="flex-1" type="button" id="mde-code-block-btn">Code Block</button>
+      <button class="flex-1" type="button" id="mde-h1-btn">H1</button>
+      <button class="flex-1" type="button" id="mde-h2-btn">H2</button>
+      <button class="flex-1" type="button" id="mde-h3-btn">H3</button>
+      <button class="flex-1" type="button" id="mde-unordered-list-button">Unordered List</button>
+      <button class="flex-1" type="button" id="mde-ordered-list-button">Ordered List</button>
+      <button class="flex-1" type="button" id="mde-quote-btn">Quote</button>
+      <button class="flex-1" type="button" id="mde-undo-btn">Undo</button>
+      <button class="flex-1" type="button" id="mde-redo-btn">Redo</button>
     </div>
     <div class="md-editor">
       <textarea id="mde-textarea" name="note-content" class="height-full">{{ .FormData.Content  }}</textarea>
