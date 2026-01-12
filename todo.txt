@@ -1,5 +1,6 @@
-(A) Add Preview Note on Edit Screen +v1
+(A) Move to pico css +v1
 (B) Move to icons from text buttons +v1 +create-note-rework
+(C) Add form validation feedback to note create +v1 +create-note-rework
 (D) Add section view page - list associated notes in section, have links to edit name or delete +v1
 (E) Build tag index +v1
 (F) Add way to go to edit screen from view note screen +v1
@@ -14,6 +15,7 @@ Split screen notes
 Tabbed notesb
 User authentication +v1
 http cache headers +v1
+x (A) Add Preview Note on Edit Screen +v1 +create-note-rework
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Markdown Bold Button +v1 +create-note-rework

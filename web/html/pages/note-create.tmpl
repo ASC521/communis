@@ -3,14 +3,16 @@
 {{define "main"}}
 
 
-{{ if eq .Type "NEW-NOTE" }}
+{{ if .Status.IsNew }}
 <form id="note-editor" action="/note" method="POST">
-  {{ else }}
+{{ else }}
 <form id="note-editor" hx-put="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}">
- {{ end }}
+{{ end }}
   <div class="flex">
     <input class="flex-100" type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title"/>
-    <button class="flex-1" type="button">Preview</button>
+
+   
+
     <!-- TODO hide delete button if it is a new note since there is nothing to delete -->
     <button class="flex-1" type="button" hx-target="body" hx-delete="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title }}"  hx-confirm="Delete {{ .FormData.Title }}?">Delete</button>
     <input class="flex-1" type="submit" value="Save"/>
@@ -18,7 +20,6 @@
 
   <div class="flex">
     <div class="flex-1">
-      <!-- <label for="section">Section: </label> -->
       <select list="section-list" id="section" name="section">
 	<option value="-1">Section</option>
 	{{ range .AllSections }}
@@ -66,25 +67,30 @@
 
   <br>
 
-  <div class="md-editor-container">
-    <div class="md-toolbar flex">
-      <button class="flex-1" Type="button" id="mde-bold-btn">Bold</button>
-      <button class="flex-1" Type="button" id="mde-italic-btn">Italic</button>
-      <button class="flex-1" type="button" id="mde-link-btn">Link</button>
-      <button class="flex-1" type="button" id="mde-inline-code-btn">Inline Code</button>
-      <button class="flex-1" type="button" id="mde-code-block-btn">Code Block</button>
-      <button class="flex-1" type="button" id="mde-h1-btn">H1</button>
-      <button class="flex-1" type="button" id="mde-h2-btn">H2</button>
-      <button class="flex-1" type="button" id="mde-h3-btn">H3</button>
-      <button class="flex-1" type="button" id="mde-unordered-list-button">Unordered List</button>
-      <button class="flex-1" type="button" id="mde-ordered-list-button">Ordered List</button>
-      <button class="flex-1" type="button" id="mde-quote-btn">Quote</button>
-      <button class="flex-1" type="button" id="mde-undo-btn">Undo</button>
-      <button class="flex-1" type="button" id="mde-redo-btn">Redo</button>
-    </div>
-    <div class="md-editor">
-      <textarea id="mde-textarea" name="note-content" class="height-full">{{ .FormData.Content  }}</textarea>
-    </div>
+  <div id="mde-toolbar" class="flex">
+    <button class="flex-1" Type="button" id="mde-bold-btn">Bold</button>
+    <button class="flex-1" Type="button" id="mde-italic-btn">Italic</button>
+    <button class="flex-1" type="button" id="mde-link-btn">Link</button>
+    <button class="flex-1" type="button" id="mde-inline-code-btn">Inline Code</button>
+    <button class="flex-1" type="button" id="mde-code-block-btn">Code Block</button>
+    <button class="flex-1" type="button" id="mde-h1-btn">H1</button>
+    <button class="flex-1" type="button" id="mde-h2-btn">H2</button>
+    <button class="flex-1" type="button" id="mde-h3-btn">H3</button>
+    <button class="flex-1" type="button" id="mde-unordered-list-button">Unordered List</button>
+    <button class="flex-1" type="button" id="mde-ordered-list-button">Ordered List</button>
+    <button class="flex-1" type="button" id="mde-quote-btn">Quote</button>
+    <button class="flex-1" type="button" id="mde-undo-btn">Undo</button>
+    <button class="flex-1" type="button" id="mde-redo-btn">Redo</button>
+    <button class="flex-1" id="mde-preview-btn" type="button" hx-target="#mde-preview" hx-post="/note/preview">Preview</button>
+  </div>
+  <div class="md-editor">
+    <textarea id="mde-textarea" name="note-content" class="height-full">{{ .FormData.Content  }}</textarea>
   </div>
 </form>
+
+<div id="mde-preview" hidden>
+  {{ template "rendered-note" .RenderedNote }}
+</div>
+
+
 {{end}}

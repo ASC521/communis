@@ -1,126 +1,113 @@
 const mdeTextareaID = "mde-textarea"
+const mdeToolBarID = "mde-toolbar"
+const mdePreviewID = "mde-preview"
 const mdeRENewLine = /\n/;
 const mdeREWord = /[a-zA-Z0-9\-']/;
 
-const mdeHistoryInstances = new WeakMap()
+let mdEditor = null;
 
-class MDEHistory {
-    entries = [];
+class MDEditor {
+    history = [];
     currentIndex = 0;
     isUndoRedo = false;
-    maxEntries = 10;
+    maxHistory = 10;
     saveTimeout = null;
+    textarea = null;
+    toolbar = null;
+    preview = null;
 
-    constructor(value) {
-	this.entries.push(value);
+    constructor(textarea, toolbar, preview) {
+	this.textarea = textarea;
+	this.history.push(textarea.value);
+	this.toolbar = toolbar;
+	this.preview = preview;
     }
     
 }
 
-function mdeUndo(history, textarea) {
-    if (history.currentIndex <= 0) {
+function mdeUndo(mde) {
+    if (mde.currentIndex <= 0) {
 	return
     }
     
-    history.currentIndex--;
-    mdeRestoreState(history, textarea);
+    mde.currentIndex--;
+    mdeRestoreState(mde);
 }
 
-function mdeRedo(history, textarea) {
-    if (history.currentIndex == history.entries.length-1) {
+function mdeRedo(mde) {
+    if (mde.currentIndex == mde.history.length-1) {
 	return
     }
 
-    history.currentIndex++;
-    mdeRestoreState(history, textarea);
+    mde.currentIndex++;
+    mdeRestoreState(mde);
 }
 
-function mdeRestoreState(history, textarea) {
-    history.isUndoRedo = true;
+function mdeRestoreState(mde) {
+    mde.isUndoRedo = true;
     
-    const cursorPos = textarea.selectionStart;
-    textarea.value = history.entries[history.currentIndex]
+    const cursorPos = mde.textarea.selectionStart;
+    mde.textarea.value = mde.history[mde.currentIndex]
 
-    const newPos = Math.min(cursorPos, textarea.value.length);
-    textarea.setSelectionRange(newPos, newPos);
+    const newPos = Math.min(cursorPos, mde.textarea.value.length);
+    mde.textarea.setSelectionRange(newPos, newPos);
 
-    history.isUndoRedo = false;
+    mde.isUndoRedo = false;
 }
 
-function mdeAddHistoryEntry(history, textarea) {
-    if (history.isUndoRedo) {
+function mdeAddHistoryEntry(mde) {
+    if (mde.isUndoRedo) {
 	return
     }
 
-    history.entries = history.entries.slice(0, history.currentIndex + 1);
-    history.entries.push(textarea.value);
-    history.currentIndex++;
+    mde.history = mde.history.slice(0, mde.currentIndex + 1);
+    mde.history.push(mde.textarea.value);
+    mde.currentIndex++;
 
-    if (history.entries.length > history.maxEntries) {
-	history.entries.shift();
-	history.currentIndex--;
+    if (mde.history.length > mde.maxHistory) {
+	mde.history.shift();
+	mde.currentIndex--;
     }
 }
 
-function mdeHistoryHandleOnInput(event) {
+function mdeHandleOnInput(event) {
     const textarea = event.target
 
-    let h = null;
-    if (mdeHistoryInstances.has(textarea)) {
-	h = mdeHistoryInstances.get(textarea);
-    } else {
-	h = new MDEHistory(textarea);
-	mdeHistoryInstances.set(textarea, h);
-    }
-
-    if (h.isUndoRedo) {
+    if (mdEditor.isUndoRedo) {
 	return
     }
     
-    clearTimeout(h.saveTimeout);
-    h.saveTimeout = setTimeout(() => {
-	mdeAddHistoryEntry(h, textarea);
+    clearTimeout(mdEditor.saveTimeout);
+    mdEditor.saveTimeout = setTimeout(() => {
+	mdeAddHistoryEntry(mdEditor);
     }, 500);
 
 }
 
 function mdeHandleKeyDown(event) {
-    const ta = document.querySelector("#" + mdeTextareaID);
-    if (ta === null) {
-	console.log("markdown editor textarea not found in document");
-	return
-    }
-
-    let h = null;
-    if (mdeHistoryInstances.has(ta)) {
-	h = mdeHistoryInstances.get(ta);
-    } else {
-	h = new MDEHistory(ta.value);
-	mdeHistoryInstances.set(ta, h);
-    }
 
     let u = null;
     if (event.ctrlKey || event.metaKey) {
 	switch (event.key) {
 	case "b":
 	    event.preventDefault();
-	    u = mdeInsertWrap(ta, "**");
+	    u = mdeInsertWrap(mdEditor.textarea, "**");
 	    break;
 	case "i":
 	    event.preventDefault();
-	    u = mdeInsertWrap(ta, "*");
+	    u = mdeInsertWrap(mdEditor.textarea, "*");
 	    break;
 	case "k":
 	    event.preventDefault();
-	    u = mdeInsertLink(ta);
+	    u = mdeInsertLink(mdEditor.textarea);
 	    break;
 	case "z":
 	    event.preventDefault();
-	    mdeUndo(h, ta);
+	    mdeUndo(mdEditor);
 	    break;
 	case "y":
 	    event.preventDefault();
-	    mdeRedo(h, ta);
+	    mdeRedo(mdEditor);
 	default:
 	    return
 	}
@@ -131,10 +118,10 @@ function mdeHandleKeyDown(event) {
 	return
     }
 
-    ta.value = u.value;
-    ta.setSelectionRange(u.selectionStart, u.selectionEnd);
-    mdeAddHistoryEntry(h, ta);
-    ta.focus();
+    mdEditor.textarea.value = u.value;
+    mdEditor.textarea.setSelectionRange(u.selectionStart, u.selectionEnd);
+    mdeAddHistoryEntry(mdEditor);
+    mdEditor.textarea.focus();
 }
 
 
@@ -306,61 +293,69 @@ function mdeInsertCodeBlock(textarea) {
     return new MDEValueUpdate(value, cursorPos, cursorPos)
 }
 
-document.addEventListener("click", (e) => {
-    const ta = document.querySelector("#" + mdeTextareaID);
-    if (ta === null) {
-	console.log("markdown editor textareanot found in document");
+
+function mdeTogglePreview() {
+
+    const form = document.querySelector("#note-editor");
+    if (form === null) {
 	return
     }
 
-    let h = null;
-    if (mdeHistoryInstances.has(ta)) {
-	h = mdeHistoryInstances.get(ta);
-    } else {
-	h = new MDEHistory(ta.value);
-	mdeHistoryInstances.set(ta, h);
+    const previewDiv = document.querySelector("#" + mdePreviewID);
+    if (previewDiv === null) {
+	return
     }
 
+    form.hidden = !form.hidden;
+    previewDiv.hidden = !form.hidden;
+    
+}
+
+function mdeHandleClick(event) {
+    console.log(event);
     let u = null;
-    switch (e.target.id) {
+    switch (event.target.id) {
+    case "mde-preview-btn":
+	mdeTogglePreview();
+	break;
     case "mde-bold-btn":
-	u = mdeInsertWrap(ta, "**");
+	u = mdeInsertWrap(mdEditor.textarea, "**");
 	break;
     case "mde-italic-btn":
-	u = mdeInsertWrap(ta, "*");
+	u = mdeInsertWrap(mdEditor.textarea, "*");
 	break;
     case "mde-inline-code-btn":
-	u = mdeInsertWrap(ta, "`");
+	u = mdeInsertWrap(mdEditor.textarea, "`");
 	break;
     case "mde-h1-btn":
-	u = mdeInsertBeginningOfLine(ta, "# ", false);
+	u = mdeInsertBeginningOfLine(mdEditor.textarea, "# ", false);
 	break;
     case "mde-h2-btn":
-	u = mdeInsertBeginningOfLine(ta, "## ", false);
+	u = mdeInsertBeginningOfLine(mdEditor.textarea, "## ", false);
 	break;
     case "mde-h3-btn":
-	u = mdeInsertBeginningOfLine(ta, "### ", false);
+	u = mdeInsertBeginningOfLine(mdEditor.textarea, "### ", false);
 	break;
     case "mde-quote-btn":
-	u = mdeInsertBeginningOfLine(ta, "> ", false);
+	u = mdeInsertBeginningOfLine(mdEditor.textarea, "> ", false);
 	break;
     case "mde-link-btn":
-	u = mdeInsertLink(ta);
+	u = mdeInsertLink(mdEditor.textarea);
 	break;
     case "mde-code-block-btn":
-	u = mdeInsertCodeBlock(ta);
+	u = mdeInsertCodeBlock(mdEditor.textarea);
 	break;
     case "mde-unordered-list-button":
-	u = mdeInsertBeginningOfLine(ta, "* ", false);
+	u = mdeInsertBeginningOfLine(mdEditor.textarea, "* ", false);
 	break;
     case "mde-ordered-list-button":
-	u = mdeInsertBeginningOfLine(ta, " ", true);
+	u = mdeInsertBeginningOfLine(mdEditor.textarea, " ", true);
 	break;
     case "mde-undo-btn":
-	mdeUndo(h, ta);
+	mdeUndo(mdEditor);
 	break;
     case "mde-redo-btn":
-	mdeRedo(h, ta);
+	mdeRedo(mdEditor);
 	break;
     default:
 	return
@@ -371,48 +366,35 @@ document.addEventListener("click", (e) => {
 	return
     }
 
-    ta.value = u.value;
-    ta.setSelectionRange(u.selectionStart, u.selectionEnd);
-    mdeAddHistoryEntry(h, ta);
-    ta.focus();
-});
+    mdEditor.textarea.value = u.value;
+    mdEditor.textarea.setSelectionRange(u.selectionStart, u.selectionEnd);
+    mdeAddHistoryEntry(mdEditor);
+    mdEditor.textarea.focus();
+}
 
-document.addEventListener("htmx:after:init", (e) => {
-    // console.log("htmx:after:init - ", e);
-    if (e.target.id !== "note-editor") {
-	return
-    }
+document.addEventListener("DOMContentLoaded", (e) => {
     
     const ta = document.querySelector("#" + mdeTextareaID);
-    if (ta === null || mdeHistoryInstances.has(ta)) {
+    const tb = document.querySelector("#" + mdeToolBarID)
+    const p = document.querySelector("#" + mdePreviewID)
+
+    if (ta === null) {
+	if (mdEditor !== null) {
+	    mdEditor.textarea.removeEventListener("input", mdeHandleOnInput);
+	    mdEditor.textarea.removeEventListener("keydown", mdeHandleKeyDown);
+	    mdEditor.toolbar.removeEventListener("click", mdeHandleClick);
+	    mdEditor.preview.removeEventListener("click", mdeHandleClick);
+	    mdEditor = null;
+	}
 	return
     }
 
-    ta.addEventListener("input", mdeHistoryHandleOnInput);
-    ta.addEventListener("keydown", mdeHandleKeyDown);
+    if (mdEditor === null) {
+	mdEditor = new MDEditor(ta, tb, p);
+	mdEditor.textarea.addEventListener("input", mdeHandleOnInput);
+	mdEditor.textarea.addEventListener("keydown", mdeHandleKeyDown);
+	mdEditor.toolbar.addEventListener("click", mdeHandleClick);
+	mdEditor.preview.addEventListener("click", mdeHandleClick);
+    }
+    
 });
-
-
-document.addEventListener("htmx:before:cleanup", (e) => {
-    // TODO: htmx docs say object remove is stored in
-    // event.detail.elt but that object is always empty
-    // recheck once htmx v6 goes stable
-    // console.log("htmx:before:cleanup", e);
-    if (e.target.id !== "note-editor") {
-	return
-    }
-
-    const ta = document.querySelector("#" + mdeTextareaID);
-    if (ta.id === null) {
-	return
-    }
-
-    if (!mdeHistoryInstances.has(ta)) {
-	return
-    }
-
-    ta.removeEventListener("input", mdeHistoryHandleOnInput);
-    ta.removeEventListener("keydown", mdeHandleKeyDown);
-    mdeHistoryInstances.delete(ta);
-});
-
