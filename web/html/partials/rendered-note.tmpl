@@ -1,0 +1,24 @@
+{{ define "rendered-note" }}
+
+<div class="flex">
+  <h2> {{ .Note.Title }}</h2>
+  {{ if .Preview }}
+  <button id="mde-preview-btn">Edit</button>
+  {{ else }}
+  <button><a href="/edit/{{ .Note.Id }}/{{ slugify .Note.Title }}">Edit</a></button>
+  {{ end}}
+  <button id="note-rendered-tag-list-btn" type="button" command="show-modal" commandFor="list-tag-modal">Tags</button>
+  <dialog id="list-tag-modal" closeBy="any">
+    <h3>Tags</h3>
+    <ul>
+      {{ range .Note.Tags }}
+      <li><a href="/tag/{{ .Id }}/{{ .Name }}">{{ .Name }}</li>
+      {{ end }}
+      <ul>
+  </dialog>
+  <p><a href="/section/{{ .Note.Section.Id }}/{{ .Note.Section.Name }}"> {{ .Note.Section.Name }}</a></p>
+</div>
+
+{{ .HTMLContent }}
+
+{{ end }}

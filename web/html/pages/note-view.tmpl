@@ -3,17 +3,6 @@
 
 {{ define "main" }}
 
-<h1> {{ .Note.Title }} </h1>
-
-{{ .HTMLContent }}
-
-
-<p>
-  Section: <a>{{ .Note.Section.Name }}</a>
-</p>
-
-<p>
-  Tags: {{ range .Note.Tags }} <a>{{ .Name }}</a> {{end}}
-</p>
+{{ template "rendered-note" . }}
 
 {{ end }}

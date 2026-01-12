@@ -17,15 +17,29 @@ import (
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
-const newNote = "NEW-NOTE"
-const editNote = "EDIT-NOTE"
+type status int
+
+const (
+	statusNew status = iota
+	statusExisting
+)
+
+func (s status) IsNew() bool      { return s == statusNew }
+func (s status) IsExisting() bool { return s == statusExisting }
 
 type tempDataCreateNote struct {
-	Type        string
-	FormData    noteForm
-	AllTags     []models.Tag
-	AllSections []models.Section
-	FieldErrors map[string]string
+	Status       status
+	FormData     noteForm
+	RenderedNote renderedNote
+	AllTags      []models.Tag
+	AllSections  []models.Section
+	FieldErrors  map[string]string
+}
+
+type renderedNote struct {
+	Note        models.Note
+	HTMLContent template.HTML
+	Preview     bool
 }
 
 type noteForm struct {
@@ -34,6 +48,24 @@ type noteForm struct {
 	Content   string
 	TagIds    []int64
 	SectionId int64
+}
+
+func renderNote(n models.Note) (renderedNote, error) {
+
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			highlighting.NewHighlighting(
+				highlighting.WithStyle("dracula"),
+			),
+		),
+	)
+	b := new(bytes.Buffer)
+	err := md.Convert([]byte(n.Content), b)
+	if err != nil {
+		return renderedNote{}, err
+	}
+
+	return renderedNote{Note: n, HTMLContent: template.HTML(b.String())}, nil
 }
 
 func parseNoteForm(r *http.Request) (noteForm, error) {
@@ -152,6 +184,19 @@ func validateNoteForm(nf noteForm, nr models.NoteRepository, sr models.SectionRe
 
 }
 
+func parseNoteFromNoteForm(nf noteForm) models.Note {
+	ts := make([]models.Tag, len(nf.TagIds))
+	for i, tid := range nf.TagIds {
+		ts[i] = models.Tag{Id: tid}
+	}
+	return models.Note{
+		Title:   nf.Title,
+		Content: nf.Content,
+		Section: models.Section{Id: nf.SectionId},
+		Tags:    ts,
+	}
+}
+
 func NoteNewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
@@ -174,11 +219,12 @@ func NoteNewGet(
 		}
 
 		td := tempDataCreateNote{
-			Type:        newNote,
-			FormData:    noteForm{},
-			AllTags:     tags,
-			AllSections: sec,
-			FieldErrors: map[string]string{},
+			Status:       statusNew,
+			FormData:     noteForm{},
+			AllTags:      tags,
+			AllSections:  sec,
+			FieldErrors:  map[string]string{},
+			RenderedNote: renderedNote{Preview: true},
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", td)
 	})
@@ -221,7 +267,7 @@ func NotePost(
 			}
 
 			td := tempDataCreateNote{
-				Type:        newNote,
+				Status:      statusNew,
 				FormData:    nf,
 				AllTags:     allTags,
 				AllSections: secs,
@@ -230,18 +276,7 @@ func NotePost(
 			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", td)
 			return
 		}
-
-		ts := make([]models.Tag, len(nf.TagIds))
-		for i, tid := range nf.TagIds {
-			ts[i] = models.Tag{Id: tid}
-		}
-		n := models.Note{
-			Title:   nf.Title,
-			Content: nf.Content,
-			Section: models.Section{Id: nf.SectionId},
-			Tags:    ts,
-		}
-
+		n := parseNoteFromNoteForm(nf)
 		id, err := nr.Create(n)
 		if err != nil {
 			serverError(logger, w, r, err)
@@ -305,11 +340,12 @@ func NoteEditGet(
 		}
 
 		td := tempDataCreateNote{
-			Type:        editNote,
-			FormData:    nf,
-			AllTags:     tags,
-			AllSections: sec,
-			FieldErrors: map[string]string{},
+			Status:       statusExisting,
+			FormData:     nf,
+			AllTags:      tags,
+			AllSections:  sec,
+			FieldErrors:  map[string]string{},
+			RenderedNote: renderedNote{Preview: true},
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", td)
 	})
@@ -356,7 +392,7 @@ func NotePut(
 			}
 
 			td := tempDataCreateNote{
-				Type:        editNote,
+				Status:      statusExisting,
 				FormData:    nf,
 				AllTags:     allTags,
 				AllSections: secs,
@@ -368,17 +404,7 @@ func NotePut(
 
 		}
 
-		ts := make([]models.Tag, len(nf.TagIds))
-		for i, tid := range nf.TagIds {
-			ts[i] = models.Tag{Id: tid}
-		}
-		n := models.Note{
-			Id:      nf.Id,
-			Title:   nf.Title,
-			Content: nf.Content,
-			Section: models.Section{Id: nf.SectionId},
-			Tags:    ts,
-		}
+		n := parseNoteFromNoteForm(nf)
 		err = nr.Update(n)
 		if err != nil {
 			serverError(logger, w, r, err)
@@ -391,16 +417,35 @@ func NotePut(
 	})
 }
 
+func NotePreviewPost(
+	tc *TemplateCache,
+	logger *slog.Logger,
+) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nf, err := parseNoteForm(r)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+		n := parseNoteFromNoteForm(nf)
+		rn, err := renderNote(n)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+		rn.Preview = true
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note.tmpl", "rendered-note", rn)
+	})
+
+}
+
 func NoteViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	nr models.NoteRepository,
 ) http.Handler {
-
-	type viewNoteData struct {
-		Note        models.Note
-		HTMLContent template.HTML
-	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
@@ -427,22 +472,13 @@ func NoteViewGet(
 			return
 		}
 
-		md := goldmark.New(
-			goldmark.WithExtensions(
-				highlighting.NewHighlighting(
-					highlighting.WithStyle("dracula"),
-				),
-			),
-		)
-		b := new(bytes.Buffer)
-		err = md.Convert([]byte(n.Content), b)
+		rn, err := renderNote(n)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		vnd := viewNoteData{Note: n, HTMLContent: template.HTML(b.String())}
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", vnd)
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", rn)
 	})
 }
 

@@ -22,6 +22,7 @@ func routes(
 
 	mux.Handle("GET /note/{id}/{slug}", handlers.NoteViewGet(tc, logger, nr))
 	mux.Handle("GET /note/new", handlers.NoteNewGet(tc, logger, tr, sr))
+	mux.Handle("POST /note/preview", handlers.NotePreviewPost(tc, logger))
 	mux.Handle("POST /note", handlers.NotePost(tc, logger, nr, sr, tr))
 	mux.Handle("PUT /note/{id}/{slug}", handlers.NotePut(tc, logger, nr, sr, tr))
 	mux.Handle("DELETE /note/{id}/{slug}", handlers.NoteDelete(tc, logger, nr))
