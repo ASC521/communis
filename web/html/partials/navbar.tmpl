@@ -1,0 +1,22 @@
+{{ define "navbar" }}
+<nav>
+  <ul>
+    <li><strong><a href="/">Home</a></strong></li>
+    <li><strong><a href="/note/new">New Note</a></strong></li>
+    <li><strong><a href="/sections">Sections</a></strong></li>
+    <li><strong><a href="/index">Index</a></strong></li>
+  </ul>
+  <ul>
+    <details id="navbar-dropdown" class="dropdown">
+      <summary>
+	Settings
+      </summary>
+      <ul dir="rtl">
+	<li><a id="theme-toggle-btn" href="#">Toggle Theme</a></li>
+	<li><a href="#">Logout</a></li>
+      </ul>
+    </details>
+  </ul>
+</nav>
+
+{{ end }}

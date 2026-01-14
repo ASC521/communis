@@ -3,11 +3,16 @@
 {{ range .Notes }}
 
 <article>
-  <h2>
-    <a href="/note/{{.Id}}/{{ slugify .Title }}" hx-boost="true">{{ safeHTML .TitleHighlight }}</a>
-  </h2>
-    <p>{{ safeHTML .ContentSnippet }}</p>
-    <p>{{safeHTML .TagNames }}</p>  
+  <header>
+    <h2>
+      <a href="/note/{{.Id}}/{{ slugify .Title }}" hx-boost="true">{{ safeHTML .TitleHighlight }}</a>
+    </h2>
+  </header>
+  {{ safeHTML .ContentSnippet }}
+  <footer>
+    <p>Section: </p>
+    <p>Tags: {{safeHTML .TagNames }}</p>
+  </footer>
 </article>
 
 {{ end }}

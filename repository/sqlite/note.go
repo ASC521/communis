@@ -250,7 +250,7 @@ func (r *noteRepository) Search(q string) ([]models.NoteSearchResult, error) {
 		  nd.id,
 		  nd.title,
 		  highlight(notes_details_fts, 0, '<mark>', '</mark>') as title_highlight,
-		  snippet(notes_details_fts, 1, '<mark>', '</mark>', '...', 40) as content_snippet,
+		  snippet(notes_details_fts, 1, '<mark>', '</mark>', '...', 100) as content_snippet,
 		  IFNULL(highlight(notes_details_fts, 2, '<mark>', '</mark>'), '') AS tags_txt
 		FROM notes_details_fts AS fts
 		INNER JOIN notes_details AS nd

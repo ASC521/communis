@@ -2,23 +2,21 @@
 
 {{ define "main" }}
 
-<form action="/search" method="GET">
-  <div class="flex search-container">
-    <img class="search-icon" src="/static/vendor/svg/lucide-book-search.svg">
-    <input class="search-input" id="search" type="text" name="q" placeholder="Search..."
+<div class="search-page">
+  <form action="/search" method="GET" role="search" autocomplete="off">
+    <input class="search-input" id="search" type="search" name="q" placeholder="Search..."
 	   autofocus
 	   value="{{ .Query }}"
 	   hx-get="/search"
 	   hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
 	   hx-target="#search-results"
-	   hx-push-url="true"
-	   hx-indicator=".htmx-indicator">
-    <span class="htmx-indicator"><img src="/static/vendor/svg/lucide-loader.svg" alt=""></span>
-  </div>
-</form>
-<br>
+	   hx-push-url="true">
+    <input type="submit" value="Search" />
+  </form>
+  <br>
 
-<div id="search-results">
-  {{ template "note-table" . }}
+  <div id="search-results">
+    {{ template "note-table" . }}
+  </div>
 </div>
 {{ end }}

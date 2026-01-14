@@ -2,26 +2,17 @@
 
 {{define "main"}}
 
-<div class="flex width-60 margin-auto flex-wrap height-50 items-center justify-center content-center">
+<div class="homepage">
+  <form  action="/search" method="GET" role="search" autocomplete="off">
+    <input id="search-home" type="search" name="q" placeholder="Search..." autofocus>
+  </form>
 
-  <div class="flex-basis-100">
-    <form action="/search" method="GET">
-      <div class="flex items-center search-container">
-	<img class="search-icon" src="/static/vendor/svg/lucide-book-search.svg">
-	<input class="search-input" id="search-home" type="text" name="q" placeholder="Search...">
-      </div>
-    </form>
-  </div>
-
-  <div class="flex flex-basis-100">
-    <div class="flex-1 flex flex-col items-center">
-      <p>RECENTLY MODIFIED</p>
-      {{ range .ModifiedNotes }}
-      <a class="flex-1" href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
-      {{ end }}
-    </div>
-  </div>
+  <h5>RECENTLY MODIFIED</h5>
+  {{ range .ModifiedNotes }}
+  <p>
+    <a class="flex-1" href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
+  </p>
+  {{ end }}
 </div>
-
 {{end}}
 
