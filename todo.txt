@@ -1,18 +1,15 @@
-(A) Move to pico css +v1
-(B) Move to icons from text buttons +v1 +create-note-rework
+(A) Refactor rendered notes screen +v1
 (C) Add form validation feedback to note create +v1 +create-note-rework
 (D) Add section view page - list associated notes in section, have links to edit name or delete +v1
 (E) Build tag index +v1
-(F) Add way to go to edit screen from view note screen +v1
 (G) Place tags and section into info side panel of view note screen +v1
 (H) Add advanced query support to search screen +v1
+Buf Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Executing template is partially writing to screen - should be finding errors when writing first to buffer
 Link between different notes
 Multi-user support +v1
 Refactor TemplateCache - don't like having to pass in file name and then defined template name
-Split screen notes
-Tabbed notesb
 User authentication +v1
 http cache headers +v1
 x (A) Add Preview Note on Edit Screen +v1 +create-note-rework
@@ -27,8 +24,11 @@ x (A) Markdown Italic Button +v1 +create-note-rework
 x (A) Markdown Ordered List +v1 +create-note-rework
 x (A) Markdown Quote +v1 +create-note-rework
 x (A) Markdown Unordered List Button +v1 +create-note-rework
+x (A) Move to icons from text buttons +v1 +create-note-rework
+x (A) Move to pico css +v1
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
+x (F) Add way to go to edit screen from view note screen +v1
 x Data Model
 x Full Text Search for Notes
 x Implement Repository Pattern for SQLite backend

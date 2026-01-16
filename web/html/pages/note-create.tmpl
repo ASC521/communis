@@ -2,92 +2,148 @@
 
 {{define "main"}}
 
-<div class="note-edit-page">
-  {{ if .Status.IsNew }}
-  <form id="note-editor" action="/note" method="POST">
-    {{ else }}
-    <form id="note-editor" hx-put="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}">
-      {{ end }}
-      <div class="flex">
-	<input class="flex-100" type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title"/>
+<div id="mde-container" class="note-edit-page">
+{{ if .Status.IsNew }}
+<form id="note-editor" action="/note" method="POST" autocomplete="off">
+  {{ else }}
+  <form id="note-editor" hx-put="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}" autocomplete="off">
+    {{ end }}
+    <div class="note-editor-title-bar">
+      <select list="section-list" id="section" name="section">
+	<option value="-1">Section</option>
+	{{ range .AllSections }}
+	{{ if eq .Id $.FormData.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
+	{{ else }}<option value="{{ .Id }}">{{ .Name }}</option>
+	{{ end }}
+	{{ end }}
+      </select>
+      <input type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title"/>
 
-	<!-- TODO hide delete button if it is a new note since there is nothing to delete -->
-	<button class="flex-1" type="button" hx-target="body" hx-delete="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title }}"  hx-confirm="Delete {{ .FormData.Title }}?">Delete</button>
-	<input class="flex-1" type="submit" value="Save"/>
-      </div>
+      <dialog id="select-tag-modal" closedBy="any">
+	<article>
+	  <header>
+	    <button rel="prev" class="close-btn" type="button" command="close" commandFor="select-tag-modal" aria-label="Close"></button>
+	    <h4>Select Tags</h4>
+	  </header>
 
-      <div class="flex">
-	<div class="flex-1">
-	  <select list="section-list" id="section" name="section">
-	    <option value="-1">Section</option>
-	    {{ range .AllSections }}
-	    {{ if eq .Id $.FormData.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
-	    {{ else }}<option value="{{ .Id }}">{{ .Name }}</option>
+	  <output class="toast" id="new-tag-output"></output>
+	  <fieldset role="search">
+	    <input type="search" name="tag-name" id="tag-name" placeholder="Search Tags..." autofocus>
+	    <button id="note-edit-create-tag-btn" type="button" hx-post="/tag" hx-include="[name='tag-name']" hx-target="#new-tag-output">+</button>
+	  </fieldset>
+
+	  <fieldset id="tag-selector" tabindex="0">
+	    {{ range .AllTags }}
+	    {{ if containsInt $.FormData.TagIds .Id }}
+	    <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }} checked>
+	    {{ else }}
+	    <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }}>
 	    {{ end }}
+	    <label for="tag-{{ .Id }}">{{ .Name }}</label>
 	    {{ end }}
-	  </select>
+	  </fieldset>
+	</article>
+      </dialog>
+      <button id="btn-select-tag-modal" type="button" command="show-modal" commandFor="select-tag-modal" class="icon-button">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#tags">
+	</svg>
+      </button>
 
-	  {{ with .FieldErrors.section }}
-	  <label class="error">{{ . }}</label>
-	  {{ end }}
-	</div>
+      <button id="btn-select-ref-notes" type="button" class="icon-button">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-symlink">
+	</svg>
+      </button>
 
-	<div class="flex-5 flex">
-
-	  <dialog id="select-tag-modal" closedBy="any">
-	    <article>
-	      <header>
-		<button rel="prev" class="close-btn" type="button" command="close" commandFor="select-tag-modal" aria-label="Close"></button>
-		<h4>Select Tags</h4>
-	      </header>
-
-	      <output class="toast" id="new-tag-output"></output>
-	      <fieldset role="search">
-		<input type="search" name="tag-name" id="tag-name" placeholder="Search Tags..." autofocus>
-		<button id="note-edit-create-tag-btn" type="button" hx-post="/tag" hx-include="[name='tag-name']" hx-target="#new-tag-output">+</button>
-	      </fieldset>
-
-	      <fieldset id="tag-selector" tabindex="0">
-		{{ range .AllTags }}
-		{{ if containsInt $.FormData.TagIds .Id }}
-		<input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }} checked>
-		{{ else }}
-		<input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }}>
-		{{ end }}
-		<label for="tag-{{ .Id }}">{{ .Name }}</label>
-		{{ end }}
-	      </fieldset>
-	    </article>
-	  </dialog>
-          <button id="btn-select-tag-modal" type="button" command="show-modal" commandFor="select-tag-modal">
-  	    Tags<span> (</span><span id="checked-tag-count">{{ len .FormData.TagIds }}</span><span>)</span>
-          </button>
-	</div>
-      </div>
+      <!-- TODO hide delete button if it is a new note since there is nothing to delete -->
+      <button type="button" hx-target="body" hx-delete="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title }}"  hx-confirm="Delete {{ .FormData.Title }}?" class="icon-button">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
+	</svg>
+      </button>
+      <button id="mde-preview-btn" type="button" name="terms" hx-post="/note/preview" hx-target="#mde-preview" class="icon-button">
+      <svg>
+	<use href="/static/vendor/svg/lucide-icons-sprite.svg#eye">
+      </svg>
+</button>
+      <button type="submit" class="icon-button">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#save">
+	</svg>
+      </button>
+    </div>
 
 
-      <br>
-
-      <div id="mde-toolbar" class="flex">
-	<button class="flex-1" Type="button" id="mde-bold-btn">Bold</button>
-	<button class="flex-1" Type="button" id="mde-italic-btn">Italic</button>
-	<button class="flex-1" type="button" id="mde-link-btn">Link</button>
-	<button class="flex-1" type="button" id="mde-inline-code-btn">Inline Code</button>
-	<button class="flex-1" type="button" id="mde-code-block-btn">Code Block</button>
-	<button class="flex-1" type="button" id="mde-h1-btn">H1</button>
-	<button class="flex-1" type="button" id="mde-h2-btn">H2</button>
-	<button class="flex-1" type="button" id="mde-h3-btn">H3</button>
-	<button class="flex-1" type="button" id="mde-unordered-list-button">Unordered List</button>
-	<button class="flex-1" type="button" id="mde-ordered-list-button">Ordered List</button>
-	<button class="flex-1" type="button" id="mde-quote-btn">Quote</button>
-	<button class="flex-1" type="button" id="mde-undo-btn">Undo</button>
-	<button class="flex-1" type="button" id="mde-redo-btn">Redo</button>
-	<button class="flex-1" id="mde-preview-btn" type="button" hx-target="#mde-preview" hx-post="/note/preview">Preview</button>
-      </div>
-      <div class="md-editor">
-	<textarea id="mde-textarea" name="note-content" class="height-full">{{ .FormData.Content  }}</textarea>
-      </div>
-    </form>
+    <div id="mde-toolbar">
+      <button class="icon-button"  Type="button" id="mde-bold-btn" aria-label="bold">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#bold">
+	</svg>
+      </button>
+      <button class="icon-button"  Type="button" id="mde-italic-btn" aria-label="italic">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#italic">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-link-btn" aria-label="hyperlink">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#link">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-inline-code-btn" aria-label="inline code">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#code">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-code-block-btn" aria-label="code block">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#square-code">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-h1-btn" aria-label="Header 1">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-1">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-h2-btn" aria-label="Header 2">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-2">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-h3-btn" aria-label="Header 3">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-3">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-unordered-list-button" aria-label="Unordered List">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#list">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-ordered-list-button" aria-label="Ordered List">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#list-ordered">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-quote-btn" aria-label="Quote">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#quote">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-undo-btn" aria-label="Undo">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#undo">
+	</svg>
+      </button>
+      <button class="icon-button"  type="button" id="mde-redo-btn" aria-label="Redo">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#redo">
+	</svg>
+      </button>
+    </div>
+    <textarea id="mde-textarea" name="note-content" autofocus="true">{{ .FormData.Content  }}</textarea>
+  </form>
 
     <div id="mde-preview" hidden>
       {{ template "rendered-note" .RenderedNote }}

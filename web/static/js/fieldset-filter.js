@@ -33,20 +33,3 @@ document.addEventListener('input', (e) => {
     }
 });
 
-document.addEventListener('change', (e) => {
-    if (e.target.type === 'checkbox') {
-	const fs = e.target.closest('fieldset');
-	if (fs.id !== 'tag-selector') {
-	    return
-	}
-
-	const count = fs.querySelectorAll('input[type="checkbox"]:checked').length;
-
-	const countSpan = document.querySelector('#checked-tag-count');
-	if (countSpan === null) {
-	    return
-	}
-	countSpan.textContent = count;
-    }
-});
-

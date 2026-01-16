@@ -1,5 +1,4 @@
 const mdeTextareaID = "mde-textarea"
-const mdeToolBarID = "mde-toolbar"
 const mdePreviewID = "mde-preview"
 const mdeRENewLine = /\n/;
 const mdeREWord = /[a-zA-Z0-9\-']/;
@@ -13,14 +12,12 @@ class MDEditor {
     maxHistory = 10;
     saveTimeout = null;
     textarea = null;
-    toolbar = null;
-    preview = null;
+    container = null;
 
-    constructor(textarea, toolbar, preview) {
+    constructor(textarea, container) {
 	this.textarea = textarea;
 	this.history.push(textarea.value);
-	this.toolbar = toolbar;
-	this.preview = preview;
+	this.container = container;
     }
     
 }
@@ -311,10 +308,17 @@ function mdeTogglePreview() {
     
 }
 
+
 function mdeHandleClick(event) {
     console.log(event);
+
+    const buttonID = event.target.closest("button")?.id;
+    if (buttonID === null) {
+	return
+    }
+    
     let u = null;
-    switch (event.target.id) {
+    switch (buttonID) {
     case "mde-preview-btn":
 	mdeTogglePreview();
 	break;
@@ -373,28 +377,25 @@ function mdeHandleClick(event) {
 }
 
 document.addEventListener("DOMContentLoaded", (e) => {
-    
-    const ta = document.querySelector("#" + mdeTextareaID);
-    const tb = document.querySelector("#" + mdeToolBarID)
-    const p = document.querySelector("#" + mdePreviewID)
 
-    if (ta === null) {
+    const container = document.querySelector("#mde-container");
+    const ta = document.querySelector("#" + mdeTextareaID);
+
+    if (container === null) {
 	if (mdEditor !== null) {
 	    mdEditor.textarea.removeEventListener("input", mdeHandleOnInput);
 	    mdEditor.textarea.removeEventListener("keydown", mdeHandleKeyDown);
-	    mdEditor.toolbar.removeEventListener("click", mdeHandleClick);
-	    mdEditor.preview.removeEventListener("click", mdeHandleClick);
+	    mdEditor.container.removeEventListener("click", mdeHandleClick);
 	    mdEditor = null;
 	}
 	return
     }
 
     if (mdEditor === null) {
-	mdEditor = new MDEditor(ta, tb, p);
+	mdEditor = new MDEditor(ta, container);
 	mdEditor.textarea.addEventListener("input", mdeHandleOnInput);
 	mdEditor.textarea.addEventListener("keydown", mdeHandleKeyDown);
-	mdEditor.toolbar.addEventListener("click", mdeHandleClick);
-	mdEditor.preview.addEventListener("click", mdeHandleClick);
+	mdEditor.container.addEventListener("click", mdeHandleClick);
     }
     
 });
