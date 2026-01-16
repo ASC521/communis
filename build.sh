@@ -88,11 +88,13 @@ function usage() {
     echo "  -h|--help                  This help text"
     echo "  -b|--build                 Build communis application"
     echo "  -t|--test                  Run unit tests"
+    echo "  -r|--run                   Run web application"
     echo
 }
 
 build=0
 true=0
+run=0
 
 case "$os" in
     linux)
@@ -122,6 +124,10 @@ while [[ $# -gt 0 ]]; do
 	    test=true
 	    shift
 	    ;;
+	-r | --run)
+	    run=true
+	    shift
+	    ;;
 	*)
 	    echo "ERROR: unknown argument $1"
 	    echo
@@ -141,5 +147,11 @@ fi
 if [ "$build" = true ]; then
     echo "Building communis with local go: $(which go)"
     go build -v -o ./dist/exec/communis ./cmd/cli/
+    exit 0
+fi
+
+if [ "$run" = true ]; then
+    echo "Running communis web application"
+    go run ./cmd/cli web run
     exit 0
 fi
