@@ -420,6 +420,8 @@ func NotePut(
 func NotePreviewPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
+	tr models.TagRepository,
+	sr models.SectionRepository,
 ) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -429,6 +431,23 @@ func NotePreviewPost(
 			return
 		}
 		n := parseNoteFromNoteForm(nf)
+
+		for i, tag := range n.Tags {
+			et, err := tr.FindById(tag.Id)
+			if err != nil {
+				slog.Error(fmt.Sprintf("failed to enrich tag %v from database", tag.Id), "errMsg", err.Error())
+				continue
+			}
+			n.Tags[i].Name = et.Name
+		}
+
+		sec, err := sr.FindById(n.Section.Id)
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to enrich section %v from database", n.Section.Id), "errMsg", err.Error())
+		} else {
+			n.Section.Name = sec.Name
+		}
+
 		rn, err := renderNote(n)
 		if err != nil {
 			serverError(logger, w, r, err)
