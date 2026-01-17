@@ -91,33 +91,38 @@ fieldset[tabindex] {
 }
 
 .rendered-note-page {
-    /* width: 90%; */
-    /* margin-left: 5%; */
-    /* margin-right: 5%; */
-    /* margin-top: 0%; */
+    width: 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-top: 0%;
+}
+
+.rendered-note {
     display: flex;
     flex-direction: column;
 }
 
-.rendered-note-page > .title-line {
-    flex: 0 0 auto;
+.rendered-note > .breadcrumb-row {
+    flex: 1;
     display: flex;
     width: 100%;
-    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    gap: 1rem;
+}
+
+.breadcrumb-buttons {
+    display: flex;
     gap: 8px;
 }
 
-.rendered-note-page > .title-line > h2 {
-    flex: 20;
-}
-
-.rendered-note-page > .title-line > button {
+.rendered-note > .title-line > button {
     flex: 1;
 }
 
 .icon-button {
-  max-width: 1.5em;
-  max-height: 1.5em;
+  max-width: 1.75em;
+  max-height: 1.75em;
   display: flex;
   align-items: center;
   justify-content: center;
