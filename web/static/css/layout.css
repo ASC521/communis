@@ -109,7 +109,6 @@ fieldset[tabindex] {
     justify-content: space-between;
     margin-bottom: 0.5rem;
     gap: 1rem;
-    align-items: center;
 }
 
 .breadcrumb-buttons {
@@ -122,8 +121,8 @@ fieldset[tabindex] {
 }
 
 .icon-button {
-  max-width: 1.5em;
-  max-height: 1.5em;
+  max-width: 1.75em;
+  max-height: 1.75em;
   display: flex;
   align-items: center;
   justify-content: center;
