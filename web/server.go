@@ -29,10 +29,11 @@ var staticFiles embed.FS
 var htmlFiles embed.FS
 
 func setupLogging(c *config.Config) *slog.Logger {
-	opts := slog.HandlerOptions{AddSource: true}
+	opts := slog.HandlerOptions{}
 	if c.VerboseLogging {
 		opts.Level = slog.LevelDebug
 	}
+
 	h := slog.NewTextHandler(os.Stdout, &opts)
 
 	return slog.New(h)

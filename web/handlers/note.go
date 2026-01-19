@@ -190,6 +190,7 @@ func parseNoteFromNoteForm(nf noteForm) models.Note {
 		ts[i] = models.Tag{Id: tid}
 	}
 	return models.Note{
+		Id:      nf.Id,
 		Title:   nf.Title,
 		Content: nf.Content,
 		Section: models.Section{Id: nf.SectionId},
