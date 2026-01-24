@@ -2,7 +2,7 @@
 
 {{define "main"}}
 
-<div id="mde-container" class="note-edit-page">
+<div id="mde-container" class="note-edit-page thin-container">
 {{ if .Status.IsNew }}
 <form id="note-editor" action="/note" method="POST" autocomplete="off">
   {{ else }}
@@ -17,7 +17,7 @@
 	{{ end }}
 	{{ end }}
       </select>
-      <input type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title"/>
+      <input type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title" required/>
 
       <dialog id="select-tag-modal" closedBy="any">
 	<article>

@@ -1,0 +1,14 @@
+{{ define "update-section" }}
+<form id="inline-section-form" autocomplete="off" class="section-form" hx-put="/section/{{ .Id }}" hx-swap="outerHTML">
+  {{ with .FieldErrors.name }}
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper">
+  <small id="invalid-helper">{{ . }}</small>
+  {{ else }}
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}">
+  {{ end }}
+  <div role="group">
+  <button hx-get="/section/{{ .Id }}/{{ slugify .Name }}" hx-target="body" type="button" class="secondary">Cancel</button>
+  <button type="submit">Save</button>
+  </group>
+</form>
+{{ end }}

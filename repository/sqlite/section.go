@@ -17,7 +17,7 @@ func NewSectionRepository(db *sqlitex.SQLiteDB, ctx context.Context) *sectionRep
 	return &sectionRepository{db: db, ctx: ctx}
 }
 
-func (r *sectionRepository) Create(s *models.Section) (int64, error) {
+func (r *sectionRepository) Create(s models.Section) (int64, error) {
 
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -55,7 +55,7 @@ func (r *sectionRepository) FindByName(name string) (models.Section, error) {
 	return nb, nil
 }
 
-func (r *sectionRepository) Update(s *models.Section) error {
+func (r *sectionRepository) Update(s models.Section) error {
 
 	sql := "UPDATE sections SET name = ? WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
@@ -83,7 +83,7 @@ func (r *sectionRepository) Delete(id int64) error {
 }
 
 func (r *sectionRepository) ListAll() ([]models.Section, error) {
-	query := "SELECT id, name FROM sections ORDER BY id ASC"
+	query := "SELECT id, name FROM sections ORDER BY name ASC"
 	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
 	defer cancel()
 	rows, err := r.db.Read.QueryContext(ctxWTO, query)

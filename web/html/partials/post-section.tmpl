@@ -1,0 +1,14 @@
+{{ define "new-section-form" }}
+<form id="inline-section-form" autocomplete="off" class="section-form" hx-post="/section" hx-swap="outerHTML">
+  {{ with .FieldErrors.name }}
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper">
+  <small id="invalid-helper">{{ . }}</small>
+  {{ else }}
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}">
+  {{ end }}
+  <div role="group">
+  <button id="btn-remove-section-form" type="button" class="secondary">Cancel</button>
+  <button type="submit">Save</button>
+  </group>
+</form>
+{{ end }}

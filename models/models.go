@@ -40,10 +40,10 @@ type PaginatedSections struct {
 }
 
 type SectionRepository interface {
-	Create(s *Section) (int64, error)
+	Create(s Section) (int64, error)
 	FindById(id int64) (Section, error)
 	FindByName(name string) (Section, error)
-	Update(s *Section) error
+	Update(s Section) error
 	Delete(id int64) error
 	ListAll() ([]Section, error)
 }
@@ -90,4 +90,5 @@ type NoteRepository interface {
 	List(limit, offset int) (PaginatedNotes, error)
 	Search(q string) ([]NoteSearchResult, error)
 	RecentUpdates(limit uint) ([]NoteDetail, error)
+	InSection(secId int64) ([]NoteDetail, error)
 }

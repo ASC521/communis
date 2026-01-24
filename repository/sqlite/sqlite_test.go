@@ -342,12 +342,12 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err, _ := bootstrapInMemoryDB(ctx)
+	db, err, cleanUp := bootstrapInMemoryDB(ctx)
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
 	defer db.Close()
-	//defer cleanUp()
+	defer cleanUp()
 
 	secRepo := sqlite.NewSectionRepository(db, ctx)
 	tRepo := sqlite.NewTagRepository(db, ctx)

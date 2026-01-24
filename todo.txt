@@ -1,18 +1,32 @@
-(A) Add section view page - list associated notes in section, have links to edit name or delete +v1
+(A) Build tag index +v1
 (B) Make textarea on edit notes screen automatically grow as more text is added +v1
-(C) Add form validation feedback to note create +v1 +create-note-rework
-(E) Build tag index +v1
+(D) Add form validation feedback to note create +v1 +create-note-rework
 (E) Fix note preview page -  buttons don't line up
-(H) Add advanced query support to search screen +v1
-Buf Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
+Add advanced query support to search screen +v1
+Add license +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
+Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 CSRF +v1
-Link between different notes
+Edit note screen - delete button should use native dialog +v1
+Error Screens +v1
+Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 Multi-user support +v1
+New note screen delete button should be disabled +v1 
+Rebuild inline section create/edit form +v1
 Refactor TemplateCache - don't like having to pass in file name and then defined template name
+Refactor css
+Refactor note, tag, and section repositories to single repository interface +v1
+Search results should contain rendered html from markdown not raw markdown
+Unit tests on note form parsing and validation +v1
+Unsaved changes will be lost warning on navigating away from page +v1
 User authentication +v1
+Write proper readme +v1
+ctrl+k search modal
 http cache headers +v1
+kindle highlight and note parser
+kobo highlight and note parser
 x (A) Add Preview Note on Edit Screen +v1 +create-note-rework
+x (A) Add section view page - list associated notes in section, have links to edit name or delete +v1
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Bug Fix: Note Edit page does not submit
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1

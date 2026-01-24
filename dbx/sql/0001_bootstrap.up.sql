@@ -1,11 +1,13 @@
 CREATE TABLE IF NOT EXISTS sections (
        id INTEGER PRIMARY KEY,
-       name TEXT NOT NULL
+       name TEXT NOT NULL UNIQUE
 ) strict;
+
+INSERT INTO sections (name) VALES ('01 Inbox');
 
 CREATE TABLE IF NOT EXISTS tags (
        id INTEGER PRIMARY KEY,
-       name TEXT UNIQUE NOT NULL
+       name TEXT NOT NULL UNIQUE
 ) strict;
 
 CREATE TABLE IF NOT EXISTS notes (

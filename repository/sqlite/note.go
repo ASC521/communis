@@ -22,6 +22,34 @@ const delNoteFTSSql = `INSERT INTO notes_details_fts(notes_details_fts, rowid, t
 		       FROM notes_details
 		       WHERE notes_details.id = ?;`
 
+func parseNoteDetailsFromRows(rows *sql.Rows) ([]models.NoteDetail, error) {
+	nds := []models.NoteDetail{}
+	for rows.Next() {
+		nd := models.NoteDetail{}
+		var createdStr, updatedStr string
+		err := rows.Scan(&nd.Id, &nd.Title, &createdStr, &updatedStr)
+		if err != nil {
+			return nil, err
+		}
+		created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
+		if err != nil {
+			return nil, err
+		}
+		nd.CreatedAt = created
+		updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
+		if err != nil {
+			return nil, err
+		}
+		nd.LastUpdatedAt = updated
+		nds = append(nds, nd)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return nds, nil
+}
+
 type noteRepository struct {
 	db  *sqlitex.SQLiteDB
 	ctx context.Context
@@ -297,30 +325,22 @@ func (r *noteRepository) RecentUpdates(limit uint) ([]models.NoteDetail, error) 
 	if err != nil {
 		return nil, err
 	}
-	ru := []models.NoteDetail{}
-	for rows.Next() {
-		nd := models.NoteDetail{}
-		var createdStr, updatedStr string
-		err = rows.Scan(&nd.Id, &nd.Title, &createdStr, &updatedStr)
-		if err != nil {
-			return nil, err
-		}
-		created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
-		if err != nil {
-			return nil, err
-		}
-		nd.CreatedAt = created
-		updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
-		if err != nil {
-			return nil, err
-		}
-		nd.LastUpdatedAt = updated
-		ru = append(ru, nd)
-	}
+	return parseNoteDetailsFromRows(rows)
+}
 
-	if err = rows.Err(); err != nil {
+func (r *noteRepository) InSection(secId int64) ([]models.NoteDetail, error) {
+	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
+		FROM notes as n
+		WHERE n.section = ?
+		ORDER BY title ASC`
+
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, secId)
+	if err != nil {
 		return nil, err
 	}
 
-	return ru, nil
+	return parseNoteDetailsFromRows(rows)
 }

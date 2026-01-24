@@ -310,7 +310,6 @@ function mdeTogglePreview() {
 
 
 function mdeHandleClick(event) {
-    console.log(event);
 
     const buttonID = event.target.closest("button")?.id;
     if (buttonID === null) {

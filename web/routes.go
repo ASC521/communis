@@ -29,6 +29,13 @@ func routes(
 	mux.Handle("GET /edit/{id}/{slug}", handlers.NoteEditGet(tc, logger, nr, sr, tr))
 
 	mux.Handle("GET /section", handlers.SectionGet(tc, logger, sr))
+	mux.Handle("POST /section", handlers.SectionPost(tc, logger, sr))
+	mux.Handle("PUT /section/{id}", handlers.SectionPut(tc, logger, sr))
+	mux.Handle("DELETE /section/{id}", handlers.SectionDelete(tc, logger, sr))
+	mux.Handle("GET /section/new", handlers.SectionNewGet(tc, logger))
+	mux.Handle("GET /section/{id}/{slug}", handlers.SectionViewGet(tc, logger, nr, sr))
+	mux.Handle("GET /section/{id}/edit", handlers.SectionEditGet(tc, logger, sr))
+
 	mux.Handle("GET /search", handlers.NoteSearchGet(tc, logger, nr))
 
 	mux.Handle("POST /tag", handlers.TagPost(tc, logger, tr))
