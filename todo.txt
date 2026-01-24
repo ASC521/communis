@@ -3,7 +3,6 @@
 (D) Add form validation feedback to note create +v1 +create-note-rework
 (E) Fix note preview page -  buttons don't line up
 Add advanced query support to search screen +v1
-Add license +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 CSRF +v1
@@ -46,6 +45,7 @@ x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
 x (A) Tidy up note section, add tags dialog to view note screen +v1
 x (F) Add way to go to edit screen from view note screen +v1
+x Add license +v1
 x Bug Fix: Executing template is partially writing to screen - should be finding errors when writing first to buffer
 x Data Model
 x Full Text Search for Notes
