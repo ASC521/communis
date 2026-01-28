@@ -50,11 +50,6 @@
 	</svg>
       </button>
 
-      <button id="btn-select-ref-notes" type="button" class="icon-button">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-symlink">
-	</svg>
-      </button>
 
       <!-- TODO hide delete button if it is a new note since there is nothing to delete -->
       <button type="button" hx-target="body" hx-delete="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title }}"  hx-confirm="Delete {{ .FormData.Title }}?" class="icon-button">
@@ -89,6 +84,11 @@
       <button class="icon-button"  type="button" id="mde-link-btn" aria-label="hyperlink">
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#link">
+	</svg>
+      </button>
+      <button id="btn-select-ref-notes" type="button" class="icon-button">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-symlink">
 	</svg>
       </button>
       <button class="icon-button"  type="button" id="mde-inline-code-btn" aria-label="inline code">
@@ -142,7 +142,7 @@
 	</svg>
       </button>
     </div>
-    <textarea id="mde-textarea" name="note-content" autofocus="true">{{ .FormData.Content  }}</textarea>
+    <textarea id="mde-textarea" class="mde-textarea" name="note-content" autofocus="true">{{ .FormData.Content  }}</textarea>
   </form>
 
     <div id="mde-preview" hidden>
