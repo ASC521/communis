@@ -38,7 +38,12 @@ func routes(
 
 	mux.Handle("GET /search", handlers.NoteSearchGet(tc, logger, nr))
 
+	mux.Handle("GET /index", handlers.TagGet(tc, logger, tr))
 	mux.Handle("POST /tag", handlers.TagPost(tc, logger, tr))
+	mux.Handle("PUT /tag/{id}", handlers.TagPut(tc, logger, tr))
+	mux.Handle("DELETE /tag/{id}", handlers.TagDelete(tc, logger, tr))
+	mux.Handle("GET /tag/{id}/{slug}", handlers.TagViewGet(tc, logger, nr, tr))
+	mux.Handle("GET /tag/{id}/edit", handlers.TagEditGet(tc, logger, tr))
 
 	mux.Handle("GET /{$}", handlers.HomeGet(tc, logger, nr))
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}

@@ -19,7 +19,7 @@ type TagRepository interface {
 	Create(t *Tag) (int64, error)
 	FindById(id int64) (Tag, error)
 	FindByName(name string) (Tag, error)
-	Update(t *Tag) error
+	Update(t Tag) error
 	Delete(id int64) error
 	ListAll() ([]Tag, error)
 	List(limit, offset int) (PaginatedTags, error)
@@ -91,4 +91,5 @@ type NoteRepository interface {
 	Search(q string) ([]NoteSearchResult, error)
 	RecentUpdates(limit uint) ([]NoteDetail, error)
 	InSection(secId int64) ([]NoteDetail, error)
+	WithTag(tagId int64) ([]NoteDetail, error)
 }

@@ -12,36 +12,22 @@ import (
 	"github.com/ASC521/communis/web/handlers/validator"
 )
 
-func parseIdFromPath(r *http.Request) (int64, error) {
-	pathSectionId := r.PathValue("id")
-	if pathSectionId == "" {
-		return 0, errors.New("no id found in path")
-	}
-
-	sectionId, err := strconv.ParseInt(pathSectionId, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("section id %v is not a valid int", pathSectionId)
-	}
-
-	return sectionId, nil
-}
-
-type newSectionForm struct {
+type sectionForm struct {
 	Method      string
 	Id          int64
 	Name        string
 	FieldErrors map[string]string
 }
 
-func parseSectionFormFromRequest(r *http.Request) (newSectionForm, error) {
+func parseSectionFormFromRequest(r *http.Request) (sectionForm, error) {
 	err := r.ParseForm()
 	if err != nil {
-		return newSectionForm{}, err
+		return sectionForm{}, err
 	}
 
 	sectionName := r.PostForm.Get("section-name")
 
-	sectionForm := newSectionForm{
+	form := sectionForm{
 		Method:      r.Method,
 		Id:          0,
 		Name:        sectionName,
@@ -51,16 +37,16 @@ func parseSectionFormFromRequest(r *http.Request) (newSectionForm, error) {
 	if r.Method == "PUT" {
 		sectionId, err := parseIdFromPath(r)
 		if err != nil {
-			return newSectionForm{}, err
+			return sectionForm{}, err
 		}
-		sectionForm.Id = sectionId
+		form.Id = sectionId
 	}
 
-	return sectionForm, nil
+	return form, nil
 
 }
 
-func validateSectionForm(form *newSectionForm) {
+func validateSectionForm(form *sectionForm) {
 
 	if form.Name == "" {
 		form.FieldErrors["name"] = "Cannot be empty"
@@ -83,7 +69,7 @@ func SectionGet(
 ) http.Handler {
 
 	type td struct {
-		FormData newSectionForm
+		FormData sectionForm
 		Sections []models.Section
 	}
 
@@ -133,7 +119,7 @@ func SectionPost(
 func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tc.RenderPartial(logger, w, r, http.StatusOK, "post-section.tmpl", "new-section-form", newSectionForm{FieldErrors: map[string]string{}})
+		tc.RenderPartial(logger, w, r, http.StatusOK, "post-section.tmpl", "new-section-form", sectionForm{FieldErrors: map[string]string{}})
 	})
 }
 
@@ -212,7 +198,7 @@ func SectionEditGet(
 			return
 		}
 
-		sectionForm := newSectionForm{Id: section.Id, Name: section.Name, FieldErrors: map[string]string{}}
+		sectionForm := sectionForm{Id: section.Id, Name: section.Name, FieldErrors: map[string]string{}}
 		tc.RenderPartial(logger, w, r, http.StatusOK, "put-section.tmpl", "update-section", sectionForm)
 	})
 }

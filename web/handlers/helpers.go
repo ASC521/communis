@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -46,4 +49,18 @@ func slugify(s string) string {
 
 func safeHTML(s string) template.HTML {
 	return template.HTML(s)
+}
+
+func parseIdFromPath(r *http.Request) (int64, error) {
+	pathId := r.PathValue("id")
+	if pathId == "" {
+		return 0, errors.New("no id found in path")
+	}
+
+	id, err := strconv.ParseInt(pathId, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("section id %v is not a valid int", pathId)
+	}
+
+	return id, nil
 }

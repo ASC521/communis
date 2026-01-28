@@ -1,0 +1,21 @@
+{{ define "title" }}Index{{ end }}
+
+{{ define "main" }}
+
+<div class="thin-container">
+
+<h2>Index</h2>
+<hr>
+<div class="tag-index">
+{{ range .Tags }}
+
+<h5>
+    <a href="/tag/{{ .Id }}/{{ slugify .Name}}">{{ .Name }}</a>
+</h5>
+
+{{ end }}
+</div>
+
+</div>
+
+{{ end }}

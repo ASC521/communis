@@ -1,0 +1,48 @@
+{{ define "title" }}Tag: {{ .Tag.Name }} {{ end }}
+
+{{ define "main" }}
+
+<div class="thin-container">
+
+  <div class="page-header">
+    <div id="title" class="title">
+      <h2>{{ .Tag.Name }}</h2>
+    </div>
+    <div class="buttons">
+      <button type="button" class="icon-button" command="show-modal" commandFor="tag-delete-confirm">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
+	</svg>
+      </button>
+      <button type="button" class="icon-button" hx-get="/tag/{{ .Tag.Id }}/edit" hx-target="#title">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#pencil">
+	</svg>
+      </button>
+    </div>
+  </div>
+  <hr>
+  <div class="header-list">
+    {{ range .NoteDetails }}
+    <h5><a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a></h5>
+    {{ end }}
+  </div>
+</div>
+
+<dialog id="tag-delete-confirm">
+  <article>
+    <header>
+      <button rel="prev" class="close-btn" type="button" command="close" commandFor="tag-delete-confirm" aria-label="Close"></button>
+      <h4>Confirm</h4>
+    </header>
+    Delete Tag {{ .Tag.Name }}?
+    <footer>
+      <button command="close" commandFor="tag-delete-confirm" class="secondary">Cancel</button>
+      <button hx-delete="/tag/{{ .Tag.Id }}">Delete</button>
+    </footer>
+
+  </article>
+</dialog>
+
+
+{{ end }}
