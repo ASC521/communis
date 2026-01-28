@@ -80,7 +80,7 @@ func TestSQLiteSectionRepository(t *testing.T) {
 			Name: "Create",
 			TFunc: func(sr models.SectionRepository) error {
 				for _, nb := range nbs {
-					id, err := sr.Create(nb)
+					id, err := sr.Create(*nb)
 					if err != nil {
 						return fmt.Errorf("failed to create section %s: %w", nb.Name, err)
 					}
@@ -112,8 +112,8 @@ func TestSQLiteSectionRepository(t *testing.T) {
 			Name: "Update",
 			TFunc: func(nr models.SectionRepository) error {
 				onb := nbs[10]
-				nnb := &models.Section{Id: onb.Id, Name: onb.Name}
-				nnb.Name = "section-25"
+				nnb := models.Section{Id: onb.Id, Name: onb.Name}
+				nnb.Name = "section-55"
 				err := nr.Update(nnb)
 				if err != nil {
 					return fmt.Errorf("failed to update section: %w", err)
@@ -156,8 +156,8 @@ func TestSQLiteSectionRepository(t *testing.T) {
 					return fmt.Errorf("failed to query database: %w", err)
 				}
 
-				// subtracting one because we have deleted a section in the test above
-				if len(secs) != (len(nbs) - 1) {
+				// not subtracting one because in bootstraping the database we include section '01 Inbox'
+				if len(secs) != (len(nbs)) {
 					return fmt.Errorf("expected ListAll to return %v sections, but got %v", len(nbs)-1, len(secs))
 				}
 
@@ -234,7 +234,7 @@ func TestSQLiteTagRepository(t *testing.T) {
 			Name: "Update",
 			TFunc: func(tr models.TagRepository) error {
 				ot := ts[10]
-				nt := &models.Tag{Id: ot.Id, Name: ot.Name}
+				nt := models.Tag{Id: ot.Id, Name: ot.Name}
 				nt.Name = "updatedtag"
 				err := tr.Update(nt)
 				if err != nil {
@@ -363,14 +363,14 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	}
 
 	for _, nb := range secs {
-		nid, err := secRepo.Create(nb)
+		nid, err := secRepo.Create(*nb)
 		if err != nil {
 			t.Fatalf("failed preppering database with notebooks: %v", err.Error())
 		}
 		nb.Id = nid
 	}
 
-	ns := make([]models.Note, 0, 20)
+	ns := make([]*models.Note, 0, 20)
 	for i := range 20 {
 
 		n := models.Note{
@@ -379,7 +379,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 			Section: *secs[8],
 			Tags:    []models.Tag{*ts[2], *ts[4], *ts[12], *ts[17]},
 		}
-		ns = append(ns, n)
+		ns = append(ns, &n)
 	}
 
 	tcs := []struct {
@@ -390,7 +390,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 			Name: "Create",
 			TFunc: func(nr models.NoteRepository) error {
 				for _, n := range ns {
-					id, err := nr.Create(n)
+					id, err := nr.Create(*n)
 					if err != nil {
 						return fmt.Errorf("failed to create note: %w", err)
 					}
@@ -438,7 +438,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 				}
 
 				idne, err := nr.Exists("i am not here")
-				if err != nil {
+				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					return err
 				}
 				if idne != -1 {
@@ -455,7 +455,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 
 				n.Title = "Updated Title"
 
-				err := nr.Update(n)
+				err := nr.Update(*n)
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
@@ -545,7 +545,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 			TFunc: func(nr models.NoteRepository) error {
 				on := ns[12]
 				on.Content = on.Content + "FTS FIND ME"
-				err := nr.Update(on)
+				err := nr.Update(*on)
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}

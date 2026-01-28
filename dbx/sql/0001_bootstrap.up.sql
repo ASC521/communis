@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS sections (
        name TEXT NOT NULL UNIQUE
 ) strict;
 
-INSERT INTO sections (name) VALES ('01 Inbox');
+INSERT INTO sections (name) VALUES ('01 Inbox');
 
 CREATE TABLE IF NOT EXISTS tags (
        id INTEGER PRIMARY KEY,

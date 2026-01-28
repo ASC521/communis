@@ -344,3 +344,21 @@ func (r *noteRepository) InSection(secId int64) ([]models.NoteDetail, error) {
 
 	return parseNoteDetailsFromRows(rows)
 }
+
+func (r *noteRepository) WithTag(tagId int64) ([]models.NoteDetail, error) {
+	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
+		FROM notes as n
+		INNER JOIN notes_tags as nt
+		ON n.id = nt.note_id
+		WHERE nt.tag_id = ?;`
+
+	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, tagId)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseNoteDetailsFromRows(rows)
+}

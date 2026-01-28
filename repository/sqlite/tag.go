@@ -113,7 +113,7 @@ func (r *tagRepository) FindByName(name string) (models.Tag, error) {
 	return t, nil
 }
 
-func (r *tagRepository) Update(t *models.Tag) error {
+func (r *tagRepository) Update(t models.Tag) error {
 
 	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
