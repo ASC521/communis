@@ -85,8 +85,21 @@ fieldset[tabindex] {
     justify-content: space-evenly;
 }
 
-#mde-textarea {
-    flex: 1;
+.mde-textarea {
+    flex: 0 0 auto;
+    border: none;
+    outline: none;
+    overflow: hidden;
+    resize: none;
+    background: transparent;
+    height: auto;
+    box-sizing: border-box;
+}
+
+.mde-textarea:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .rendered-note-page {

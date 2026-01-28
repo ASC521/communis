@@ -67,9 +67,19 @@ function mdeAddHistoryEntry(mde) {
     }
 }
 
-function mdeHandleOnInput(event) {
-    const textarea = event.target
+function mdeAdjustTextareaHeight() {
+    const start = mdEditor.textarea.selectionStart;
+    const end = mdEditor.textarea.selectionEnd;
+    const scrollY = window.scrollY || window.pageYOffset;
 
+    mdEditor.textarea.style.height = 'auto';
+    mdEditor.textarea.style.height = mdEditor.textarea.scrollHeight + 'px';
+
+    mdEditor.textarea.setSelectionRange(start, end);
+    window.scrollTo(0, scrollY);
+}
+
+function mdeAddUndoRedoEntry(event) {
     if (mdEditor.isUndoRedo) {
 	return
     }
@@ -78,6 +88,12 @@ function mdeHandleOnInput(event) {
     mdEditor.saveTimeout = setTimeout(() => {
 	mdeAddHistoryEntry(mdEditor);
     }, 500);
+}
+
+function mdeHandleOnInput(event) {
+
+    mdeAddUndoRedoEntry(event);
+    mdeAdjustTextareaHeight();
 
 }
 
@@ -392,6 +408,7 @@ document.addEventListener("DOMContentLoaded", (e) => {
 
     if (mdEditor === null) {
 	mdEditor = new MDEditor(ta, container);
+	mdeAdjustTextareaHeight();
 	mdEditor.textarea.addEventListener("input", mdeHandleOnInput);
 	mdEditor.textarea.addEventListener("keydown", mdeHandleKeyDown);
 	mdEditor.container.addEventListener("click", mdeHandleClick);
