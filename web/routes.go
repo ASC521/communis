@@ -46,6 +46,7 @@ func routes(
 	mux.Handle("GET /tag/{id}/edit", handlers.TagEditGet(tc, logger, tr))
 
 	mux.Handle("GET /{$}", handlers.HomeGet(tc, logger, nr))
+
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
 	return baseChain.then(mux)
 }

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
@@ -45,7 +46,8 @@ func connectToDatabase(c *config.Config, ctx context.Context, logger *slog.Logge
 		return nil, err
 	}
 
-	db, err := sqlitex.NewSQLiteDB(ctx, c.SQLite.FilePath,
+	indexDBFP := filepath.Join(c.SQLite.DBDirectory, "index.db")
+	db, err := sqlitex.NewSQLiteDB(ctx, indexDBFP,
 		sqlitex.WithBusyTimeout(c.SQLite.BusyTimeout),
 		sqlitex.WithCacheSize(c.SQLite.CacheSize),
 		sqlitex.WithForeignKeys(c.SQLite.ForeignKeys),
@@ -57,7 +59,7 @@ func connectToDatabase(c *config.Config, ctx context.Context, logger *slog.Logge
 		return nil, err
 	}
 
-	mig, err := dbx.NewSQLiteMigrator(ctx, db)
+	mig, err := dbx.NewSQLiteMigrator(ctx, db, c.SQLite.IndexDBMigrations)
 	if err != nil {
 		db.Close()
 		return nil, err

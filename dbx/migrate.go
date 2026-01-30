@@ -44,8 +44,8 @@ func findVersionIndex(migrations []migration, version uint) int {
 	return -1
 }
 
-func loadMigrations() ([]migration, error) {
-	des, err := embeddedMigrationsFS.ReadDir("sql")
+func loadMigrations(migPath string) ([]migration, error) {
+	des, err := embeddedMigrationsFS.ReadDir(migPath)
 	if err != nil {
 		return nil, err
 	}
@@ -90,28 +90,28 @@ type Migrator struct {
 	Migrations   []migration
 }
 
-func NewMigrator(driver MigrationDriver) (*Migrator, error) {
+func NewMigrator(driver MigrationDriver, migPath string) (*Migrator, error) {
 
-	migs, err := loadMigrations()
+	migs, err := loadMigrations(migPath)
 	if err != nil {
 		return nil, err
 	}
 
-	mig := &Migrator{driver: driver, embeddedRoot: "sql", Migrations: migs}
+	mig := &Migrator{driver: driver, embeddedRoot: migPath, Migrations: migs}
 
 	return mig, nil
 }
 
-func NewSQLiteMigrator(ctx context.Context, db *sqlitex.SQLiteDB) (*Migrator, error) {
+func NewSQLiteMigrator(ctx context.Context, db *sqlitex.SQLiteDB, migPath string) (*Migrator, error) {
 	sd, err := sqlitex.NewSQLiteMigrationDriver(db, ctx)
 	if err != nil {
 		return nil, err
 	}
-	migs, err := loadMigrations()
+	migs, err := loadMigrations(migPath)
 	if err != nil {
 		return nil, err
 	}
-	return &Migrator{driver: sd, embeddedRoot: "sql", Migrations: migs}, nil
+	return &Migrator{driver: sd, embeddedRoot: migPath, Migrations: migs}, nil
 }
 
 func (m *Migrator) First() (migration, error) {
