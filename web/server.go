@@ -16,9 +16,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ASC521/communis/cache"
 	"github.com/ASC521/communis/config"
-	"github.com/ASC521/communis/dbx"
+	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
+	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/repository/sqlite"
 	"github.com/ASC521/communis/web/handlers"
 )
@@ -40,70 +42,123 @@ func setupLogging(c *config.Config) *slog.Logger {
 	return slog.New(h)
 }
 
-func connectToDatabase(c *config.Config, ctx context.Context, logger *slog.Logger) (*sqlitex.SQLiteDB, error) {
-	err := config.ValidSQLite(c.SQLite)
+func connectToDatabase(conf *config.Config, ctx context.Context, logger *slog.Logger) (models.IndexRepository, *cache.TTLCache[string, *sqlitex.SQLiteDB], error) {
+	err := config.ValidSQLite(conf.SQLite)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	indexDBFP := filepath.Join(c.SQLite.DBDirectory, "index.db")
-	db, err := sqlitex.NewSQLiteDB(ctx, indexDBFP,
-		sqlitex.WithBusyTimeout(c.SQLite.BusyTimeout),
-		sqlitex.WithCacheSize(c.SQLite.CacheSize),
-		sqlitex.WithForeignKeys(c.SQLite.ForeignKeys),
-		sqlitex.WithJournalMode(c.SQLite.JournalMode),
-		sqlitex.WithSynchronous(c.SQLite.Synchronous),
-		sqlitex.WithTempStore(c.SQLite.TempStore),
+	notesConnCache := cache.NewTTL[string, *sqlitex.SQLiteDB](func(key string, value *sqlitex.SQLiteDB) {
+		err := value.Close()
+		if err != nil {
+			logger.Error(fmt.Sprintf("failed to close %s db connection", key), "erMsg", err.Error())
+		}
+	})
+
+	indexDBFP := filepath.Join(conf.SQLite.DBDirectory, conf.SQLite.IndexDBFileName)
+	indexDB, err := sqlitex.NewSQLiteDB(ctx, indexDBFP,
+		sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
+		sqlitex.WithCacheSize(conf.SQLite.CacheSize),
+		sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys),
+		sqlitex.WithJournalMode(conf.SQLite.JournalMode),
+		sqlitex.WithSynchronous(conf.SQLite.Synchronous),
+		sqlitex.WithTempStore(conf.SQLite.TempStore),
 	)
 	if err != nil {
-		return nil, err
+		return nil, notesConnCache, err
 	}
 
-	mig, err := dbx.NewSQLiteMigrator(ctx, db, c.SQLite.IndexDBMigrations)
+	indexMigrations, err := migrations.Load(conf.SQLite.IndexDBMigrations)
 	if err != nil {
-		db.Close()
-		return nil, err
+		indexDB.Close()
+		return nil, notesConnCache, err
 	}
+	indexDBMigrationDriver := sqlitex.NewMigrationDriver(indexDB, ctx)
 
-	emptyDB, err := mig.IsEmpty()
+	emptyIndexDB, err := indexDBMigrationDriver.IsEmpty()
 	if err != nil {
-		db.Close()
-		return nil, err
+		indexDB.Close()
+		return nil, notesConnCache, err
 	}
 
-	if emptyDB {
+	if emptyIndexDB {
 		logger.Info("fresh database - bootstrapping all the way up")
-		err = mig.Bootstrap()
+		_, err = migrations.Bootstrap(indexMigrations, indexDBMigrationDriver)
 		if err != nil {
-			db.Close()
-			return nil, fmt.Errorf("failed to bootstrap new datbase: %w", err)
+			indexDB.Close()
+			return nil, nil, fmt.Errorf("failed to bootstrap new datbase: %w", err)
 		}
-		return db, nil
 
+		return sqlite.NewIndexDBRepository(ctx, indexDB.QueryTimeout), nil, nil
 	}
 
-	isLatest, err := mig.IsLatest()
+	isLatest, err := migrations.IsLatest(indexMigrations, indexDBMigrationDriver)
 	if err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to determine if database on latest migration: %w", err)
+		indexDB.Close()
+		return nil, notesConnCache, fmt.Errorf("failed to determine if database on latest migration: %w", err)
 	}
 
 	if !isLatest {
 		logger.Info("database not on latest version - running migrations up")
-		err = mig.Up()
+		_, err = migrations.Up(indexMigrations, indexDBMigrationDriver)
 		if err != nil {
-			db.Close()
-			return nil, fmt.Errorf("failed to run migrations up: %w", err)
+			indexDB.Close()
+			return nil, notesConnCache, fmt.Errorf("failed to run migrations up: %w", err)
 		}
 
-		return db, nil
+		return sqlite.NewIndexDBRepository(ctx, indexDB.QueryTimeout), nil, nil
+	}
+
+	// Check notes db for available migrations
+	notesMigrations, err := migrations.Load(conf.SQLite.NotesDBMigrations)
+	if err != nil {
+		indexDB.Close()
+		return nil, notesConnCache, err
+	}
+
+	latestNotesMigration, err := migrations.Latest(notesMigrations)
+	if err != nil {
+		indexDB.Close()
+		return nil, notesConnCache, err
+	}
+
+	indexRepository := sqlite.NewIndexDBRepository(ctx, indexDB.QueryTimeout)
+	dbsToUpgrade, err := indexRepository.DBVersionBefore(indexDB.Read, int(latestNotesMigration.Version))
+	if err != nil {
+		indexDB.Close()
+		return nil, notesConnCache, err
+	}
+
+	for _, dbInfo := range dbsToUpgrade {
+		// TODO: This is embarassingly parallelisable and should be rewritten for concurrency
+		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, dbInfo.DBPath)
+		notesDB, err := sqlitex.NewSQLiteDB(ctx, notesDBFP,
+			sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
+			sqlitex.WithCacheSize(conf.SQLite.CacheSize),
+			sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys),
+			sqlitex.WithJournalMode(conf.SQLite.JournalMode),
+			sqlitex.WithSynchronous(conf.SQLite.Synchronous),
+			sqlitex.WithTempStore(conf.SQLite.TempStore),
+		)
+		if err != nil {
+			indexDB.Close()
+			return nil, notesConnCache, err
+		}
+
+		notesDBMigrationDriver := sqlitex.NewMigrationDriver(notesDB, ctx)
+		version, err := migrations.Up(notesMigrations, notesDBMigrationDriver)
+		if err != nil {
+			indexDB.Close()
+			return nil, notesConnCache, err
+		}
+		indexRepository.UpdateDBVersion(indexDB.Write, dbInfo.UserId, version)
+
 	}
 
 	logger.Info("database on latest version - leaving it be")
+	logger.Info("database configured", slog.Any("config", indexDB.LogDBConfig()))
 
-	logger.Info("database configured", slog.Any("config", db.LogDBConfig()))
-
-	return db, nil
+	return indexRepository, notesConnCache, nil
 
 }
 
@@ -127,11 +182,16 @@ func RunServer(conf *config.Config) error {
 	if err != nil {
 		return err
 	}
-	db, err := connectToDatabase(conf, ctx, logger)
+	_, notesDBCache, err := connectToDatabase(conf, ctx, logger)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer notesDBCache.Shutdown()
+
+	// TODO: Clean up indexRepository connection
+
+	// TODO: Remove this. Doing this to compile and be able to run CLI
+	db, _ := notesDBCache.Get("need-to-just-compile")
 
 	nr := sqlite.NewNoteRepository(db, ctx)
 	tr := sqlite.NewTagRepository(db, ctx)

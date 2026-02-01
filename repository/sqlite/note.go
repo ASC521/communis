@@ -60,7 +60,7 @@ func NewNoteRepository(db *sqlitex.SQLiteDB, ctx context.Context) *noteRepositor
 }
 
 func (r *noteRepository) Create(n models.Note) (int64, error) {
-	return sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int64, error) {
+	return sqlitex.WithTransaction(r.db.Write, r.ctx, func(ctx context.Context, tx *sql.Tx) (int64, error) {
 		res, err := tx.Exec("INSERT INTO notes (title, content, section) VALUES (?, ?, ?);", n.Title, n.Content, n.Section.Id)
 		if err != nil {
 			return 0, fmt.Errorf("failed to insert new note: %w", err)
@@ -144,7 +144,7 @@ func (r *noteRepository) FindById(id int64) (models.Note, error) {
 }
 
 func (r *noteRepository) Update(n models.Note) error {
-	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	_, err := sqlitex.WithTransaction(r.db.Write, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delNoteFTSSql, n.Id)
 		if err != nil {
@@ -183,7 +183,7 @@ func (r *noteRepository) Update(n models.Note) error {
 }
 
 func (r *noteRepository) Delete(id int64) error {
-	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	_, err := sqlitex.WithTransaction(r.db.Write, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delNoteFTSSql, id)
 		if err != nil {

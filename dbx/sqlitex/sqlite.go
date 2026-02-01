@@ -269,11 +269,11 @@ func (d *SQLiteDB) Close() error {
 	}
 }
 
-func WithTransaction[R any](db *SQLiteDB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {
+func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {
 	ctxWTO, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	tx, err := db.Write.BeginTx(ctxWTO, nil)
+	tx, err := db.BeginTx(ctxWTO, nil)
 	if err != nil {
 		return result, err
 	}
@@ -315,8 +315,8 @@ type SQLiteMigrationDriver struct {
 	ctx context.Context
 }
 
-func NewSQLiteMigrationDriver(db *SQLiteDB, ctx context.Context) (*SQLiteMigrationDriver, error) {
-	return &SQLiteMigrationDriver{db: db, ctx: ctx}, nil
+func NewMigrationDriver(db *SQLiteDB, ctx context.Context) *SQLiteMigrationDriver {
+	return &SQLiteMigrationDriver{db: db, ctx: ctx}
 }
 
 func (s *SQLiteMigrationDriver) IsEmpty() (bool, error) {
@@ -338,7 +338,7 @@ func (s *SQLiteMigrationDriver) AddVersionTable() error {
 }
 
 func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error {
-	_, err := WithTransaction(s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
+	_, err := WithTransaction(s.db.Write, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
 		_, err := tx.Exec(sqlMig)
 		if err != nil {
 			return nil, err

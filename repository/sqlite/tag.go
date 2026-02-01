@@ -115,7 +115,7 @@ func (r *tagRepository) FindByName(name string) (models.Tag, error) {
 
 func (r *tagRepository) Update(t models.Tag) error {
 
-	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	_, err := sqlitex.WithTransaction(r.db.Write, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delTagFTSSql, t.Id)
 		if err != nil {
@@ -138,7 +138,7 @@ func (r *tagRepository) Update(t models.Tag) error {
 }
 
 func (r *tagRepository) Delete(id int64) error {
-	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	_, err := sqlitex.WithTransaction(r.db.Write, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delTagFTSSql, id)
 		if err != nil {

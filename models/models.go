@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type Tag struct {
 	Id   int64  `json:"id"`
@@ -92,4 +95,22 @@ type NoteRepository interface {
 	RecentUpdates(limit uint) ([]NoteDetail, error)
 	InSection(secId int64) ([]NoteDetail, error)
 	WithTag(tagId int64) ([]NoteDetail, error)
+}
+
+type User struct {
+	Id             int64
+	Name           string
+	HashedPassword []byte
+	IsAdmin        bool
+}
+
+type NotesDBInfo struct {
+	UserId    int64
+	DBPath    string
+	DBVersion int
+}
+
+type IndexRepository interface {
+	DBVersionBefore(db *sql.DB, latestVer int) ([]NotesDBInfo, error)
+	UpdateDBVersion(db *sql.DB, id int64, version int) error
 }

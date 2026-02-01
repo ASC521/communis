@@ -1,7 +1,10 @@
-(A) User Authentication support +v1
-(C) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
-(D) Add form validation feedback to note create +v1 +create-note-rework
-(E) Fix note preview page -  buttons don't line up
+(A) Refactor migrations to support multiple databases +v1 +user-auth
+(B) Refactor database repositories to accept db connection in function +v1 +user-auth
+(C) Add middleware to check auth user and retrieve correct db connection +v1 +user-auth
+(D) Add capability to add, edit, and delete users +v1 +auth-user
+(E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
+(F) Add form validation feedback to note create +v1 +create-note-rework
+(G) Fix note preview page -  buttons don't line up
 Add advanced query support to search screen +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1

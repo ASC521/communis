@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ASC521/communis/config"
-	"github.com/ASC521/communis/dbx"
+	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
 )
 
@@ -42,34 +42,37 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 	}
 	defer db.Close()
 
-	mig, err := dbx.NewSQLiteMigrator(ctx, db, migrationsDir)
+	migs, err := migrations.Load(migrationsDir)
 	if err != nil {
 		return err
 	}
 
+	migDriver := sqlitex.NewMigrationDriver(db, ctx)
+
 	cmd, _ := args[0], args[1:]
 	switch cmd {
 	case "down":
-		return mig.Down()
+		return migrations.Down(migs, migDriver)
 	case "step-down":
-		pm, err := mig.StepDown()
+		pm, err := migrations.StepDown(migs, migDriver)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", pm.Version, pm.Name)
 		return nil
 	case "step-up":
-		nm, err := mig.StepUp()
+		nm, err := migrations.StepUp(migs, migDriver)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", nm.Version, nm.Name)
 		return nil
 	case "up":
-		return mig.Up()
+		_, err = migrations.Up(migs, migDriver)
+		return err
 	case "list":
 
-		cv, err := mig.Version()
+		cv, err := migDriver.Version()
 		if err != nil {
 			return err
 		}
@@ -79,7 +82,7 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 		} else {
 			fmt.Fprint(os.Stdout, "0000 - empty database\n")
 		}
-		for _, m := range mig.Migrations {
+		for _, m := range migs {
 			if cv == m.Version {
 				fmt.Fprintf(os.Stdout, "*** %04d - %s ***\n", m.Version, m.Name)
 			} else {
@@ -149,12 +152,14 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 		}
 		defer db.Close()
 
-		mig, err := dbx.NewSQLiteMigrator(ctx, db, migrationsDir)
+		migs, err := migrations.Load(migrationsDir)
 		if err != nil {
 			return err
 		}
 
-		return mig.Bootstrap()
+		driver := sqlitex.NewMigrationDriver(db, ctx)
+		_, err = migrations.Bootstrap(migs, driver)
+		return err
 
 	case "migrate":
 		return MigrateCMD(conf, subArgs, dbPath, migrationsDir)

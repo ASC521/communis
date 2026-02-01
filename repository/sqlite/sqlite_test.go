@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ASC521/communis/dbx"
-	"github.com/ASC521/communis/dbx/sqlitex"
+	"github.com/ASC521/communis/migrations"
+	"github.com/ASC521/communis/migrations/sqlitex"
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/repository/sqlite"
 )
@@ -40,7 +40,7 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 		return nil, fmt.Errorf("failed to create sqlite database: %w", err), nil
 	}
 
-	mig, err := dbx.NewSQLiteMigrator(ctx, db)
+	mig, err := migrations.NewSQLiteMigrator(ctx, db)
 	if err != nil {
 		cleanUp()
 		return nil, fmt.Errorf("failed to create sqlite migrator: %w", err), nil
