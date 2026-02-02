@@ -164,6 +164,10 @@ func (o sqliteOptions) pragmaStatements() []string {
 	}
 }
 
+type key string
+
+var dbKey key
+
 type SQLiteDB struct {
 	dbPath       string
 	Read         *sql.DB
@@ -267,6 +271,17 @@ func (d *SQLiteDB) Close() error {
 	} else {
 		return nil
 	}
+}
+
+// NewContext returns a new context that carries the db value.
+func NewContext(ctx context.Context, db *SQLiteDB) context.Context {
+	return context.WithValue(ctx, dbKey, db)
+}
+
+// FromContext returns the DB value stored in ctx, if any.
+func FromContext(ctx context.Context) (*SQLiteDB, bool) {
+	db, ok := ctx.Value(dbKey).(*SQLiteDB)
+	return db, ok
 }
 
 func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {

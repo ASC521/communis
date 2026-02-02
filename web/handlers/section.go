@@ -65,7 +65,7 @@ func validateSectionForm(form *sectionForm) {
 func SectionGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	sr models.SectionRepository,
+	newNotesRepo getNotesRepo,
 ) http.Handler {
 
 	type td struct {
@@ -74,8 +74,13 @@ func SectionGet(
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		notesRepo, ok := newNotesRepo(r)
+		if !ok {
+			serverError(logger, w, r, ErrNotesRepoNotFound)
+			return
+		}
 
-		sections, err := sr.ListAll()
+		sections, err := notesRepo.ListAllSections(r.Context())
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
@@ -88,7 +93,7 @@ func SectionGet(
 func SectionPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	sr models.SectionRepository,
+	newNotesRepo getNotesRepo,
 ) http.Handler {
 	type td struct {
 	}
@@ -99,13 +104,20 @@ func SectionPost(
 			http.Error(w, "failed to parse form", http.StatusUnprocessableEntity)
 			return
 		}
+
 		validateSectionForm(&form)
 		if len(form.FieldErrors) > 0 {
 			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "post-section.tmpl", "new-section-form", form)
 			return
 		}
 
-		_, err = sr.Create(models.Section{Name: form.Name})
+		notesRepo, ok := newNotesRepo(r)
+		if !ok {
+			serverError(logger, w, r, ErrNotesRepoNotFound)
+			return
+		}
+
+		_, err = notesRepo.CreateSection(r.Context(), models.Section{Name: form.Name})
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
@@ -126,7 +138,7 @@ func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.Handler {
 func SectionDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	sr models.SectionRepository,
+	newNotesRepo getNotesRepo,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -136,7 +148,12 @@ func SectionDelete(
 			return
 		}
 
-		err = sr.Delete(sectionId)
+		notesRepo, ok := newNotesRepo(r)
+		if !ok {
+			serverError(logger, w, r, ErrNotesRepoNotFound)
+			return
+		}
+		err = notesRepo.DeleteSection(r.Context(), sectionId)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
@@ -150,7 +167,7 @@ func SectionDelete(
 func SectionPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	sr models.SectionRepository,
+	newNotesRepo getNotesRepo,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		form, err := parseSectionFormFromRequest(r)
@@ -164,7 +181,13 @@ func SectionPut(
 			return
 		}
 
-		err = sr.Update(models.Section{Id: form.Id, Name: form.Name})
+		notesRepo, ok := newNotesRepo(r)
+		if !ok {
+			serverError(logger, w, r, ErrNotesRepoNotFound)
+			return
+		}
+
+		err = notesRepo.UpdateSection(r.Context(), models.Section{Id: form.Id, Name: form.Name})
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
@@ -178,7 +201,7 @@ func SectionPut(
 func SectionEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	sr models.SectionRepository,
+	newNotesRepo getNotesRepo,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sectionId, err := parseIdFromPath(r)
@@ -186,8 +209,12 @@ func SectionEditGet(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		section, err := sr.FindById(sectionId)
+		notesRepo, ok := newNotesRepo(r)
+		if !ok {
+			serverError(logger, w, r, ErrNotesRepoNotFound)
+			return
+		}
+		section, err := notesRepo.FindSectionById(r.Context(), sectionId)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.Error(w, fmt.Sprintf("section %v not found", sectionId), http.StatusNotFound)
@@ -206,8 +233,7 @@ func SectionEditGet(
 func SectionViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	nr models.NoteRepository,
-	sr models.SectionRepository,
+	newNotesRepo getNotesRepo,
 ) http.Handler {
 	type td struct {
 		Section     models.Section
@@ -226,7 +252,12 @@ func SectionViewGet(
 			return
 		}
 
-		sec, err := sr.FindById(id)
+		notesRepo, ok := newNotesRepo(r)
+		if !ok {
+			serverError(logger, w, r, ErrNotesRepoNotFound)
+			return
+		}
+		sec, err := notesRepo.FindSectionById(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.Error(w, "section not found", http.StatusNotFound)
@@ -236,7 +267,7 @@ func SectionViewGet(
 			return
 		}
 
-		nds, err := nr.InSection(id)
+		nds, err := notesRepo.NotesInSection(r.Context(), id)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return

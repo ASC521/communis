@@ -1,7 +1,5 @@
-(A) Refactor migrations to support multiple databases +v1 +user-auth
-(B) Refactor database repositories to accept db connection in function +v1 +user-auth
-(C) Add middleware to check auth user and retrieve correct db connection +v1 +user-auth
-(D) Add capability to add, edit, and delete users +v1 +auth-user
+(A) Add middleware to check auth user and retrieve correct db connection +v1 +user-auth
+(B) Add capability to add, edit, and delete users +v1 +auth-user
 (E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (G) Fix note preview page -  buttons don't line up
@@ -45,7 +43,9 @@ x (A) Move to icons from text buttons +v1 +create-note-rework
 x (A) Move to pico css +v1
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
+x (A) Refactor migrations to support multiple databases +v1 +user-auth
 x (A) Tidy up note section, add tags dialog to view note screen +v1
+x (B) Refactor database repositories to support database connection in each handler +v1 +user-auth
 x (F) Add way to go to edit screen from view note screen +v1
 x Add license +v1
 x Bug Fix: Executing template is partially writing to screen - should be finding errors when writing first to buffer

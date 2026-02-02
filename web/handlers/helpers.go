@@ -9,6 +9,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ASC521/communis/dbx/sqlitex"
+	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/repository/sqlite"
 )
 
 // The serverError helper writes a log entry at Error level (including the request
@@ -63,4 +67,17 @@ func parseIdFromPath(r *http.Request) (int64, error) {
 	}
 
 	return id, nil
+}
+
+var ErrNotesRepoNotFound = errors.New("notes repository not found in context")
+
+type getNotesRepo func(*http.Request) (models.NotesRepository, bool)
+
+func GetSQLiteNotesRepo(r *http.Request) (models.NotesRepository, bool) {
+
+	db, ok := sqlitex.FromContext(r.Context())
+	if !ok {
+		return nil, false
+	}
+	return sqlite.NewNotesRepository(db), true
 }

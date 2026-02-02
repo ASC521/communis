@@ -182,7 +182,7 @@ func RunServer(conf *config.Config) error {
 	if err != nil {
 		return err
 	}
-	_, notesDBCache, err := connectToDatabase(conf, ctx, logger)
+	indexRepo, notesDBCache, err := connectToDatabase(conf, ctx, logger)
 	if err != nil {
 		return err
 	}
@@ -190,14 +190,7 @@ func RunServer(conf *config.Config) error {
 
 	// TODO: Clean up indexRepository connection
 
-	// TODO: Remove this. Doing this to compile and be able to run CLI
-	db, _ := notesDBCache.Get("need-to-just-compile")
-
-	nr := sqlite.NewNoteRepository(db, ctx)
-	tr := sqlite.NewTagRepository(db, ctx)
-	sr := sqlite.NewSectionRepository(db, ctx)
-
-	handler := routes(logger, tc, nr, tr, sr)
+	handler := routes(logger, tc, indexRepo, notesDBCache)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),

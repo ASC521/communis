@@ -20,19 +20,10 @@ const insTagFTSSql = `INSERT INTO notes_details_fts(rowid, title, content, tags_
 		   FROM notes_details, json_each(notes_details.tags_json)
 		   WHERE json_extract(value, '$.id') = ?;`
 
-type tagRepository struct {
-	db  *sqlitex.SQLiteDB
-	ctx context.Context
-}
-
-func NewTagRepository(db *sqlitex.SQLiteDB, ctx context.Context) *tagRepository {
-	return &tagRepository{db: db, ctx: ctx}
-}
-
-func (r *tagRepository) Create(t *models.Tag) (int64, error) {
+func (r *NotesRepository) CreateTag(ctx context.Context, t models.Tag) (int64, error) {
 
 	sql := "INSERT INTO tags (name) VALUES (?);"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	res, err := r.db.Write.ExecContext(ctxWTO, sql, t.Name)
@@ -43,53 +34,9 @@ func (r *tagRepository) Create(t *models.Tag) (int64, error) {
 
 }
 
-func (r *tagRepository) CheckMissing(names []string) ([]string, error) {
-	valPlaceholders := make([]string, len(names))
-	args := make([]any, len(names))
-	for i, n := range names {
-		valPlaceholders[i] = "(?)"
-		args[i] = n
-	}
-	valuesClause := strings.Join(valPlaceholders, ",")
-
-	q := fmt.Sprintf(`
-		WITH input_values(name) AS (VALUES %s)
-		SELECT input_values.name
-		FROM input_values
-		WHERE name NOT IN (SELECT name from tags);`,
-		valuesClause,
-	)
-
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
-	defer cancel()
-
-	rows, err := r.db.Read.QueryContext(ctxWTO, q, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query database for tags: %w", err)
-	}
-	defer rows.Close()
-
-	missing := []string{}
-	for rows.Next() {
-		var t string
-		err = rows.Scan(&t)
-		if err != nil {
-			return nil, err
-		}
-		missing = append(missing, t)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed iterating missing tags: %w", err)
-	}
-
-	return missing, nil
-
-}
-
-func (r *tagRepository) FindById(id int64) (models.Tag, error) {
+func (r *NotesRepository) FindTagById(ctx context.Context, id int64) (models.Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	t := models.Tag{}
@@ -100,9 +47,9 @@ func (r *tagRepository) FindById(id int64) (models.Tag, error) {
 	return t, nil
 }
 
-func (r *tagRepository) FindByName(name string) (models.Tag, error) {
+func (r *NotesRepository) FindTagByName(ctx context.Context, name string) (models.Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE name = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	t := models.Tag{}
@@ -113,9 +60,9 @@ func (r *tagRepository) FindByName(name string) (models.Tag, error) {
 	return t, nil
 }
 
-func (r *tagRepository) Update(t models.Tag) error {
+func (r *NotesRepository) UpdateTag(ctx context.Context, t models.Tag) error {
 
-	_, err := sqlitex.WithTransaction(r.db.Write, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delTagFTSSql, t.Id)
 		if err != nil {
@@ -137,8 +84,8 @@ func (r *tagRepository) Update(t models.Tag) error {
 	return err
 }
 
-func (r *tagRepository) Delete(id int64) error {
-	_, err := sqlitex.WithTransaction(r.db.Write, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+func (r *NotesRepository) DeleteTag(ctx context.Context, id int64) error {
+	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delTagFTSSql, id)
 		if err != nil {
@@ -160,9 +107,9 @@ func (r *tagRepository) Delete(id int64) error {
 
 }
 
-func (r *tagRepository) ListAll() ([]models.Tag, error) {
+func (r *NotesRepository) ListAllTags(ctx context.Context) ([]models.Tag, error) {
 	query := "SELECT id, name FROM tags ORDER BY name ASC"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query)
@@ -190,7 +137,7 @@ func (r *tagRepository) ListAll() ([]models.Tag, error) {
 
 }
 
-func (r *tagRepository) List(limit, offset int) (models.PaginatedTags, error) {
+func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (models.PaginatedTags, error) {
 
 	if limit <= 0 {
 		limit = 10
@@ -201,7 +148,7 @@ func (r *tagRepository) List(limit, offset int) (models.PaginatedTags, error) {
 	}
 
 	query := `SELECT id, name FROM tags ORDER BY id ASC LIMIT ? OFFSET ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
@@ -237,7 +184,7 @@ func (r *tagRepository) List(limit, offset int) (models.PaginatedTags, error) {
 
 }
 
-func (r *tagRepository) Query(ids []int64) ([]models.Tag, error) {
+func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]models.Tag, error) {
 	placeholders := make([]string, len(ids))
 	args := make([]any, len(ids))
 
@@ -254,7 +201,7 @@ func (r *tagRepository) Query(ids []int64) ([]models.Tag, error) {
 		strings.Join(placeholders, ","),
 	)
 
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, q, args...)
