@@ -1,9 +1,10 @@
 module github.com/ASC521/communis
 
-go 1.25.3
+go 1.25.7
 
 require (
 	github.com/BurntSushi/toml v1.5.0
+	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/yuin/goldmark v1.7.13
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc

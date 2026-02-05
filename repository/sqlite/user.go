@@ -3,26 +3,24 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
 )
 
 type indexDBRepository struct {
-	ctx          context.Context
-	queryTimeout time.Duration
+	db *sqlitex.SQLiteDB
 }
 
-func NewIndexDBRepository(ctx context.Context, timeout time.Duration) *indexDBRepository {
-	return &indexDBRepository{ctx: ctx, queryTimeout: timeout}
+func NewIndexDBRepository(db *sqlitex.SQLiteDB) *indexDBRepository {
+	return &indexDBRepository{db: db}
 }
 
-func (r *indexDBRepository) DBVersionBefore(db *sql.DB, latestVer int) ([]models.NotesDBInfo, error) {
+func (r *indexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) ([]models.NotesDBInfo, error) {
 	sql := `SELECT id, db_path, db_version FROM users WHERE db_version < ? AND is_admin = 0;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.queryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
-	rows, err := db.QueryContext(ctxWTO, sql, latestVer)
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, latestVer)
 	if err != nil {
 		return nil, err
 	}
@@ -44,10 +42,10 @@ func (r *indexDBRepository) DBVersionBefore(db *sql.DB, latestVer int) ([]models
 	return dbInfos, nil
 }
 
-func (r *indexDBRepository) UpdateDBVersion(db *sql.DB, userID int64, version int) error {
+func (r *indexDBRepository) UpdateDBVersion(ctx context.Context, userID int64, version int) error {
 	updateStmt := `UPDATE users SET db_version = ? WHERE id = ?;`
 
-	_, err := sqlitex.WithTransaction(db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 		_, err := tx.Exec(updateStmt, version, userID)
 		if err != nil {
 			return -1, err
@@ -57,5 +55,18 @@ func (r *indexDBRepository) UpdateDBVersion(db *sql.DB, userID int64, version in
 	})
 
 	return err
+}
 
+func (r *indexDBRepository) GetUserDB(ctx context.Context, userId int64) (models.NotesDBInfo, error) {
+	q := `SELECT id, db_path, db_version FROM users WHERE id = ?;`
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	dbInfo := models.NotesDBInfo{}
+	row := r.db.Read.QueryRowContext(ctxWTO, q, userId)
+	err := row.Scan(&dbInfo.UserId, &dbInfo.DBPath, &dbInfo.DBVersion)
+	if err != nil {
+		return models.NotesDBInfo{}, err
+	}
+	return dbInfo, nil
 }

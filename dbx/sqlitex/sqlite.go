@@ -326,18 +326,17 @@ func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.C
 }
 
 type SQLiteMigrationDriver struct {
-	db  *SQLiteDB
-	ctx context.Context
+	db *SQLiteDB
 }
 
 func NewMigrationDriver(db *SQLiteDB, ctx context.Context) *SQLiteMigrationDriver {
-	return &SQLiteMigrationDriver{db: db, ctx: ctx}
+	return &SQLiteMigrationDriver{db: db}
 }
 
-func (s *SQLiteMigrationDriver) IsEmpty() (bool, error) {
+func (s *SQLiteMigrationDriver) IsEmpty(ctx context.Context) (bool, error) {
 	var count int
 	q := "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
-	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, s.db.QueryTimeout)
 	defer cancel()
 	err := s.db.Read.QueryRowContext(ctxWTO, q).Scan(&count)
 	if err != nil {
@@ -346,14 +345,14 @@ func (s *SQLiteMigrationDriver) IsEmpty() (bool, error) {
 	return count == 0, nil
 }
 
-func (s *SQLiteMigrationDriver) AddVersionTable() error {
+func (s *SQLiteMigrationDriver) AddVersionTable(ctx context.Context) error {
 	// SQLite has a built in pragma 'user_version' that can be used to track versioning of a database.
 	// That pragma will be leveraged so there is no need to a new table to the database so this is a no op.
 	return nil
 }
 
-func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error {
-	_, err := WithTransaction(s.db.Write, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
+func (s *SQLiteMigrationDriver) RunMigration(ctx context.Context, sqlMig string, version uint) error {
+	_, err := WithTransaction(s.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
 		_, err := tx.Exec(sqlMig)
 		if err != nil {
 			return nil, err
@@ -371,10 +370,10 @@ func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error 
 
 }
 
-func (s *SQLiteMigrationDriver) Version() (uint, error) {
+func (s *SQLiteMigrationDriver) Version(ctx context.Context) (uint, error) {
 	sql := "PRAGMA user_version;"
 
-	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, s.db.QueryTimeout)
 	defer cancel()
 
 	var ver uint

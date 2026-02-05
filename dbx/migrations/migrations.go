@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -16,10 +17,10 @@ var embeddedMigrationsFS embed.FS
 var migrationRegex = regexp.MustCompile(`^(?<number>\d+)_(?<name>.*)\.(?<direction>up|down)\.sql$`)
 
 type MigrationDriver interface {
-	AddVersionTable() error
-	RunMigration(sql string, version uint) error
-	Version() (uint, error)
-	IsEmpty() (bool, error)
+	AddVersionTable(ctx context.Context) error
+	RunMigration(ctx context.Context, sql string, version uint) error
+	Version(ctx context.Context) (uint, error)
+	IsEmpty(ctx context.Context) (bool, error)
 }
 
 type Migration struct {
@@ -127,8 +128,8 @@ func Next(migrations []Migration, currVersion uint) (Migration, error) {
 	return migrations[i+1], nil
 }
 
-func Curr(migrations []Migration, driver MigrationDriver) (Migration, error) {
-	cvn, err := driver.Version()
+func Curr(ctx context.Context, migrations []Migration, driver MigrationDriver) (Migration, error) {
+	cvn, err := driver.Version(ctx)
 	if err != nil {
 		return Migration{}, err
 	}
@@ -146,24 +147,24 @@ func Curr(migrations []Migration, driver MigrationDriver) (Migration, error) {
 }
 
 // Bootstrap configures an migration controlled database and migrates it to the latest version
-func Bootstrap(migrations []Migration, driver MigrationDriver) (int, error) {
-	err := driver.AddVersionTable()
+func Bootstrap(ctx context.Context, migrations []Migration, driver MigrationDriver) (int, error) {
+	err := driver.AddVersionTable(ctx)
 	if err != nil {
 		return -1, err
 	}
 
-	return Up(migrations, driver)
+	return Up(ctx, migrations, driver)
 }
 
 // Up migrates a database to it's latest version
-func Up(migrations []Migration, driver MigrationDriver) (int, error) {
+func Up(ctx context.Context, migrations []Migration, driver MigrationDriver) (int, error) {
 
 	lv, err := Latest(migrations)
 	if err != nil {
 		return -1, err
 	}
 	for {
-		mig, err := StepUp(migrations, driver)
+		mig, err := StepUp(ctx, migrations, driver)
 		if err != nil {
 			return -1, err
 		}
@@ -176,8 +177,8 @@ func Up(migrations []Migration, driver MigrationDriver) (int, error) {
 }
 
 // StepUp execute the current version's up.sql file and returns the resulting current migration
-func StepUp(migrations []Migration, driver MigrationDriver) (Migration, error) {
-	isLatest, err := IsLatest(migrations, driver)
+func StepUp(ctx context.Context, migrations []Migration, driver MigrationDriver) (Migration, error) {
+	isLatest, err := IsLatest(ctx, migrations, driver)
 	if err != nil {
 		return Migration{}, err
 	}
@@ -190,7 +191,7 @@ func StepUp(migrations []Migration, driver MigrationDriver) (Migration, error) {
 		return lm, nil
 	}
 
-	cv, err := driver.Version()
+	cv, err := driver.Version(ctx)
 	if err != nil {
 		return Migration{}, nil
 	}
@@ -205,7 +206,7 @@ func StepUp(migrations []Migration, driver MigrationDriver) (Migration, error) {
 		return Migration{}, err
 	}
 
-	err = driver.RunMigration(sql, nm.Version)
+	err = driver.RunMigration(ctx, sql, nm.Version)
 	if err != nil {
 		return Migration{}, err
 	}
@@ -222,10 +223,10 @@ func readUp(migration Migration) (string, error) {
 }
 
 // Down migrates a database to an 'Empty Database' state
-func Down(migrations []Migration, driver MigrationDriver) error {
+func Down(ctx context.Context, migrations []Migration, driver MigrationDriver) error {
 
 	for {
-		mig, err := StepDown(migrations, driver)
+		mig, err := StepDown(ctx, migrations, driver)
 		if err != nil {
 			return err
 		}
@@ -237,8 +238,8 @@ func Down(migrations []Migration, driver MigrationDriver) error {
 }
 
 // StepDown executes the current version's down.sql file and returns the resulting current migration.
-func StepDown(migrations []Migration, driver MigrationDriver) (Migration, error) {
-	currMigration, err := Curr(migrations, driver)
+func StepDown(ctx context.Context, migrations []Migration, driver MigrationDriver) (Migration, error) {
+	currMigration, err := Curr(ctx, migrations, driver)
 	if err != nil {
 		return Migration{}, err
 	}
@@ -261,7 +262,7 @@ func StepDown(migrations []Migration, driver MigrationDriver) (Migration, error)
 		return Migration{}, err
 	}
 
-	err = driver.RunMigration(sql, prevMigration.Version)
+	err = driver.RunMigration(ctx, sql, prevMigration.Version)
 	if err != nil {
 		return Migration{}, err
 	}
@@ -277,8 +278,8 @@ func readDown(migration Migration) (Migration, string, error) {
 	return migration, string(data), nil
 }
 
-func IsLatest(migrations []Migration, driver MigrationDriver) (bool, error) {
-	dbv, err := driver.Version()
+func IsLatest(ctx context.Context, migrations []Migration, driver MigrationDriver) (bool, error) {
+	dbv, err := driver.Version(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to find database version: %w", err)
 	}

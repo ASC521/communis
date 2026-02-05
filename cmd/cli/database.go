@@ -52,27 +52,27 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 	cmd, _ := args[0], args[1:]
 	switch cmd {
 	case "down":
-		return migrations.Down(migs, migDriver)
+		return migrations.Down(ctx, migs, migDriver)
 	case "step-down":
-		pm, err := migrations.StepDown(migs, migDriver)
+		pm, err := migrations.StepDown(ctx, migs, migDriver)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", pm.Version, pm.Name)
 		return nil
 	case "step-up":
-		nm, err := migrations.StepUp(migs, migDriver)
+		nm, err := migrations.StepUp(ctx, migs, migDriver)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", nm.Version, nm.Name)
 		return nil
 	case "up":
-		_, err = migrations.Up(migs, migDriver)
+		_, err = migrations.Up(ctx, migs, migDriver)
 		return err
 	case "list":
 
-		cv, err := migDriver.Version()
+		cv, err := migDriver.Version(ctx)
 		if err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 		}
 
 		driver := sqlitex.NewMigrationDriver(db, ctx)
-		_, err = migrations.Bootstrap(migs, driver)
+		_, err = migrations.Bootstrap(ctx, migs, driver)
 		return err
 
 	case "migrate":

@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"database/sql"
 	"time"
 )
 
@@ -111,6 +110,7 @@ type NotesDBInfo struct {
 }
 
 type IndexRepository interface {
-	DBVersionBefore(db *sql.DB, latestVer int) ([]NotesDBInfo, error)
-	UpdateDBVersion(db *sql.DB, id int64, version int) error
+	DBVersionBefore(ctx context.Context, latestVer int) ([]NotesDBInfo, error)
+	UpdateDBVersion(ctx context.Context, id int64, version int) error
+	GetUserDB(ctx context.Context, userId int64) (NotesDBInfo, error)
 }
