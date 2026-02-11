@@ -3,9 +3,11 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type indexDBRepository struct {
@@ -69,4 +71,56 @@ func (r *indexDBRepository) GetUserDB(ctx context.Context, userId int64) (models
 		return models.NotesDBInfo{}, err
 	}
 	return dbInfo, nil
+}
+
+func (r *indexDBRepository) CreateUser(ctx context.Context, user models.User) (int64, error) {
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.PTPassword), 12)
+	if err != nil {
+		return 0, err
+	}
+
+	q := `INSERT INTO users (name, hashed_password, db_path, db_version, is_admin) VALUES (?, ?, ?, ?, ?);`
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	return sqlitex.WithTransaction(r.db.Write, ctxWTO, func(ctx context.Context, tx *sql.Tx) (int64, error) {
+		result, err := tx.ExecContext(ctx, q, user.Name, hashedPassword, user.DBPath, user.DBVersion, user.IsAdmin)
+		if err != nil {
+			return -1, err
+		}
+
+		return result.LastInsertId()
+	})
+}
+
+func (r *indexDBRepository) AuthenticateUser(ctx context.Context, username, password string) (int64, error) {
+	q := `SELECT id, hashed_password FROM users WHERE name = ?;`
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	var id int64
+	var hashedPassword []byte
+	row := r.db.Read.QueryRowContext(ctxWTO, q, username)
+	err := row.Scan(&id, &hashedPassword)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, models.ErrInvalidCredentials
+		} else {
+			return 0, err
+		}
+
+	}
+
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return 0, models.ErrInvalidCredentials
+		} else {
+			return 0, err
+		}
+
+	}
+
+	return id, nil
 }

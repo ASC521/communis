@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"slices"
@@ -147,7 +148,8 @@ func requireAuthentication(
 					return
 				}
 
-				notesDB, err = sqlitex.NewSQLiteDB(r.Context(), dbInfo.DBPath,
+				dbFP := filepath.Join(conf.SQLite.DBDirectory, dbInfo.DBPath)
+				notesDB, err = sqlitex.NewSQLiteDB(dbFP,
 					sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
 					sqlitex.WithCacheSize(conf.SQLite.CacheSize),
 					sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys),
@@ -162,6 +164,7 @@ func requireAuthentication(
 				}
 
 				notesDBCache.Set(authUserId, notesDB, 24*time.Hour)
+				logger.Debug(fmt.Sprintf("added connection to %s to cache", notesDB.DBPath))
 
 			}
 

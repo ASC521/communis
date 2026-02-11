@@ -2,7 +2,13 @@ package models
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	ErrInvalidCredentials = errors.New("models: invalid credentials")
+	ErrDuplicateUserName  = errors.New("models: duplicate username")
 )
 
 type Tag struct {
@@ -99,8 +105,12 @@ type NotesRepository interface {
 type User struct {
 	Id             int64
 	Name           string
+	PTPassword     string
 	HashedPassword []byte
 	IsAdmin        bool
+	DBPath         string
+	DBVersion      int
+	CreatedAtUTC   time.Time
 }
 
 type NotesDBInfo struct {
@@ -113,4 +123,6 @@ type IndexRepository interface {
 	DBVersionBefore(ctx context.Context, latestVer int) ([]NotesDBInfo, error)
 	UpdateDBVersion(ctx context.Context, id int64, version int) error
 	GetUserDB(ctx context.Context, userId int64) (NotesDBInfo, error)
+	CreateUser(ctx context.Context, user User) (int64, error)
+	AuthenticateUser(ctx context.Context, username, password string) (int64, error)
 }

@@ -36,7 +36,7 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 
 	ctx := context.Background()
 
-	db, err := sqlitex.NewSQLiteDB(ctx, dbPath)
+	db, err := sqlitex.NewSQLiteDB(dbPath)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 	switch cmd {
 	case "bootstrap":
 		ctx := context.Background()
-		db, err := sqlitex.NewSQLiteDB(ctx, dbPath)
+		db, err := sqlitex.NewSQLiteDB(dbPath)
 		if err != nil {
 			return err
 		}

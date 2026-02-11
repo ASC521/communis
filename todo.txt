@@ -1,5 +1,4 @@
-(A) Add middleware to check auth user and retrieve correct db connection +v1 +user-auth
-(B) Add capability to add, edit, and delete users +v1 +auth-user
+(A) Add capability to add, edit, and delete users +v1 +auth-user
 (E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (G) Fix note preview page -  buttons don't line up
@@ -23,6 +22,7 @@ http cache headers +v1
 kindle highlight and note parser
 kobo highlight and note parser
 x (A) Add Preview Note on Edit Screen +v1 +create-note-rework
+x (A) Add middleware to check auth user and retrieve correct db connection +v1 +user-auth
 x (A) Add section view page - list associated notes in section, have links to edit name or delete +v1
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Bug Fix: Note Edit page does not submit

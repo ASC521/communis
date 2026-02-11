@@ -1,10 +1,11 @@
 CREATE TABLE IF NOT EXISTS users (
        id INTEGER PRIMARY KEY,
        name TEXT UNIQUE NOT NULL,
-       hashed_password TEXT NOT NULL,
+       hashed_password BLOB NOT NULL,
        db_path TEXT NOT NULL,
        db_version INTEGER NOT NULL,
-       is_admin INTEGER NOT NULL DEFAULT 0
+       is_admin INTEGER NOT NULL DEFAULT 0,
+       created_at_utc TEXT DEFAULT (datetime('now'))
 ) strict;
 
 CREATE TABLE sessions (

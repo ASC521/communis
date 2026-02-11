@@ -169,14 +169,14 @@ type key string
 var dbKey key
 
 type SQLiteDB struct {
-	dbPath       string
+	DBPath       string
 	Read         *sql.DB
 	Write        *sql.DB
 	QueryTimeout time.Duration
 	opts         *sqliteOptions
 }
 
-func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
+func NewSQLiteDB(dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
 
 	sopts := sqliteOptions{
 		journalMode:    JournalModeWAL,
@@ -213,11 +213,11 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 		return nil, fmt.Errorf("%s references to a directory not a database file", dbPath)
 	}
 
-	db := &SQLiteDB{dbPath: dbp, QueryTimeout: sopts.queryTimeout, opts: &sopts}
+	db := &SQLiteDB{DBPath: dbp, QueryTimeout: sopts.queryTimeout, opts: &sopts}
 
 	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
 		for _, p := range sopts.pragmaStatements() {
-			_, err := conn.ExecContext(ctx, p, nil)
+			_, err := conn.ExecContext(context.Background(), p, nil)
 			if err != nil {
 				return err
 			}
@@ -225,7 +225,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 		return nil
 	})
 
-	write, err := sql.Open("sqlite", "file:"+db.dbPath)
+	write, err := sql.Open("sqlite", "file:"+db.DBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 	write.SetMaxOpenConns(1)
 	write.SetConnMaxIdleTime(time.Minute)
 
-	read, err := sql.Open("sqlite", "file:"+db.dbPath)
+	read, err := sql.Open("sqlite", "file:"+db.DBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 
 func (d *SQLiteDB) LogDBConfig() slog.Value {
 	return slog.GroupValue(
-		slog.String("file-location", d.dbPath),
+		slog.String("file-location", d.DBPath),
 		slog.String("journal_mode", string(d.opts.journalMode)),
 		slog.String("synchronous", string(d.opts.synchronous)),
 		slog.String("temp_store", string(d.opts.tempStore)),
@@ -285,10 +285,8 @@ func FromContext(ctx context.Context) (*SQLiteDB, bool) {
 }
 
 func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {
-	ctxWTO, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
 
-	tx, err := db.BeginTx(ctxWTO, nil)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return result, err
 	}

@@ -24,9 +24,9 @@ func routes(
 	mux := http.NewServeMux()
 
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
-
+	dynamic := chain{sessionManager.LoadAndSave}
 	authMiddleware := requireAuthentication(sessionManager, notesDBConnCache, indexRepo, conf, logger)
-	authReq := chain{sessionManager.LoadAndSave, authMiddleware}
+	authReq := append(dynamic, authMiddleware)
 
 	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
 
@@ -44,7 +44,7 @@ func routes(
 	mux.Handle("DELETE /section/{id}", authReq.then(handlers.SectionDelete(tc, logger, handlers.GetSQLiteNotesRepo)))
 	mux.Handle("GET /section/new", authReq.then(handlers.SectionNewGet(tc, logger)))
 	mux.Handle("GET /section/{id}/{slug}", authReq.then(handlers.SectionViewGet(tc, logger, handlers.GetSQLiteNotesRepo)))
-	mux.Handle("GET /section/{id}/edit", handlers.SectionEditGet(tc, logger, handlers.GetSQLiteNotesRepo))
+	mux.Handle("GET /section/{id}/edit", authReq.then(handlers.SectionEditGet(tc, logger, handlers.GetSQLiteNotesRepo)))
 
 	mux.Handle("GET /search", authReq.then(handlers.NoteSearchGet(tc, logger, handlers.GetSQLiteNotesRepo)))
 
@@ -56,6 +56,12 @@ func routes(
 	mux.Handle("GET /tag/{id}/edit", authReq.then(handlers.TagEditGet(tc, logger, handlers.GetSQLiteNotesRepo)))
 
 	mux.Handle("GET /{$}", authReq.then(handlers.HomeGet(tc, logger, handlers.GetSQLiteNotesRepo)))
+
+	mux.Handle("GET /login", dynamic.then(handlers.GetUserLogin(tc, logger, indexRepo, sessionManager)))
+	mux.Handle("POST /login", dynamic.then(handlers.PostUserLogin(tc, logger, indexRepo, sessionManager)))
+	mux.Handle("GET /user/new", handlers.GetUserCreate(tc, logger, indexRepo))
+	mux.Handle("POST /user", handlers.PostUserCreate(tc, logger, indexRepo, conf))
+	// mux.Handle("POST /logout", handlers.PostUserLogout(tc, logger, sessionManager))
 
 	return baseChain.then(mux)
 }

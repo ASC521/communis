@@ -34,7 +34,7 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 		return os.RemoveAll(testPath)
 	}
 
-	db, err := sqlitex.NewSQLiteDB(ctx, filepath.Join(testPath, "test.db"))
+	db, err := sqlitex.NewSQLiteDB(filepath.Join(testPath, "test.db"))
 	if err != nil {
 		cleanUp()
 		return nil, fmt.Errorf("failed to create sqlite database: %w", err), nil
@@ -46,7 +46,7 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 		return nil, fmt.Errorf("failed to create sqlite migrator: %w", err), nil
 	}
 	driver := sqlitex.NewMigrationDriver(db, ctx)
-	_, err = migrations.Bootstrap(migs, driver)
+	_, err = migrations.Bootstrap(ctx, migs, driver)
 	if err != nil {
 		cleanUp()
 		return nil, fmt.Errorf("failed to bootstrap database: %w", err), nil
