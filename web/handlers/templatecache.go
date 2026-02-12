@@ -9,7 +9,22 @@ import (
 	"net/http"
 	"path/filepath"
 	"slices"
+
+	"github.com/ASC521/communis/models"
 )
+
+type TemplateData struct {
+	IsAuthenticated bool
+	Note            models.Note
+	RenderedNote    models.RenderedNote
+	Sections        []models.Section
+	Section         models.Section
+	Tags            []models.Tag
+	Tag             models.Tag
+	NoteDetails     []models.NoteDetail
+	SearchResults   []models.NoteSearchResult
+	Form            any
+}
 
 type TemplateCache struct {
 	pages    map[string]*template.Template
@@ -72,7 +87,7 @@ func (t *TemplateCache) RenderPage(
 	r *http.Request,
 	status int,
 	tempName string,
-	data any,
+	data TemplateData,
 ) {
 	ts, ok := t.pages[tempName]
 	if !ok {

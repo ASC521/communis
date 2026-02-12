@@ -14,34 +14,10 @@ import (
 
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/web/handlers/validator"
+	"github.com/alexedwards/scs/v2"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
-
-type status int
-
-const (
-	statusNew status = iota
-	statusExisting
-)
-
-func (s status) IsNew() bool      { return s == statusNew }
-func (s status) IsExisting() bool { return s == statusExisting }
-
-type tempDataCreateNote struct {
-	Status       status
-	FormData     noteForm
-	RenderedNote renderedNote
-	AllTags      []models.Tag
-	AllSections  []models.Section
-	FieldErrors  map[string]string
-}
-
-type renderedNote struct {
-	Note        models.Note
-	HTMLContent template.HTML
-	Preview     bool
-}
 
 type noteForm struct {
 	Id        int64
@@ -49,9 +25,14 @@ type noteForm struct {
 	Content   string
 	TagIds    []int64
 	SectionId int64
+	Errors    map[string]string
 }
 
-func renderNote(n models.Note) (renderedNote, error) {
+type searchForm struct {
+	Query string
+}
+
+func renderNote(n models.Note) (models.RenderedNote, error) {
 
 	md := goldmark.New(
 		goldmark.WithExtensions(
@@ -63,10 +44,17 @@ func renderNote(n models.Note) (renderedNote, error) {
 	b := new(bytes.Buffer)
 	err := md.Convert([]byte(n.Content), b)
 	if err != nil {
-		return renderedNote{}, err
+		return models.RenderedNote{}, err
 	}
 
-	return renderedNote{Note: n, HTMLContent: template.HTML(b.String())}, nil
+	rn := models.RenderedNote{
+		Id:          n.Id,
+		Title:       n.Title,
+		Section:     n.Section,
+		HTMLContent: template.HTML(b.String()),
+		Tags:        n.Tags,
+	}
+	return rn, nil
 }
 
 func parseNoteForm(r *http.Request) (noteForm, error) {
@@ -225,13 +213,11 @@ func NoteNewGet(
 			return
 		}
 
-		td := tempDataCreateNote{
-			Status:       statusNew,
-			FormData:     noteForm{},
-			AllTags:      tags,
-			AllSections:  sec,
-			FieldErrors:  map[string]string{},
-			RenderedNote: renderedNote{Preview: true},
+		td := TemplateData{
+			Form:         noteForm{SectionId: 1},
+			Tags:         tags,
+			Sections:     sec,
+			RenderedNote: models.RenderedNote{IsPreview: true},
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", td)
 	})
@@ -241,6 +227,7 @@ func NotePost(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -263,6 +250,7 @@ func NotePost(
 		if len(fe) > 0 {
 			logger.Debug("Not creation did not pass validation", "fieldErrors", fe)
 
+			nf.Errors = fe
 			allTags, err := notesRepo.ListAllTags(r.Context())
 			if err != nil {
 				serverError(logger, w, r, err)
@@ -275,14 +263,13 @@ func NotePost(
 				return
 			}
 
-			td := tempDataCreateNote{
-				Status:      statusNew,
-				FormData:    nf,
-				AllTags:     allTags,
-				AllSections: secs,
-				FieldErrors: fe,
+			data := TemplateData{
+				IsAuthenticated: isAuthenticated(r, sessionManager),
+				Sections:        secs,
+				Tags:            allTags,
+				Form:            nf,
 			}
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", td)
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", data)
 			return
 		}
 		n := parseNoteFromNoteForm(nf)
@@ -301,6 +288,7 @@ func NoteEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -349,17 +337,17 @@ func NoteEditGet(
 			Content:   n.Content,
 			TagIds:    tids,
 			SectionId: n.Section.Id,
+			Errors:    map[string]string{},
 		}
 
-		td := tempDataCreateNote{
-			Status:       statusExisting,
-			FormData:     nf,
-			AllTags:      tags,
-			AllSections:  sec,
-			FieldErrors:  map[string]string{},
-			RenderedNote: renderedNote{Preview: true},
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+			RenderedNote:    models.RenderedNote{IsPreview: true},
+			Sections:        sec,
+			Tags:            tags,
+			Form:            nf,
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", td)
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
 	})
 }
 
@@ -367,6 +355,7 @@ func NotePut(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -393,6 +382,7 @@ func NotePut(
 		}
 
 		if len(fe) > 0 {
+			nf.Errors = fe
 
 			allTags, err := notesRepo.ListAllTags(r.Context())
 			if err != nil {
@@ -406,15 +396,14 @@ func NotePut(
 				return
 			}
 
-			td := tempDataCreateNote{
-				Status:      statusExisting,
-				FormData:    nf,
-				AllTags:     allTags,
-				AllSections: secs,
-				FieldErrors: fe,
+			data := TemplateData{
+				IsAuthenticated: isAuthenticated(r, sessionManager),
+				Sections:        secs,
+				Tags:            allTags,
+				Form:            nf,
 			}
 
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", td)
+			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", data)
 			return
 
 		}
@@ -472,7 +461,7 @@ func NotePreviewPost(
 			serverError(logger, w, r, err)
 			return
 		}
-		rn.Preview = true
+		rn.IsPreview = true
 
 		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note.tmpl", "rendered-note", rn)
 	})
@@ -483,6 +472,7 @@ func NoteViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -519,8 +509,14 @@ func NoteViewGet(
 			serverError(logger, w, r, err)
 			return
 		}
+		rn.IsPreview = false
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", rn)
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+			RenderedNote:    rn,
+		}
+
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", data)
 	})
 }
 
@@ -528,6 +524,7 @@ func NoteSearchGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 
 	type templateData struct {
@@ -536,7 +533,9 @@ func NoteSearchGet(
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		td := templateData{}
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+		}
 		q := r.URL.Query().Get("q")
 
 		if q != "" {
@@ -550,19 +549,19 @@ func NoteSearchGet(
 				serverError(logger, w, r, err)
 				return
 			}
-			td.Notes = srs
-			td.Query = q
+			data.SearchResults = srs
+			data.Form = searchForm{Query: q}
 		} else {
-			td.Notes = []models.NoteSearchResult{}
-			td.Query = ""
+			data.SearchResults = []models.NoteSearchResult{}
+			data.Form = searchForm{Query: ""}
 		}
 
 		name := r.Header.Get("Hx-Source")
 		if name == "input#search" {
-			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table.tmpl", "note-table", td)
+			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table.tmpl", "note-table", data.SearchResults)
 			return
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", td)
+		tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", data)
 
 	})
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/web/handlers/validator"
+	"github.com/alexedwards/scs/v2"
 )
 
 type tagForm struct {
@@ -69,6 +70,7 @@ func TagGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 
 	type td struct {
@@ -88,7 +90,11 @@ func TagGet(
 			return
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "tags-list.tmpl", td{Tags: allTags})
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+			Tags:            allTags,
+		}
+		tc.RenderPage(logger, w, r, http.StatusOK, "tags-list.tmpl", data)
 	})
 }
 
@@ -96,6 +102,7 @@ func TagViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 	type td struct {
 		Tag         models.Tag
@@ -126,7 +133,13 @@ func TagViewGet(
 			return
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "tag-view.tmpl", td{Tag: tag, NoteDetails: noteDetails})
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+			NoteDetails:     noteDetails,
+			Tag:             tag,
+		}
+
+		tc.RenderPage(logger, w, r, http.StatusOK, "tag-view.tmpl", data)
 
 	})
 }

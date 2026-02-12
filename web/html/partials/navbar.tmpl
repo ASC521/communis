@@ -13,7 +13,11 @@
       </summary>
       <ul dir="rtl">
 	<li><a id="theme-toggle-btn" href="#">Toggle Theme</a></li>
-	<li><a href="#">Logout</a></li>
+	{{ if .IsAuthenticated }}
+	<li><a hx-post="/logout">Logout</a></li>
+	{{ else }}
+	<li><a href="/login">Login</a></li>
+	{{ end }}
       </ul>
     </details>
   </ul>

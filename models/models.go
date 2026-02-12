@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"errors"
+	"html/template"
 	"time"
 )
 
@@ -45,6 +46,15 @@ type Note struct {
 	Tags          []Tag
 	CreatedAt     time.Time
 	LastUpdatedAt time.Time
+}
+
+type RenderedNote struct {
+	Id          int64
+	Title       string
+	Section     Section
+	HTMLContent template.HTML
+	Tags        []Tag
+	IsPreview   bool
 }
 
 type NoteDetail struct {

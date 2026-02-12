@@ -13,6 +13,7 @@ import (
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/repository/sqlite"
+	"github.com/alexedwards/scs/v2"
 )
 
 // The serverError helper writes a log entry at Error level (including the request
@@ -80,4 +81,8 @@ func GetSQLiteNotesRepo(r *http.Request) (models.NotesRepository, bool) {
 		return nil, false
 	}
 	return sqlite.NewNotesRepository(db), true
+}
+
+func isAuthenticated(r *http.Request, sm *scs.SessionManager) bool {
+	return sm.Exists(r.Context(), "authenticatedUserId")
 }

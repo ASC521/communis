@@ -42,17 +42,25 @@ func parseUserFormFromRequest(r *http.Request) (userForm, error) {
 	return form, nil
 }
 
-// func PostUser() http.Handler     {}
 // func PutUser() http.Handler      {}
 // func GetUser() http.Handler      {}
 // func DeleteUser() http.Handler   {}
 
-func GetUserCreate(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepository) http.Handler {
+func GetUserCreate(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	sessionManager *scs.SessionManager,
+) http.Handler {
 	type td struct {
 		Form userForm
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tc.RenderPage(logger, w, r, http.StatusOK, "user-create.tmpl", td{Form: userForm{}})
+		data := TemplateData{
+			Form:            userForm{},
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+		}
+		tc.RenderPage(logger, w, r, http.StatusOK, "user-create.tmpl", data)
 	})
 }
 
@@ -116,12 +124,13 @@ func GetUserLogin(
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
-	type td struct {
-		Form userForm
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "login.tmpl", td{Form: userForm{}})
+		data := TemplateData{
+			Form:            userForm{},
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+		}
+		tc.RenderPage(logger, w, r, http.StatusOK, "login.tmpl", data)
 
 	})
 }
@@ -156,5 +165,24 @@ func PostUserLogin(
 		sessionManager.Put(r.Context(), "authenticatedUserId", userId)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 
+	})
+}
+
+func PostUserLogout(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	sessionManager *scs.SessionManager,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		err := sessionManager.RenewToken(r.Context())
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		sessionManager.Remove(r.Context(), "authenticatedUserId")
+		w.Header().Set("HX-Redirect", "/login")
+		w.WriteHeader(http.StatusOK)
 	})
 }

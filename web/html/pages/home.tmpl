@@ -8,7 +8,7 @@
   </form>
 
   <h5>RECENTLY MODIFIED</h5>
-  {{ range .ModifiedNotes }}
+  {{ range .NoteDetails }}
   <p>
     <a class="flex-1" href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
   </p>

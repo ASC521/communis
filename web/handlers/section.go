@@ -10,6 +10,7 @@ import (
 
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/web/handlers/validator"
+	"github.com/alexedwards/scs/v2"
 )
 
 type sectionForm struct {
@@ -66,6 +67,7 @@ func SectionGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 
 	type td struct {
@@ -86,7 +88,12 @@ func SectionGet(
 			return
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "section-list.tmpl", td{Sections: sections})
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+			Sections:        sections,
+		}
+
+		tc.RenderPage(logger, w, r, http.StatusOK, "section-list.tmpl", data)
 	})
 }
 
@@ -234,6 +241,7 @@ func SectionViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 	type td struct {
 		Section     models.Section
@@ -273,13 +281,19 @@ func SectionViewGet(
 			return
 		}
 
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+			Section:         sec,
+			NoteDetails:     nds,
+		}
+
 		tc.RenderPage(
 			logger,
 			w,
 			r,
 			http.StatusOK,
 			"section-view.tmpl",
-			td{Section: sec, NoteDetails: nds},
+			data,
 		)
 	})
 }

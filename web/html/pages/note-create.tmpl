@@ -3,21 +3,21 @@
 {{define "main"}}
 
 <div id="mde-container" class="note-edit-page thin-container">
-{{ if .Status.IsNew }}
+{{ if eq .Form.Id 0 }}
 <form id="note-editor" action="/note" method="POST" autocomplete="off">
   {{ else }}
-  <form id="note-editor" hx-put="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title}}" autocomplete="off">
+  <form id="note-editor" hx-put="/note/{{ .Form.Id }}/{{ slugify .Form.Title}}" autocomplete="off">
     {{ end }}
     <div class="note-editor-title-bar">
       <select list="section-list" id="section" name="section">
 	<option value="-1">Section</option>
-	{{ range .AllSections }}
-	{{ if eq .Id $.FormData.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
+	{{ range .Sections }}
+	{{ if eq .Id $.Form.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
 	{{ else }}<option value="{{ .Id }}">{{ .Name }}</option>
 	{{ end }}
 	{{ end }}
       </select>
-      <input type="text" id="title" name="title" value="{{ .FormData.Title }}" placeholder="Title" required/>
+      <input type="text" id="title" name="title" value="{{ .Form.Title }}" placeholder="Title" required/>
 
       <dialog id="select-tag-modal" closedBy="any">
 	<article>
@@ -33,8 +33,8 @@
 	  </fieldset>
 
 	  <fieldset id="tag-selector" tabindex="0">
-	    {{ range .AllTags }}
-	    {{ if containsInt $.FormData.TagIds .Id }}
+	    {{ range .Tags }}
+	    {{ if containsInt $.Form.TagIds .Id }}
 	    <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }} checked>
 	    {{ else }}
 	    <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }}>
@@ -52,7 +52,7 @@
 
 
       <!-- TODO hide delete button if it is a new note since there is nothing to delete -->
-      <button type="button" hx-target="body" hx-delete="/note/{{ .FormData.Id }}/{{ slugify .FormData.Title }}"  hx-confirm="Delete {{ .FormData.Title }}?" class="icon-button">
+      <button type="button" hx-target="body" hx-delete="/note/{{ .Form.Id }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="icon-button">
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
 	</svg>
@@ -142,7 +142,7 @@
 	</svg>
       </button>
     </div>
-    <textarea id="mde-textarea" class="mde-textarea" name="note-content" autofocus="true">{{ .FormData.Content  }}</textarea>
+    <textarea id="mde-textarea" class="mde-textarea" name="note-content" autofocus="true">{{ .Form.Content  }}</textarea>
   </form>
 
     <div id="mde-preview" hidden>
