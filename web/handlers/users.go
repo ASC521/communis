@@ -46,7 +46,6 @@ func parseUserFormFromRequest(r *http.Request) (userForm, error) {
 	return form, nil
 }
 
-// TODO: validate user form
 func validateUserForm(form *userForm) {
 
 	if form.Name == "" {
@@ -77,25 +76,25 @@ func DeleteUser(
 		connCache.Remove(userId)
 		userDB, err := indexRepo.GetUserDB(r.Context(), userId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		err = indexRepo.DeleteUser(r.Context(), userId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		// TODO: this shouldn't be happening here - config object should have aboslute path
 		dbd, err := homedir.Expand(dbDirectory)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		err = os.Remove(filepath.Join(dbd, userDB.Path))
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -133,7 +132,7 @@ func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepo
 		dbPath := fmt.Sprintf("notes/%s.db", strings.ToLower(userForm.Name))
 		userId, err := indexRepo.CreateUserAndDB(r.Context(), userForm.Name, userForm.PlainTextPassword, userForm.IsAdmin, dbPath)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -147,25 +146,25 @@ func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepo
 			sqlitex.WithTempStore(conf.SQLite.TempStore),
 		)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		notesDBMigrationDriver := sqlitex.NewMigrationDriver(notesDB, r.Context())
 		migs, err := migrations.Load(conf.SQLite.NotesDBMigrations)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		_, err = migrations.Bootstrap(r.Context(), migs, notesDBMigrationDriver)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		user, err := indexRepo.GetUser(r.Context(), userId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -209,19 +208,19 @@ func PostUserLogin(
 
 		user, err := indexRepo.AuthenticateUser(r.Context(), userForm.Name, userForm.PlainTextPassword)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		err = indexRepo.UpdateUserLastLoginToNow(r.Context(), user.Id)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		err = sessionManager.RenewToken(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -244,7 +243,7 @@ func PostUserLogout(
 
 		err := sessionManager.RenewToken(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -268,7 +267,7 @@ func GetUser(
 		}
 		user, err := indexRepo.GetUser(r.Context(), userId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -292,7 +291,7 @@ func GetUserEdit(
 
 		user, err := indexRepo.GetUser(r.Context(), userId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		data := TemplateData{

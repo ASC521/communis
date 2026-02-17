@@ -81,12 +81,12 @@ func TagGet(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		allTags, err := notesRepo.ListAllTags(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -117,19 +117,19 @@ func TagViewGet(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		tag, err := notesRepo.FindTagById(r.Context(), tagId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		noteDetails, err := notesRepo.NotesWithTag(r.Context(), tagId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -164,13 +164,13 @@ func TagEditGet(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		tag, err := notesRepo.FindTagById(r.Context(), tagId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -187,7 +187,7 @@ func TagPut(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		form, err := parseTagFormFromRequest(r)
@@ -204,7 +204,7 @@ func TagPut(
 
 		err = notesRepo.UpdateTag(r.Context(), models.Tag{Id: form.Id, Name: form.Name})
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -228,13 +228,13 @@ func TagDelete(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		err = notesRepo.DeleteTag(r.Context(), tagId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -264,13 +264,13 @@ func TagPost(
 		}
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		err = validateTagForm(r.Context(), &form, notesRepo)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -285,7 +285,7 @@ func TagPost(
 
 		id, err := notesRepo.CreateTag(r.Context(), models.Tag{Name: form.Name})
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 

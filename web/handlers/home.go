@@ -17,12 +17,12 @@ func HomeGet(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		mn, err := notesRepo.RecentlyUpdatedNotes(r.Context(), 5)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		td := TemplateData{

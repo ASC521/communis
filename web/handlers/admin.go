@@ -19,7 +19,7 @@ func GetAdmin(
 
 		users, err := indexRepo.ListUsers(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 
 	"github.com/ASC521/communis/models"
@@ -29,11 +30,12 @@ type TemplateData struct {
 }
 
 type TemplateCache struct {
+	debug    bool
 	pages    map[string]*template.Template
 	partials *template.Template
 }
 
-func NewTemplateCache(files fs.FS) (*TemplateCache, error) {
+func NewTemplateCache(files fs.FS, debug bool) (*TemplateCache, error) {
 
 	funcMap := template.FuncMap{
 		"slugify":     slugify,
@@ -65,7 +67,7 @@ func NewTemplateCache(files fs.FS) (*TemplateCache, error) {
 
 	}
 
-	return &TemplateCache{pages: pages, partials: partialsTemplate}, nil
+	return &TemplateCache{pages: pages, partials: partialsTemplate, debug: debug}, nil
 
 }
 
@@ -79,13 +81,13 @@ func (t *TemplateCache) RenderPage(
 ) {
 	ts, ok := t.pages[tempName]
 	if !ok {
-		serverError(logger, w, r, fmt.Errorf("template %s does not exist", tempName))
+		t.RenderError(logger, w, r, fmt.Errorf("template %s does not exist", tempName))
 		return
 	}
 	buf := new(bytes.Buffer)
 	err := ts.ExecuteTemplate(buf, "layout", data)
 	if err != nil {
-		serverError(logger, w, r, err)
+		t.RenderError(logger, w, r, err)
 		return
 	}
 	w.WriteHeader(status)
@@ -103,9 +105,28 @@ func (t *TemplateCache) RenderPartial(
 	buf := new(bytes.Buffer)
 	err := t.partials.ExecuteTemplate(buf, name, data)
 	if err != nil {
-		serverError(logger, w, r, err)
+		t.RenderError(logger, w, r, err)
 		return
 	}
 	w.WriteHeader(status)
 	buf.WriteTo(w)
+}
+
+func (t *TemplateCache) RenderError(
+	logger *slog.Logger,
+	w http.ResponseWriter,
+	r *http.Request,
+	err error,
+) {
+	method := r.Method
+	uri := r.URL.RequestURI()
+
+	logger.Error(err.Error(), "method", method, "uri", uri)
+	if t.debug {
+		trace := string(debug.Stack())
+		body := fmt.Sprintf("%s\n%s", err, trace)
+		http.Error(w, body, http.StatusInternalServerError)
+		return
+	}
+	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }

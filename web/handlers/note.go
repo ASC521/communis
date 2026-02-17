@@ -197,19 +197,19 @@ func NoteNewGet(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		sec, err := notesRepo.ListAllSections(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		tags, err := notesRepo.ListAllTags(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -233,17 +233,17 @@ func NotePost(
 
 		nf, err := parseNoteForm(r)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		fe, err := validateNoteForm(r.Context(), nf, notesRepo)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -253,13 +253,13 @@ func NotePost(
 			nf.Errors = fe
 			allTags, err := notesRepo.ListAllTags(r.Context())
 			if err != nil {
-				serverError(logger, w, r, err)
+				tc.RenderError(logger, w, r, err)
 				return
 			}
 
 			secs, err := notesRepo.ListAllSections(r.Context())
 			if err != nil {
-				serverError(logger, w, r, err)
+				tc.RenderError(logger, w, r, err)
 				return
 			}
 
@@ -275,7 +275,7 @@ func NotePost(
 		n := parseNoteFromNoteForm(nf)
 		id, err := notesRepo.CreateNote(r.Context(), n)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -301,7 +301,7 @@ func NoteEditGet(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		n, err := notesRepo.FindNoteById(r.Context(), id)
@@ -311,19 +311,19 @@ func NoteEditGet(
 				return
 			}
 
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		sec, err := notesRepo.ListAllSections(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		tags, err := notesRepo.ListAllTags(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -361,17 +361,17 @@ func NotePut(
 
 		nf, err := parseNoteForm(r)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		fe, err := validateNoteForm(r.Context(), nf, notesRepo)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -386,13 +386,13 @@ func NotePut(
 
 			allTags, err := notesRepo.ListAllTags(r.Context())
 			if err != nil {
-				serverError(logger, w, r, err)
+				tc.RenderError(logger, w, r, err)
 				return
 			}
 
 			secs, err := notesRepo.ListAllSections(r.Context())
 			if err != nil {
-				serverError(logger, w, r, err)
+				tc.RenderError(logger, w, r, err)
 				return
 			}
 
@@ -411,7 +411,7 @@ func NotePut(
 		n := parseNoteFromNoteForm(nf)
 		err = notesRepo.UpdateNote(r.Context(), n)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -430,14 +430,14 @@ func NotePreviewPost(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nf, err := parseNoteForm(r)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		n := parseNoteFromNoteForm(nf)
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		for i, tag := range n.Tags {
@@ -458,7 +458,7 @@ func NotePreviewPost(
 
 		rn, err := renderNote(n)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		rn.IsPreview = true
@@ -483,7 +483,7 @@ func NoteViewGet(
 		}
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		n, err := notesRepo.FindNoteById(r.Context(), id)
@@ -493,7 +493,7 @@ func NoteViewGet(
 				return
 			}
 
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -506,7 +506,7 @@ func NoteViewGet(
 
 		rn, err := renderNote(n)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		rn.IsPreview = false
@@ -541,12 +541,12 @@ func NoteSearchGet(
 		if q != "" {
 			notesRepo, ok := newNotesRepo(r)
 			if !ok {
-				serverError(logger, w, r, ErrNotesRepoNotFound)
+				tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 				return
 			}
 			srs, err := notesRepo.SearchNotes(r.Context(), `"`+q+`"`)
 			if err != nil {
-				serverError(logger, w, r, err)
+				tc.RenderError(logger, w, r, err)
 				return
 			}
 			data.SearchResults = srs
@@ -579,12 +579,12 @@ func NoteDelete(
 		}
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		err = notesRepo.DeleteNote(r.Context(), id)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 

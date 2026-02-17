@@ -16,6 +16,7 @@ func WebCMD(conf *config.Config, args []string) error {
 		runFlags := flag.NewFlagSet("web-run", flag.ExitOnError)
 		hostF := runFlags.String("host", "localhost", "web host to run server")
 		portF := runFlags.Uint("port", 6789, "web port for server to listen on")
+		debugF := runFlags.Bool("debug", false, "run server in debug mode")
 
 		runFlags.Usage = func() {
 			fmt.Fprint(os.Stdout, "Usage: communis [global options] web run [subcommand options]\n\n")
@@ -35,6 +36,8 @@ func WebCMD(conf *config.Config, args []string) error {
 				conf.Web.Host = *hostF
 			case "port":
 				conf.Web.Port = *portF
+			case "debug":
+				conf.Web.Debug = *debugF
 			}
 		})
 

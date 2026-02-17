@@ -150,7 +150,7 @@ func RunServer(conf *config.Config) error {
 
 `)
 
-	tc, err := handlers.NewTemplateCache(htmlFiles)
+	tc, err := handlers.NewTemplateCache(htmlFiles, conf.Web.Debug)
 	if err != nil {
 		return err
 	}

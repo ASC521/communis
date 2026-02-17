@@ -78,13 +78,13 @@ func SectionGet(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		sections, err := notesRepo.ListAllSections(r.Context())
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -120,13 +120,13 @@ func SectionPost(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		_, err = notesRepo.CreateSection(r.Context(), models.Section{Name: form.Name})
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -157,12 +157,12 @@ func SectionDelete(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		err = notesRepo.DeleteSection(r.Context(), sectionId)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 		w.Header().Add("HX-Redirect", "/section")
@@ -190,13 +190,13 @@ func SectionPut(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 
 		err = notesRepo.UpdateSection(r.Context(), models.Section{Id: form.Id, Name: form.Name})
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -218,7 +218,7 @@ func SectionEditGet(
 		}
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		section, err := notesRepo.FindSectionById(r.Context(), sectionId)
@@ -228,7 +228,7 @@ func SectionEditGet(
 				return
 			}
 
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -262,7 +262,7 @@ func SectionViewGet(
 
 		notesRepo, ok := newNotesRepo(r)
 		if !ok {
-			serverError(logger, w, r, ErrNotesRepoNotFound)
+			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
 			return
 		}
 		sec, err := notesRepo.FindSectionById(r.Context(), id)
@@ -271,13 +271,13 @@ func SectionViewGet(
 				http.Error(w, "section not found", http.StatusNotFound)
 				return
 			}
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
 		nds, err := notesRepo.NotesInSection(r.Context(), id)
 		if err != nil {
-			serverError(logger, w, r, err)
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
