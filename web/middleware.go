@@ -15,6 +15,7 @@ import (
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -144,8 +145,9 @@ func requireAuthAndDB(
 	sessionManager *scs.SessionManager,
 	notesDBCache *cache.TTLCache[int64, *sqlitex.SQLiteDB],
 	indexRepo models.IndexRepository,
-	conf *config.Config,
+	conf *config.SQLite,
 	logger *slog.Logger,
+	tc *handlers.TemplateCache,
 ) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
@@ -162,22 +164,22 @@ func requireAuthAndDB(
 				logger.Debug("cache miss - create new db connection")
 				dbInfo, err := indexRepo.GetUserDB(r.Context(), authUserId)
 				if err != nil {
-					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+					tc.RenderError(logger, w, r, err)
 					return
 				}
 
-				dbFP := filepath.Join(conf.SQLite.DBDirectory, dbInfo.Path)
+				dbFP := filepath.Join(conf.DBDirectory, dbInfo.Path)
 				notesDB, err = sqlitex.NewSQLiteDB(dbFP,
-					sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
-					sqlitex.WithCacheSize(conf.SQLite.CacheSize),
-					sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys),
-					sqlitex.WithJournalMode(conf.SQLite.JournalMode),
-					sqlitex.WithSynchronous(conf.SQLite.Synchronous),
-					sqlitex.WithTempStore(conf.SQLite.TempStore),
+					sqlitex.WithBusyTimeout(conf.BusyTimeout),
+					sqlitex.WithCacheSize(conf.CacheSize),
+					sqlitex.WithForeignKeys(conf.ForeignKeys),
+					sqlitex.WithJournalMode(conf.JournalMode),
+					sqlitex.WithSynchronous(conf.Synchronous),
+					sqlitex.WithTempStore(conf.TempStore),
 				)
 
 				if err != nil {
-					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+					tc.RenderError(logger, w, r, err)
 					return
 				}
 

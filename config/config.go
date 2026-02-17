@@ -45,6 +45,7 @@ func ValidSQLite(s SQLite) error {
 type Web struct {
 	Host                string   `toml:"host"`
 	Port                uint     `toml:"port"`
+	Debug               bool     `toml:"debug"`
 	LoggingIgnoredPaths []string `toml:"logging-ignored-paths"`
 }
 

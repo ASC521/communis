@@ -25,7 +25,7 @@ func routes(
 
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
 	dynamic := chain{sessionManager.LoadAndSave}
-	authDBMiddleware := requireAuthAndDB(sessionManager, notesDBConnCache, indexRepo, conf, logger)
+	authDBMiddleware := requireAuthAndDB(sessionManager, notesDBConnCache, indexRepo, &conf.SQLite, logger, tc)
 	authDBReq := append(dynamic, authDBMiddleware)
 	authReq := append(dynamic, requireAuth(sessionManager))
 	adminReq := append(dynamic, requireAdmin(sessionManager, indexRepo))
