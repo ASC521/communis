@@ -164,15 +164,19 @@ func (o sqliteOptions) pragmaStatements() []string {
 	}
 }
 
+type key string
+
+var dbKey key
+
 type SQLiteDB struct {
-	dbPath       string
+	DBPath       string
 	Read         *sql.DB
 	Write        *sql.DB
 	QueryTimeout time.Duration
 	opts         *sqliteOptions
 }
 
-func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
+func NewSQLiteDB(dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
 
 	sopts := sqliteOptions{
 		journalMode:    JournalModeWAL,
@@ -209,11 +213,11 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 		return nil, fmt.Errorf("%s references to a directory not a database file", dbPath)
 	}
 
-	db := &SQLiteDB{dbPath: dbp, QueryTimeout: sopts.queryTimeout, opts: &sopts}
+	db := &SQLiteDB{DBPath: dbp, QueryTimeout: sopts.queryTimeout, opts: &sopts}
 
 	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
 		for _, p := range sopts.pragmaStatements() {
-			_, err := conn.ExecContext(ctx, p, nil)
+			_, err := conn.ExecContext(context.Background(), p, nil)
 			if err != nil {
 				return err
 			}
@@ -221,7 +225,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 		return nil
 	})
 
-	write, err := sql.Open("sqlite", "file:"+db.dbPath)
+	write, err := sql.Open("sqlite", "file:"+db.DBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +233,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 	write.SetMaxOpenConns(1)
 	write.SetConnMaxIdleTime(time.Minute)
 
-	read, err := sql.Open("sqlite", "file:"+db.dbPath)
+	read, err := sql.Open("sqlite", "file:"+db.DBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +247,7 @@ func NewSQLiteDB(ctx context.Context, dbPath string, opts ...SQLiteOption) (*SQL
 
 func (d *SQLiteDB) LogDBConfig() slog.Value {
 	return slog.GroupValue(
-		slog.String("file-location", d.dbPath),
+		slog.String("file-location", d.DBPath),
 		slog.String("journal_mode", string(d.opts.journalMode)),
 		slog.String("synchronous", string(d.opts.synchronous)),
 		slog.String("temp_store", string(d.opts.tempStore)),
@@ -269,11 +273,20 @@ func (d *SQLiteDB) Close() error {
 	}
 }
 
-func WithTransaction[R any](db *SQLiteDB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {
-	ctxWTO, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+// NewContext returns a new context that carries the db value.
+func NewContext(ctx context.Context, db *SQLiteDB) context.Context {
+	return context.WithValue(ctx, dbKey, db)
+}
 
-	tx, err := db.Write.BeginTx(ctxWTO, nil)
+// FromContext returns the DB value stored in ctx, if any.
+func FromContext(ctx context.Context) (*SQLiteDB, bool) {
+	db, ok := ctx.Value(dbKey).(*SQLiteDB)
+	return db, ok
+}
+
+func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return result, err
 	}
@@ -311,18 +324,17 @@ func WithTransaction[R any](db *SQLiteDB, ctx context.Context, txIn func(context
 }
 
 type SQLiteMigrationDriver struct {
-	db  *SQLiteDB
-	ctx context.Context
+	db *SQLiteDB
 }
 
-func NewSQLiteMigrationDriver(db *SQLiteDB, ctx context.Context) (*SQLiteMigrationDriver, error) {
-	return &SQLiteMigrationDriver{db: db, ctx: ctx}, nil
+func NewMigrationDriver(db *SQLiteDB, ctx context.Context) *SQLiteMigrationDriver {
+	return &SQLiteMigrationDriver{db: db}
 }
 
-func (s *SQLiteMigrationDriver) IsEmpty() (bool, error) {
+func (s *SQLiteMigrationDriver) IsEmpty(ctx context.Context) (bool, error) {
 	var count int
 	q := "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
-	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, s.db.QueryTimeout)
 	defer cancel()
 	err := s.db.Read.QueryRowContext(ctxWTO, q).Scan(&count)
 	if err != nil {
@@ -331,14 +343,14 @@ func (s *SQLiteMigrationDriver) IsEmpty() (bool, error) {
 	return count == 0, nil
 }
 
-func (s *SQLiteMigrationDriver) AddVersionTable() error {
+func (s *SQLiteMigrationDriver) AddVersionTable(ctx context.Context) error {
 	// SQLite has a built in pragma 'user_version' that can be used to track versioning of a database.
 	// That pragma will be leveraged so there is no need to a new table to the database so this is a no op.
 	return nil
 }
 
-func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error {
-	_, err := WithTransaction(s.db, s.ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
+func (s *SQLiteMigrationDriver) RunMigration(ctx context.Context, sqlMig string, version uint) error {
+	_, err := WithTransaction(s.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
 		_, err := tx.Exec(sqlMig)
 		if err != nil {
 			return nil, err
@@ -356,10 +368,10 @@ func (s *SQLiteMigrationDriver) RunMigration(sqlMig string, version uint) error 
 
 }
 
-func (s *SQLiteMigrationDriver) Version() (uint, error) {
+func (s *SQLiteMigrationDriver) Version(ctx context.Context) (uint, error) {
 	sql := "PRAGMA user_version;"
 
-	ctxWTO, cancel := context.WithTimeout(s.ctx, s.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, s.db.QueryTimeout)
 	defer cancel()
 
 	var ver uint

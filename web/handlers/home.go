@@ -4,27 +4,32 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/models"
+	"github.com/alexedwards/scs/v2"
 )
 
 func HomeGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	nr models.NoteRepository,
+	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 
-	type templateData struct {
-		Sections      []*models.Section
-		ModifiedNotes []models.NoteDetail
-	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		mn, err := nr.RecentUpdates(5)
+		notesRepo, ok := newNotesRepo(r)
+		if !ok {
+			serverError(logger, w, r, ErrNotesRepoNotFound)
+			return
+		}
+		mn, err := notesRepo.RecentlyUpdatedNotes(r.Context(), 5)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
+		td := TemplateData{
+			NoteDetails:     mn,
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", templateData{ModifiedNotes: mn})
+		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", td)
 	})
 }

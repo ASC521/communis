@@ -4,9 +4,9 @@
   <div class="breadcrumb-row">
 
      <div class="breadcrumb">
-        <a href="/section/{{ .Note.Section.Id }}/{{ .Note.Section.Name }}">{{ .Note.Section.Name }}</a>
+        <a href="/section/{{ .Section.Id }}/{{ .Section.Name }}">{{ .Section.Name }}</a>
         <span class="separator">/</span>
-        <span>{{ .Note.Title }}</span>
+        <span>{{ .Title }}</span>
      </div>
 
 
@@ -23,8 +23,8 @@
        </svg>
      </button>
     
-    {{ if .Preview }}
-        <button type="button" hx-target="body" hx-delete="/note/{{ .Note.Id }}/{{ slugify .Note.Title }}"  hx-confirm="Delete {{ .Note.Title }}?" class="icon-button">
+    {{ if .IsPreview }}
+        <button type="button" hx-target="body" hx-delete="/note/{{ .Id }}/{{ slugify .Title }}"  hx-confirm="Delete {{ .Title }}?" class="icon-button">
       <svg>
 	<use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
       </svg>
@@ -40,7 +40,7 @@
       </svg>
     </button>
     {{ else }}
-    <a class="icon-button" href="/edit/{{ .Note.Id }}/{{ slugify .Note.Title }}">
+    <a class="icon-button" href="/edit/{{ .Id }}/{{ slugify .Title }}">
       <svg>
 	<use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line">
       </svg>
@@ -51,7 +51,7 @@
     </div>
   </div>
 
-  <h1> {{ .Note.Title }}</h1>
+  <h1> {{ .Title }}</h1>
 
   {{ .HTMLContent }}
 
@@ -63,7 +63,7 @@
 	<h4>Tags</h4>
       </header>
       <ul>
-      {{ range .Note.Tags }}
+      {{ range .Tags }}
       <li><a href="/tag/{{ .Id }}/{{ .Name }}">{{ .Name }}</a></li>
       {{ end }}
       </ul>

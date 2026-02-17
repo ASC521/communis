@@ -1,0 +1,80 @@
+{{ define "local-datetime" }}
+<time class="local-time" datetime="{{ .Format "2006-01-02T15:04:05Z07:00" }}">{{ .Format "Jan 2, 2006 3:04 PM" }} UTC</time>
+{{ end }}
+
+
+{{ define "user-edit" }}
+<tr>
+  <td>{{ .User.Id }}</td>
+  <td><input name="name" value="{{ .User.Name }}"></td>
+  <td><a>Change Password</a></td>
+  <td><input type="checkbox" {{ if .User.IsAdmin }} checked {{ end }} ></td>
+  <td>{{ template "local-datetime" .User.CreatedAtUTC }}</td>
+  <td>{{ template "local-datetime" .User.LastLoginUTC }}</td>
+  <td>
+    <button command="show-modal" commandFor="delete-user-{{ .User.Id}}">Delete</button>
+    <button hx-get="/user/{{ .User.Id }}" hx-target="closest tr" hx-swap="outerHTML">Cancel</button>
+    <button hx-put="/user/{{ .User.Id }}" hx-include="closest tr">Save</button>
+  </td>
+</tr>
+
+<dialog id="delete-user-{{ .User.Id }}">
+  <article>
+    <header>
+      <button rel="prev" class="close-btn" type="button" command="close" commandFor="delete-user-{{ .User.Id}}" aria-label="Close"></button>
+      <h4>Confirm Deletion</h4>
+    </header>
+    <p>Delete user {{ .User.Name }}?  This is irreversible and will delete all user data.</p>
+    <footer>
+      <button class="secondary" command="close" commandFor="delete-user-{{ .User.Id }}">Cancel</button>
+      <button hx-delete="/user/{{ .User.Id}}">Delete</button>
+    </footer>
+  </article>
+
+</dialog>
+
+{{ end }}
+
+
+{{ define "user-row" }}
+
+<tr>
+  <td>{{ .Id }}</td>
+  <td>{{ .Name }}</td>
+  <td>******</td>
+  <td>{{ .IsAdmin }}</td>
+  <td>{{ template "local-datetime" .CreatedAtUTC }}</td>
+  <td>{{ template "local-datetime" .LastLoginUTC }}</td>
+  <td>
+    <button hx-get="/user/{{ .Id }}/edit" hx-target="closest tr" hx-swap="outerHTML">Edit</button>
+  </td>
+</tr>
+
+{{ end }}
+
+{{ define "user-new" }}
+
+<tr>
+  <td></td>
+  <td>    
+    <input name="username" value="{{ .Name }}">
+    {{ with .FieldErrors.name }}
+    <label>{{ . }}</label>
+    {{end }}
+  </td>
+  <td>
+    <input name="password">
+    {{ with .FieldErrors.password }}
+    <label>{{ . }}<label>
+    {{ end }}
+  </td>
+  <td><input type="checkbox" {{ if .IsAdmin }} checked {{ end }}></td>
+  <td></td>
+  <td></td>
+  <td>
+    <a>Cancel</a>
+    <a hx-post="/user" hx-include="closest tr" hx-target="closest tr" hx-swap="outerHTML">Save</a>
+  </td>
+</tr>
+
+{{ end }}

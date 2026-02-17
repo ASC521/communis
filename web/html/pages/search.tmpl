@@ -6,7 +6,7 @@
   <form action="/search" method="GET" role="search" autocomplete="off">
     <input class="search-input" id="search" type="search" name="q" placeholder="Search..."
 	   autofocus
-	   value="{{ .Query }}"
+	   value="{{ .Form.Query }}"
 	   hx-get="/search"
 	   hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
 	   hx-target="#search-results"
@@ -16,7 +16,7 @@
   <br>
 
   <div id="search-results">
-    {{ template "note-table" . }}
+    {{ template "note-table" .SearchResults }}
   </div>
 </div>
 {{ end }}

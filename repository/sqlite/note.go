@@ -50,17 +50,8 @@ func parseNoteDetailsFromRows(rows *sql.Rows) ([]models.NoteDetail, error) {
 	return nds, nil
 }
 
-type noteRepository struct {
-	db  *sqlitex.SQLiteDB
-	ctx context.Context
-}
-
-func NewNoteRepository(db *sqlitex.SQLiteDB, ctx context.Context) *noteRepository {
-	return &noteRepository{db: db, ctx: ctx}
-}
-
-func (r *noteRepository) Create(n models.Note) (int64, error) {
-	return sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int64, error) {
+func (r *NotesRepository) CreateNote(ctx context.Context, n models.Note) (int64, error) {
+	return sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int64, error) {
 		res, err := tx.Exec("INSERT INTO notes (title, content, section) VALUES (?, ?, ?);", n.Title, n.Content, n.Section.Id)
 		if err != nil {
 			return 0, fmt.Errorf("failed to insert new note: %w", err)
@@ -91,9 +82,9 @@ func (r *noteRepository) Create(n models.Note) (int64, error) {
 	})
 }
 
-func (r *noteRepository) Exists(title string) (int64, error) {
+func (r *NotesRepository) NoteExists(ctx context.Context, title string) (int64, error) {
 	q := `SELECT id FROM notes WHERE title = ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	var id int64
@@ -105,12 +96,12 @@ func (r *noteRepository) Exists(title string) (int64, error) {
 	return id, nil
 }
 
-func (r *noteRepository) FindById(id int64) (models.Note, error) {
+func (r *NotesRepository) FindNoteById(ctx context.Context, id int64) (models.Note, error) {
 	q := `
      SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags_json
      FROM notes_details
      WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	var n models.Note
@@ -143,8 +134,8 @@ func (r *noteRepository) FindById(id int64) (models.Note, error) {
 	return n, nil
 }
 
-func (r *noteRepository) Update(n models.Note) error {
-	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+func (r *NotesRepository) UpdateNote(ctx context.Context, n models.Note) error {
+	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delNoteFTSSql, n.Id)
 		if err != nil {
@@ -182,8 +173,8 @@ func (r *noteRepository) Update(n models.Note) error {
 	return err
 }
 
-func (r *noteRepository) Delete(id int64) error {
-	_, err := sqlitex.WithTransaction(r.db, r.ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+func (r *NotesRepository) DeleteNote(ctx context.Context, id int64) error {
+	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
 		_, err := tx.Exec(delNoteFTSSql, id)
 		if err != nil {
@@ -203,7 +194,7 @@ func (r *noteRepository) Delete(id int64) error {
 	return err
 }
 
-func (r *noteRepository) List(limit, offset int) (models.PaginatedNotes, error) {
+func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (models.PaginatedNotes, error) {
 
 	if limit <= 0 {
 		limit = 10
@@ -217,7 +208,7 @@ func (r *noteRepository) List(limit, offset int) (models.PaginatedNotes, error) 
 	SELECT n.id,  n.title, n.created_at_utc, n.last_updated_at_utc
 	FROM notes AS n
 	ORDER BY n.id ASC LIMIT ? OFFSET ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
@@ -272,7 +263,7 @@ func (r *noteRepository) List(limit, offset int) (models.PaginatedNotes, error) 
 
 }
 
-func (r *noteRepository) Search(q string) ([]models.NoteSearchResult, error) {
+func (r *NotesRepository) SearchNotes(ctx context.Context, q string) ([]models.NoteSearchResult, error) {
 
 	sql := `SELECT
 		  nd.id,
@@ -286,7 +277,7 @@ func (r *noteRepository) Search(q string) ([]models.NoteSearchResult, error) {
 		WHERE notes_details_fts MATCH ?
 		ORDER BY rank
 		LIMIT 50;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, sql, q)
@@ -312,13 +303,13 @@ func (r *noteRepository) Search(q string) ([]models.NoteSearchResult, error) {
 
 }
 
-func (r *noteRepository) RecentUpdates(limit uint) ([]models.NoteDetail, error) {
+func (r *NotesRepository) RecentlyUpdatedNotes(ctx context.Context, limit int) ([]models.NoteDetail, error) {
 
 	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
 		FROM notes as n
 		ORDER BY last_updated_at_utc DESC
 		LIMIT ?;`
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, sql, limit)
@@ -328,13 +319,13 @@ func (r *noteRepository) RecentUpdates(limit uint) ([]models.NoteDetail, error) 
 	return parseNoteDetailsFromRows(rows)
 }
 
-func (r *noteRepository) InSection(secId int64) ([]models.NoteDetail, error) {
+func (r *NotesRepository) NotesInSection(ctx context.Context, secId int64) ([]models.NoteDetail, error) {
 	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
 		FROM notes as n
 		WHERE n.section = ?
 		ORDER BY title ASC`
 
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, sql, secId)
@@ -345,14 +336,14 @@ func (r *noteRepository) InSection(secId int64) ([]models.NoteDetail, error) {
 	return parseNoteDetailsFromRows(rows)
 }
 
-func (r *noteRepository) WithTag(tagId int64) ([]models.NoteDetail, error) {
+func (r *NotesRepository) NotesWithTag(ctx context.Context, tagId int64) ([]models.NoteDetail, error) {
 	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
 		FROM notes as n
 		INNER JOIN notes_tags as nt
 		ON n.id = nt.note_id
 		WHERE nt.tag_id = ?;`
 
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, sql, tagId)

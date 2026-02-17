@@ -1,6 +1,16 @@
 package models
 
-import "time"
+import (
+	"context"
+	"errors"
+	"html/template"
+	"time"
+)
+
+var (
+	ErrInvalidCredentials = errors.New("models: invalid credentials")
+	ErrDuplicateUserName  = errors.New("models: duplicate username")
+)
 
 type Tag struct {
 	Id   int64  `json:"id"`
@@ -13,17 +23,6 @@ type PaginatedTags struct {
 	Offset     int
 	HasMore    bool
 	NextOffset *int
-}
-
-type TagRepository interface {
-	Create(t *Tag) (int64, error)
-	FindById(id int64) (Tag, error)
-	FindByName(name string) (Tag, error)
-	Update(t Tag) error
-	Delete(id int64) error
-	ListAll() ([]Tag, error)
-	List(limit, offset int) (PaginatedTags, error)
-	Query(ids []int64) ([]Tag, error)
 }
 
 type Section struct {
@@ -39,15 +38,6 @@ type PaginatedSections struct {
 	NextOffset *int
 }
 
-type SectionRepository interface {
-	Create(s Section) (int64, error)
-	FindById(id int64) (Section, error)
-	FindByName(name string) (Section, error)
-	Update(s Section) error
-	Delete(id int64) error
-	ListAll() ([]Section, error)
-}
-
 type Note struct {
 	Id            int64
 	Title         string
@@ -56,6 +46,15 @@ type Note struct {
 	Tags          []Tag
 	CreatedAt     time.Time
 	LastUpdatedAt time.Time
+}
+
+type RenderedNote struct {
+	Id          int64
+	Title       string
+	Section     Section
+	HTMLContent template.HTML
+	Tags        []Tag
+	IsPreview   bool
 }
 
 type NoteDetail struct {
@@ -81,15 +80,64 @@ type NoteSearchResult struct {
 	TagNames       string
 }
 
-type NoteRepository interface {
-	Create(n Note) (int64, error)
-	Exists(title string) (int64, error)
-	FindById(id int64) (Note, error)
-	Update(n Note) error
-	Delete(id int64) error
-	List(limit, offset int) (PaginatedNotes, error)
-	Search(q string) ([]NoteSearchResult, error)
-	RecentUpdates(limit uint) ([]NoteDetail, error)
-	InSection(secId int64) ([]NoteDetail, error)
-	WithTag(tagId int64) ([]NoteDetail, error)
+type NotesRepository interface {
+	// Tag Methods
+	CreateTag(ctx context.Context, t Tag) (int64, error)
+	FindTagById(ctx context.Context, id int64) (Tag, error)
+	FindTagByName(ctx context.Context, name string) (Tag, error)
+	UpdateTag(ctx context.Context, t Tag) error
+	DeleteTag(ctx context.Context, id int64) error
+	ListAllTags(ctx context.Context) ([]Tag, error)
+	ListTags(ctx context.Context, limit, offset int) (PaginatedTags, error)
+	QueryTags(ctx context.Context, ids []int64) ([]Tag, error)
+
+	// Section Methods
+	CreateSection(ctx context.Context, s Section) (int64, error)
+	FindSectionById(ctx context.Context, id int64) (Section, error)
+	FindSectionByName(ctx context.Context, name string) (Section, error)
+	UpdateSection(ctx context.Context, s Section) error
+	DeleteSection(ctx context.Context, id int64) error
+	ListAllSections(ctx context.Context) ([]Section, error)
+
+	// Note Methods
+	CreateNote(ctx context.Context, n Note) (int64, error)
+	NoteExists(ctx context.Context, title string) (int64, error)
+	FindNoteById(ctx context.Context, id int64) (Note, error)
+	UpdateNote(ctx context.Context, n Note) error
+	DeleteNote(ctx context.Context, id int64) error
+	ListNotes(ctx context.Context, limit, offset int) (PaginatedNotes, error)
+	SearchNotes(ctx context.Context, query string) ([]NoteSearchResult, error)
+	RecentlyUpdatedNotes(ctx context.Context, limit int) ([]NoteDetail, error)
+	NotesInSection(ctx context.Context, sectionId int64) ([]NoteDetail, error)
+	NotesWithTag(ctx context.Context, tagId int64) ([]NoteDetail, error)
+}
+
+type User struct {
+	Id           int64
+	Name         string
+	IsAdmin      bool
+	CreatedAtUTC time.Time
+	LastLoginUTC time.Time
+}
+
+type UserDatabase struct {
+	Id      int64
+	UserId  int64
+	Path    string
+	Version int
+}
+
+type IndexRepository interface {
+	DBVersionBefore(ctx context.Context, latestVer int) ([]UserDatabase, error)
+	UpdateDBVersion(ctx context.Context, id int64, version int) error
+	GetUserDB(ctx context.Context, userId int64) (UserDatabase, error)
+	CreateAdminUser(ctx context.Context, username, password string) (int64, error)
+	CreateUserAndDB(ctx context.Context, userName, password string, isAdmin bool, dbPath string) (int64, error)
+	AuthenticateUser(ctx context.Context, username, password string) (User, error)
+	IsAdminUser(ctx context.Context, userId int64) (bool, error)
+	GetUser(ctx context.Context, userId int64) (User, error)
+	ListUsers(ctx context.Context) ([]User, error)
+	UpdateUser(ctx context.Context, id int64, name string, isAdmin bool) error
+	UpdateUserLastLoginToNow(ctx context.Context, id int64) error
+	DeleteUser(ctx context.Context, id int64) error
 }

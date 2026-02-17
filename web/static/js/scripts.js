@@ -53,7 +53,7 @@ function filterFieldSet(id, filter) {
 		label.style.display = 'none';
 	    }
 	}
-	
+n	
     });
 }
 
@@ -93,3 +93,24 @@ document.addEventListener("click", (e) => {
 });
 
 // SECTION FORM REMOVAL
+
+// DATETIME FORMAT
+
+function convertToLocalTime() {
+    document.querySelectorAll('time.local-time').forEach(function(timeEl) {
+    const utcTime = new Date(timeEl.getAttribute('datetime'));
+    timeEl.textContent = utcTime.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+  });  
+}
+
+document.addEventListener('DOMContentLoaded', convertToLocalTime);
+document.addEventListener('htmx:after:swap', convertToLocalTime)
+
+// DATETIME FORMAT

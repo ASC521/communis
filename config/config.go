@@ -7,13 +7,16 @@ import (
 )
 
 type SQLite struct {
-	FilePath    string `toml:"filepath"`
-	BusyTimeout int    `toml:"busy-timeout"`
-	CacheSize   int    `toml:"cache-size"`
-	ForeignKeys bool   `toml:"foreign-keys"`
-	JournalMode string `toml:"journal-mode"`
-	Synchronous string `toml:"synchronous"`
-	TempStore   string `toml:"temp-store"`
+	DBDirectory       string `toml:"db-directory"`
+	BusyTimeout       int    `toml:"busy-timeout"`
+	CacheSize         int    `toml:"cache-size"`
+	ForeignKeys       bool   `toml:"foreign-keys"`
+	JournalMode       string `toml:"journal-mode"`
+	Synchronous       string `toml:"synchronous"`
+	TempStore         string `toml:"temp-store"`
+	IndexDBFileName   string
+	IndexDBMigrations string
+	NotesDBMigrations string
 }
 
 func ValidSQLite(s SQLite) error {
@@ -32,7 +35,7 @@ func ValidSQLite(s SQLite) error {
 		return err
 	}
 
-	if s.FilePath == "" {
+	if s.DBDirectory == "" {
 		return fmt.Errorf("filepath is a required configuration")
 	}
 
@@ -54,13 +57,16 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		SQLite: SQLite{
-			FilePath:    "",
-			BusyTimeout: 5000,
-			CacheSize:   2000,
-			ForeignKeys: true,
-			JournalMode: "WAL",
-			Synchronous: "NORMAL",
-			TempStore:   "MEMORY",
+			DBDirectory:       "",
+			BusyTimeout:       5000,
+			CacheSize:         2000,
+			ForeignKeys:       true,
+			JournalMode:       "WAL",
+			Synchronous:       "NORMAL",
+			TempStore:         "MEMORY",
+			IndexDBFileName:   "index.db",
+			IndexDBMigrations: "sql/index-db",
+			NotesDBMigrations: "sql/notes-db",
 		},
 		Web: Web{
 			Host:                "localhost",

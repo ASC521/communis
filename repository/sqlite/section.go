@@ -4,22 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
 )
 
-type sectionRepository struct {
-	db  *sqlitex.SQLiteDB
-	ctx context.Context
-}
+func (r *NotesRepository) CreateSection(ctx context.Context, s models.Section) (int64, error) {
 
-func NewSectionRepository(db *sqlitex.SQLiteDB, ctx context.Context) *sectionRepository {
-	return &sectionRepository{db: db, ctx: ctx}
-}
-
-func (r *sectionRepository) Create(s models.Section) (int64, error) {
-
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 	res, err := r.db.Write.ExecContext(ctxWTO, "INSERT INTO sections (name) VALUES (?);", s.Name)
 	if err != nil {
@@ -29,9 +19,9 @@ func (r *sectionRepository) Create(s models.Section) (int64, error) {
 
 }
 
-func (r *sectionRepository) FindById(id int64) (models.Section, error) {
+func (r *NotesRepository) FindSectionById(ctx context.Context, id int64) (models.Section, error) {
 	sql := "SELECT id, name FROM sections WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	nb := models.Section{}
@@ -42,9 +32,9 @@ func (r *sectionRepository) FindById(id int64) (models.Section, error) {
 	return nb, nil
 }
 
-func (r *sectionRepository) FindByName(name string) (models.Section, error) {
+func (r *NotesRepository) FindSectionByName(ctx context.Context, name string) (models.Section, error) {
 	sql := "SELECT id, name FROM sections WHERE name = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	nb := models.Section{}
@@ -55,10 +45,10 @@ func (r *sectionRepository) FindByName(name string) (models.Section, error) {
 	return nb, nil
 }
 
-func (r *sectionRepository) Update(s models.Section) error {
+func (r *NotesRepository) UpdateSection(ctx context.Context, s models.Section) error {
 
 	sql := "UPDATE sections SET name = ? WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, sql, s.Name, s.Id)
@@ -69,10 +59,10 @@ func (r *sectionRepository) Update(s models.Section) error {
 	return nil
 }
 
-func (r *sectionRepository) Delete(id int64) error {
+func (r *NotesRepository) DeleteSection(ctx context.Context, id int64) error {
 
 	sql := "DELETE FROM sections WHERE id = ?;"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, sql, id)
@@ -82,9 +72,9 @@ func (r *sectionRepository) Delete(id int64) error {
 	return nil
 }
 
-func (r *sectionRepository) ListAll() ([]models.Section, error) {
+func (r *NotesRepository) ListAllSections(ctx context.Context) ([]models.Section, error) {
 	query := "SELECT id, name FROM sections ORDER BY name ASC"
-	ctxWTO, cancel := context.WithTimeout(r.ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 	rows, err := r.db.Read.QueryContext(ctxWTO, query)
 	if err != nil {

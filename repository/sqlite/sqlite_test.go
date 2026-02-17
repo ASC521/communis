@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ASC521/communis/dbx"
+	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/repository/sqlite"
@@ -34,18 +34,19 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 		return os.RemoveAll(testPath)
 	}
 
-	db, err := sqlitex.NewSQLiteDB(ctx, filepath.Join(testPath, "test.db"))
+	db, err := sqlitex.NewSQLiteDB(filepath.Join(testPath, "test.db"))
 	if err != nil {
 		cleanUp()
 		return nil, fmt.Errorf("failed to create sqlite database: %w", err), nil
 	}
 
-	mig, err := dbx.NewSQLiteMigrator(ctx, db)
+	migs, err := migrations.Load("sql/notes-db")
 	if err != nil {
 		cleanUp()
 		return nil, fmt.Errorf("failed to create sqlite migrator: %w", err), nil
 	}
-	err = mig.Bootstrap()
+	driver := sqlitex.NewMigrationDriver(db, ctx)
+	_, err = migrations.Bootstrap(ctx, migs, driver)
 	if err != nil {
 		cleanUp()
 		return nil, fmt.Errorf("failed to bootstrap database: %w", err), nil
@@ -55,7 +56,7 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 
 }
 
-func TestSQLiteSectionRepository(t *testing.T) {
+func TestSQLiteSectionMethods(t *testing.T) {
 
 	nbs := make([]*models.Section, 0, 20)
 	for i := range 20 {
@@ -70,17 +71,17 @@ func TestSQLiteSectionRepository(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	sRepo := sqlite.NewSectionRepository(db, ctx)
+	sRepo := sqlite.NewNotesRepository(db)
 
 	tcs := []struct {
 		Name  string
-		TFunc func(models.SectionRepository) error
+		TFunc func(models.NotesRepository) error
 	}{
 		{
 			Name: "Create",
-			TFunc: func(sr models.SectionRepository) error {
+			TFunc: func(sr models.NotesRepository) error {
 				for _, nb := range nbs {
-					id, err := sr.Create(*nb)
+					id, err := sr.CreateSection(ctx, *nb)
 					if err != nil {
 						return fmt.Errorf("failed to create section %s: %w", nb.Name, err)
 					}
@@ -95,9 +96,9 @@ func TestSQLiteSectionRepository(t *testing.T) {
 		},
 		{
 			Name: "FindById",
-			TFunc: func(nr models.SectionRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 				nb := nbs[2]
-				nbQ, err := nr.FindById(nb.Id)
+				nbQ, err := nr.FindSectionById(ctx, nb.Id)
 				if err != nil {
 					return fmt.Errorf("failed to find section by id: %w", err)
 				}
@@ -110,15 +111,15 @@ func TestSQLiteSectionRepository(t *testing.T) {
 		},
 		{
 			Name: "Update",
-			TFunc: func(nr models.SectionRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 				onb := nbs[10]
 				nnb := models.Section{Id: onb.Id, Name: onb.Name}
 				nnb.Name = "section-55"
-				err := nr.Update(nnb)
+				err := nr.UpdateSection(ctx, nnb)
 				if err != nil {
 					return fmt.Errorf("failed to update section: %w", err)
 				}
-				qnb, err := nr.FindById(onb.Id)
+				qnb, err := nr.FindSectionById(ctx, onb.Id)
 				if err != nil {
 					return fmt.Errorf("failed to find updated section by id: %w", err)
 				}
@@ -130,14 +131,14 @@ func TestSQLiteSectionRepository(t *testing.T) {
 		},
 		{
 			Name: "Delete",
-			TFunc: func(nr models.SectionRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 				nb := nbs[12]
-				err := nr.Delete(nb.Id)
+				err := nr.DeleteSection(ctx, nb.Id)
 				if err != nil {
 					return fmt.Errorf("section delete failed: %w", err)
 				}
 
-				_, err = nr.FindById(nb.Id)
+				_, err = nr.FindSectionById(ctx, nb.Id)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")
@@ -150,8 +151,8 @@ func TestSQLiteSectionRepository(t *testing.T) {
 		},
 		{
 			Name: "ListAll",
-			TFunc: func(sr models.SectionRepository) error {
-				secs, err := sr.ListAll()
+			TFunc: func(sr models.NotesRepository) error {
+				secs, err := sr.ListAllSections(ctx)
 				if err != nil {
 					return fmt.Errorf("failed to query database: %w", err)
 				}
@@ -177,7 +178,7 @@ func TestSQLiteSectionRepository(t *testing.T) {
 
 }
 
-func TestSQLiteTagRepository(t *testing.T) {
+func TestSQLiteTagMethods(t *testing.T) {
 
 	ts := make([]*models.Tag, 0, 19)
 	for i := range 20 {
@@ -192,17 +193,17 @@ func TestSQLiteTagRepository(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	nbRepo := sqlite.NewTagRepository(db, ctx)
+	nbRepo := sqlite.NewNotesRepository(db)
 
 	tcs := []struct {
 		Name  string
-		TFunc func(models.TagRepository) error
+		TFunc func(models.NotesRepository) error
 	}{
 		{
 			Name: "Create",
-			TFunc: func(tr models.TagRepository) error {
+			TFunc: func(tr models.NotesRepository) error {
 				for _, t := range ts {
-					id, err := tr.Create(t)
+					id, err := tr.CreateTag(ctx, *t)
 					if err != nil {
 						return fmt.Errorf("failed to create tag %s: %w", t.Name, err)
 					}
@@ -217,9 +218,9 @@ func TestSQLiteTagRepository(t *testing.T) {
 		},
 		{
 			Name: "FindById",
-			TFunc: func(tr models.TagRepository) error {
+			TFunc: func(tr models.NotesRepository) error {
 				t := ts[2]
-				tq, err := tr.FindById(t.Id)
+				tq, err := tr.FindTagById(ctx, t.Id)
 				if err != nil {
 					return fmt.Errorf("failed to find tag by id: %w", err)
 				}
@@ -232,15 +233,15 @@ func TestSQLiteTagRepository(t *testing.T) {
 		},
 		{
 			Name: "Update",
-			TFunc: func(tr models.TagRepository) error {
+			TFunc: func(tr models.NotesRepository) error {
 				ot := ts[10]
 				nt := models.Tag{Id: ot.Id, Name: ot.Name}
 				nt.Name = "updatedtag"
-				err := tr.Update(nt)
+				err := tr.UpdateTag(ctx, nt)
 				if err != nil {
 					return fmt.Errorf("failed to update tag: %w", err)
 				}
-				qt, err := tr.FindById(ot.Id)
+				qt, err := tr.FindTagById(ctx, ot.Id)
 				if err != nil {
 					return fmt.Errorf("failed to find updated tag by id: %w", err)
 				}
@@ -253,14 +254,14 @@ func TestSQLiteTagRepository(t *testing.T) {
 		},
 		{
 			Name: "Delete",
-			TFunc: func(tr models.TagRepository) error {
+			TFunc: func(tr models.NotesRepository) error {
 				t := ts[12]
-				err := tr.Delete(t.Id)
+				err := tr.DeleteTag(ctx, t.Id)
 				if err != nil {
 					return fmt.Errorf("tag delete failed: %w", err)
 				}
 
-				_, err = tr.FindById(t.Id)
+				_, err = tr.FindTagById(ctx, t.Id)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")
@@ -273,8 +274,8 @@ func TestSQLiteTagRepository(t *testing.T) {
 		},
 		{
 			Name: "List",
-			TFunc: func(tr models.TagRepository) error {
-				set1, err := tr.List(10, 0)
+			TFunc: func(tr models.NotesRepository) error {
+				set1, err := tr.ListTags(ctx, 10, 0)
 				if err != nil {
 					return fmt.Errorf("failed to list tags: %w", err)
 				}
@@ -289,7 +290,7 @@ func TestSQLiteTagRepository(t *testing.T) {
 				if set1.NextOffset == nil {
 					return fmt.Errorf("set 1 next offset is nil but indicates there is more data; expecting NextOffset to be non nil")
 				}
-				set2, err := tr.List(set1.Limit, *set1.NextOffset)
+				set2, err := tr.ListTags(ctx, set1.Limit, *set1.NextOffset)
 				if err != nil {
 					return fmt.Errorf("failed to list tags: %w", err)
 				}
@@ -302,10 +303,10 @@ func TestSQLiteTagRepository(t *testing.T) {
 		},
 		{
 			Name: "Query",
-			TFunc: func(tr models.TagRepository) error {
+			TFunc: func(tr models.NotesRepository) error {
 				missing1 := int64(120)
 				missing2 := int64(340)
-				tags, err := tr.Query([]int64{ts[3].Id, ts[14].Id, ts[17].Id, missing1, missing2})
+				tags, err := tr.QueryTags(ctx, []int64{ts[3].Id, ts[14].Id, ts[17].Id, missing1, missing2})
 				if err != nil {
 					return err
 				}
@@ -330,7 +331,7 @@ func TestSQLiteTagRepository(t *testing.T) {
 
 }
 
-func TestSQLiteNoteRepository(t *testing.T) {
+func TestSQLiteNoteMethods(t *testing.T) {
 	ts := make([]*models.Tag, 0, 19)
 	for i := range 20 {
 		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag%v", i+1)})
@@ -349,12 +350,10 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	secRepo := sqlite.NewSectionRepository(db, ctx)
-	tRepo := sqlite.NewTagRepository(db, ctx)
-	nRepo := sqlite.NewNoteRepository(db, ctx)
+	notesRepo := sqlite.NewNotesRepository(db)
 
 	for _, tag := range ts {
-		tid, err := tRepo.Create(tag)
+		tid, err := notesRepo.CreateTag(ctx, *tag)
 		if err != nil {
 			t.Fatalf("failed prepping database with tags: %v", err.Error())
 		}
@@ -363,7 +362,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 	}
 
 	for _, nb := range secs {
-		nid, err := secRepo.Create(*nb)
+		nid, err := notesRepo.CreateSection(ctx, *nb)
 		if err != nil {
 			t.Fatalf("failed preppering database with notebooks: %v", err.Error())
 		}
@@ -384,13 +383,13 @@ func TestSQLiteNoteRepository(t *testing.T) {
 
 	tcs := []struct {
 		Name  string
-		TFunc func(models.NoteRepository) error
+		TFunc func(models.NotesRepository) error
 	}{
 		{
 			Name: "Create",
-			TFunc: func(nr models.NoteRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 				for _, n := range ns {
-					id, err := nr.Create(*n)
+					id, err := nr.CreateNote(ctx, *n)
 					if err != nil {
 						return fmt.Errorf("failed to create note: %w", err)
 					}
@@ -402,7 +401,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 					n.Id = id
 				}
 
-				srs, err := nr.Search(`"Title-17"`)
+				srs, err := nr.SearchNotes(ctx, `"Title-17"`)
 				if err != nil {
 					return fmt.Errorf("failed to search for created notes: %w", err)
 				}
@@ -424,9 +423,9 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		},
 		{
 			Name: "Exists",
-			TFunc: func(nr models.NoteRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 
-				ide, err := nr.Exists("title-3")
+				ide, err := nr.NoteExists(ctx, "title-3")
 				if err != nil {
 					return err
 				}
@@ -437,7 +436,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 					return fmt.Errorf("expected title-3 id to be 3 in the database, query returned %v", ide)
 				}
 
-				idne, err := nr.Exists("i am not here")
+				idne, err := nr.NoteExists(ctx, "i am not here")
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					return err
 				}
@@ -449,18 +448,18 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		},
 		{
 			Name: "Update",
-			TFunc: func(nr models.NoteRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 				n := ns[16]
 				n.Tags = append(n.Tags[:2], n.Tags[3:]...)
 
 				n.Title = "Updated Title"
 
-				err := nr.Update(*n)
+				err := nr.UpdateNote(ctx, *n)
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
 
-				un, err := nr.FindById(n.Id)
+				un, err := nr.FindNoteById(ctx, n.Id)
 				if err != nil {
 					return fmt.Errorf("failed to query updated note: %w", err)
 				}
@@ -469,7 +468,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 					return errors.New("updated note has 4 tags, expected 3")
 				}
 
-				srs, err := nr.Search(`"Updated Title"`)
+				srs, err := nr.SearchNotes(ctx, `"Updated Title"`)
 				if err != nil {
 					return errors.New("failed to search notes database for updated title")
 				}
@@ -490,14 +489,14 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		},
 		{
 			Name: "Delete",
-			TFunc: func(nr models.NoteRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 				n := ns[11]
-				err := nr.Delete(n.Id)
+				err := nr.DeleteNote(ctx, n.Id)
 				if err != nil {
 					return fmt.Errorf("failed to delete note: %w", err)
 				}
 
-				_, err = nr.FindById(n.Id)
+				_, err = nr.FindNoteById(ctx, n.Id)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")
@@ -510,8 +509,8 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		},
 		{
 			Name: "List",
-			TFunc: func(nr models.NoteRepository) error {
-				set1, err := nr.List(10, 0)
+			TFunc: func(nr models.NotesRepository) error {
+				set1, err := nr.ListNotes(ctx, 10, 0)
 				if err != nil {
 					return fmt.Errorf("failed to list notes: %w", err)
 				}
@@ -526,7 +525,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 				if set1.NextOffset == nil {
 					return fmt.Errorf("list 1 NextOffset is nil but HasMore indicates there is more data;  expecting NextOffset to be non nil")
 				}
-				set2, err := nr.List(set1.Limit, *set1.NextOffset)
+				set2, err := nr.ListNotes(ctx, set1.Limit, *set1.NextOffset)
 				if err != nil {
 					return fmt.Errorf("failed to list tags: %w", err)
 				}
@@ -542,14 +541,14 @@ func TestSQLiteNoteRepository(t *testing.T) {
 		},
 		{
 			Name: "Search",
-			TFunc: func(nr models.NoteRepository) error {
+			TFunc: func(nr models.NotesRepository) error {
 				on := ns[12]
 				on.Content = on.Content + "FTS FIND ME"
-				err := nr.Update(*on)
+				err := nr.UpdateNote(ctx, *on)
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
-				srs, err := nr.Search("FTS FIND ME")
+				srs, err := nr.SearchNotes(ctx, "FTS FIND ME")
 				if err != nil {
 					return fmt.Errorf("failed to search notes: %w", err)
 				}
@@ -574,7 +573,7 @@ func TestSQLiteNoteRepository(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.Name, func(t *testing.T) {
-			err = tc.TFunc(nRepo)
+			err = tc.TFunc(notesRepo)
 			if err != nil {
 				t.Fatal(err)
 			}

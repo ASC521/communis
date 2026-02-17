@@ -9,19 +9,31 @@ import (
 	"net/http"
 	"path/filepath"
 	"slices"
+
+	"github.com/ASC521/communis/models"
 )
+
+type TemplateData struct {
+	IsAuthenticated bool
+	Note            models.Note
+	RenderedNote    models.RenderedNote
+	Sections        []models.Section
+	Section         models.Section
+	Tags            []models.Tag
+	Tag             models.Tag
+	NoteDetails     []models.NoteDetail
+	SearchResults   []models.NoteSearchResult
+	Users           []models.User
+	User            models.User
+	Form            any
+}
 
 type TemplateCache struct {
 	pages    map[string]*template.Template
-	partials map[string]*template.Template
+	partials *template.Template
 }
 
 func NewTemplateCache(files fs.FS) (*TemplateCache, error) {
-
-	tc := &TemplateCache{
-		pages:    map[string]*template.Template{},
-		partials: map[string]*template.Template{},
-	}
 
 	funcMap := template.FuncMap{
 		"slugify":     slugify,
@@ -29,40 +41,31 @@ func NewTemplateCache(files fs.FS) (*TemplateCache, error) {
 		"containsInt": slices.Contains[[]int64],
 	}
 
-	partialFiles, err := fs.Glob(files, "html/partials/*.tmpl")
-	if err != nil {
-		return nil, err
-	}
-
-	for _, partialFile := range partialFiles {
-		name := filepath.Base(partialFile)
-		ts, err := template.New(name).Funcs(funcMap).ParseFS(files, partialFile)
-		if err != nil {
-			return nil, err
-		}
-
-		tc.partials[name] = ts
-	}
+	partialsTemplate, err := template.New("partials").Funcs(funcMap).ParseFS(files, "html/partials/*.tmpl")
 
 	pageFiles, err := fs.Glob(files, "html/pages/*.tmpl")
 	if err != nil {
 		return nil, err
 	}
 
+	pages := map[string]*template.Template{}
 	for _, pageFile := range pageFiles {
 		name := filepath.Base(pageFile)
 		tempFiles := []string{"html/layout.tmpl", pageFile}
-		tempFiles = append(tempFiles, partialFiles...)
-		ts, err := template.New(name).Funcs(funcMap).ParseFS(files, tempFiles...)
+		temp, err := partialsTemplate.Clone()
+		if err != nil {
+			return nil, err
+		}
+		temp, err = temp.Funcs(funcMap).ParseFS(files, tempFiles...)
 		if err != nil {
 			return nil, err
 		}
 
-		tc.pages[name] = ts
+		pages[name] = temp
 
 	}
 
-	return tc, nil
+	return &TemplateCache{pages: pages, partials: partialsTemplate}, nil
 
 }
 
@@ -72,7 +75,7 @@ func (t *TemplateCache) RenderPage(
 	r *http.Request,
 	status int,
 	tempName string,
-	data any,
+	data TemplateData,
 ) {
 	ts, ok := t.pages[tempName]
 	if !ok {
@@ -94,17 +97,11 @@ func (t *TemplateCache) RenderPartial(
 	w http.ResponseWriter,
 	r *http.Request,
 	status int,
-	tempFileName string,
-	tempName string,
+	name string,
 	data any,
 ) {
-	ts, ok := t.partials[tempFileName]
-	if !ok {
-		serverError(logger, w, r, fmt.Errorf("template %s does not exist", tempFileName))
-		return
-	}
 	buf := new(bytes.Buffer)
-	err := ts.ExecuteTemplate(buf, tempName, data)
+	err := t.partials.ExecuteTemplate(buf, name, data)
 	if err != nil {
 		serverError(logger, w, r, err)
 		return
