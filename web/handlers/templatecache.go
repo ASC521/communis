@@ -11,22 +11,17 @@ import (
 	"runtime/debug"
 	"slices"
 
-	"github.com/ASC521/communis/models"
+	"github.com/alexedwards/scs/v2"
 )
 
-type TemplateData struct {
+type BaseData struct {
 	IsAuthenticated bool
-	Note            models.Note
-	RenderedNote    models.RenderedNote
-	Sections        []models.Section
-	Section         models.Section
-	Tags            []models.Tag
-	Tag             models.Tag
-	NoteDetails     []models.NoteDetail
-	SearchResults   []models.NoteSearchResult
-	Users           []models.User
-	User            models.User
-	Form            any
+}
+
+func newBase(r *http.Request, sessionManager *scs.SessionManager) BaseData {
+	return BaseData{
+		IsAuthenticated: isAuthenticated(r, sessionManager),
+	}
 }
 
 type TemplateCache struct {
@@ -77,7 +72,7 @@ func (t *TemplateCache) RenderPage(
 	r *http.Request,
 	status int,
 	tempName string,
-	data TemplateData,
+	data any,
 ) {
 	ts, ok := t.pages[tempName]
 	if !ok {

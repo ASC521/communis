@@ -74,6 +74,7 @@ func TagGet(
 ) http.Handler {
 
 	type td struct {
+		BaseData
 		Tags []models.Tag
 	}
 
@@ -90,9 +91,9 @@ func TagGet(
 			return
 		}
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			Tags:            allTags,
+		data := td{
+			BaseData: newBase(r, sessionManager),
+			Tags:     allTags,
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "tags-list.tmpl", data)
 	})
@@ -105,6 +106,7 @@ func TagViewGet(
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 	type td struct {
+		BaseData
 		Tag         models.Tag
 		NoteDetails []models.NoteDetail
 	}
@@ -133,10 +135,10 @@ func TagViewGet(
 			return
 		}
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			NoteDetails:     noteDetails,
-			Tag:             tag,
+		data := td{
+			BaseData:    newBase(r, sessionManager),
+			NoteDetails: noteDetails,
+			Tag:         tag,
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "tag-view.tmpl", data)
