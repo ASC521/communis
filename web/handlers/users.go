@@ -4,14 +4,18 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/ASC521/communis/cache"
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
+	"github.com/mitchellh/go-homedir"
 )
 
 type userForm struct {
@@ -42,52 +46,98 @@ func parseUserFormFromRequest(r *http.Request) (userForm, error) {
 	return form, nil
 }
 
-// func PutUser() http.Handler      {}
-// func GetUser() http.Handler      {}
-// func DeleteUser() http.Handler   {}
+// TODO: validate user form
+func validateUserForm(form *userForm) {
+
+	if form.Name == "" {
+		form.FieldErrors["name"] = "Name cannot be empty"
+	}
+
+	if form.PlainTextPassword == "" {
+		form.FieldErrors["password"] = "Password cannot be empty"
+	} else if !validator.MinChars(form.PlainTextPassword, 8) {
+		form.FieldErrors["password"] = "Password must be at least 8 characters"
+	}
+}
+
+func DeleteUser(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	connCache *cache.TTLCache[int64, *sqlitex.SQLiteDB],
+	dbDirectory string,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, err := parseIdFromPath(r)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		connCache.Remove(userId)
+		userDB, err := indexRepo.GetUserDB(r.Context(), userId)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		err = indexRepo.DeleteUser(r.Context(), userId)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		// TODO: this shouldn't be happening here - config object should have aboslute path
+		dbd, err := homedir.Expand(dbDirectory)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+		err = os.Remove(filepath.Join(dbd, userDB.Path))
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		w.Header().Set("HX-Redirect", "/admin")
+		w.WriteHeader(http.StatusOK)
+	}
+}
 
 func GetUserCreate(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	indexRepo models.IndexRepository,
 	sessionManager *scs.SessionManager,
-) http.Handler {
-	type td struct {
-		Form userForm
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tc.RenderPartial(logger, w, r, http.StatusOK, "user-new", nil)
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		data := TemplateData{
-			Form:            userForm{},
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "user-create.tmpl", data)
-	})
 }
 
-// PostUserCreate creates a new user in the index database and bootstraps a new user database.
-func PostUserCreate(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepository, conf *config.Config) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// PostUser creates a new user in the index database and bootstraps a new user database.
+func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepository, conf *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		userForm, err := parseUserFormFromRequest(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
-		user := models.User{
-			Name:       userForm.Name,
-			PTPassword: userForm.PlainTextPassword,
-			IsAdmin:    userForm.IsAdmin,
-			DBPath:     fmt.Sprintf("notes/%s.db", strings.ToLower(userForm.Name)),
-			DBVersion:  0,
+		validateUserForm(&userForm)
+		if len(userForm.FieldErrors) > 0 {
+			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "user-new", userForm)
+			return
 		}
 
-		_, err = indexRepo.CreateUser(r.Context(), user)
+		dbPath := fmt.Sprintf("notes/%s.db", strings.ToLower(userForm.Name))
+		userId, err := indexRepo.CreateUserAndDB(r.Context(), userForm.Name, userForm.PlainTextPassword, userForm.IsAdmin, dbPath)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
 		}
 
-		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, user.DBPath)
+		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, dbPath)
 		notesDB, err := sqlitex.NewSQLiteDB(notesDBFP,
 			sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
 			sqlitex.WithCacheSize(conf.SQLite.CacheSize),
@@ -112,9 +162,16 @@ func PostUserCreate(tc *TemplateCache, logger *slog.Logger, indexRepo models.Ind
 			serverError(logger, w, r, err)
 			return
 		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
 
-	})
+		user, err := indexRepo.GetUser(r.Context(), userId)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusCreated, "user-row", user)
+
+	}
 }
 
 func GetUserLogin(
@@ -150,7 +207,13 @@ func PostUserLogin(
 			return
 		}
 
-		userId, err := indexRepo.AuthenticateUser(r.Context(), userForm.Name, userForm.PlainTextPassword)
+		user, err := indexRepo.AuthenticateUser(r.Context(), userForm.Name, userForm.PlainTextPassword)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		err = indexRepo.UpdateUserLastLoginToNow(r.Context(), user.Id)
 		if err != nil {
 			serverError(logger, w, r, err)
 			return
@@ -162,8 +225,12 @@ func PostUserLogin(
 			return
 		}
 
-		sessionManager.Put(r.Context(), "authenticatedUserId", userId)
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		sessionManager.Put(r.Context(), "authenticatedUserId", user.Id)
+		if user.IsAdmin {
+			http.Redirect(w, r, "/admin", http.StatusSeeOther)
+		} else {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+		}
 
 	})
 }
@@ -185,4 +252,54 @@ func PostUserLogout(
 		w.Header().Set("HX-Redirect", "/login")
 		w.WriteHeader(http.StatusOK)
 	})
+}
+
+func GetUser(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	sessionManager *scs.SessionManager,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, err := parseIdFromPath(r)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		user, err := indexRepo.GetUser(r.Context(), userId)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "user-row", user)
+
+	}
+}
+
+func GetUserEdit(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	sessionManager *scs.SessionManager,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, err := parseIdFromPath(r)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		user, err := indexRepo.GetUser(r.Context(), userId)
+		if err != nil {
+			serverError(logger, w, r, err)
+			return
+		}
+		data := TemplateData{
+			IsAuthenticated: isAuthenticated(r, sessionManager),
+			User:            user,
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "user-edit", data)
+	}
 }

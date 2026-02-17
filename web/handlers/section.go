@@ -114,7 +114,7 @@ func SectionPost(
 
 		validateSectionForm(&form)
 		if len(form.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "post-section.tmpl", "new-section-form", form)
+			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "new-section-form", form)
 			return
 		}
 
@@ -138,7 +138,7 @@ func SectionPost(
 func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tc.RenderPartial(logger, w, r, http.StatusOK, "post-section.tmpl", "new-section-form", sectionForm{FieldErrors: map[string]string{}})
+		tc.RenderPartial(logger, w, r, http.StatusOK, "new-section-form", sectionForm{FieldErrors: map[string]string{}})
 	})
 }
 
@@ -184,7 +184,7 @@ func SectionPut(
 		}
 		validateSectionForm(&form)
 		if len(form.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusOK, "put-section.tmpl", "update-section", form)
+			tc.RenderPartial(logger, w, r, http.StatusOK, "update-section", form)
 			return
 		}
 
@@ -233,7 +233,7 @@ func SectionEditGet(
 		}
 
 		sectionForm := sectionForm{Id: section.Id, Name: section.Name, FieldErrors: map[string]string{}}
-		tc.RenderPartial(logger, w, r, http.StatusOK, "put-section.tmpl", "update-section", sectionForm)
+		tc.RenderPartial(logger, w, r, http.StatusOK, "update-section", sectionForm)
 	})
 }
 

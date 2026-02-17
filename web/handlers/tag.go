@@ -174,7 +174,7 @@ func TagEditGet(
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag.tmpl", "put-tag", td{Id: tag.Id, Name: tag.Name, FieldErrors: map[string]string{}})
+		tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag", td{Id: tag.Id, Name: tag.Name, FieldErrors: map[string]string{}})
 
 	})
 }
@@ -198,7 +198,7 @@ func TagPut(
 		validateTagForm(r.Context(), &form, notesRepo)
 
 		if len(form.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag.tmpl", "put-tag", form)
+			tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag", form)
 			return
 		}
 
@@ -279,7 +279,7 @@ func TagPost(
 			for _, e := range form.FieldErrors {
 				msg += fmt.Sprintf("<p>%s</p>\n", e)
 			}
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "new-tag.tmpl", "new-tag", td{ErrMsg: msg})
+			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "new-tag", td{ErrMsg: msg})
 			return
 		}
 
@@ -295,7 +295,6 @@ func TagPost(
 			w,
 			r,
 			http.StatusCreated,
-			"new-tag.tmpl",
 			"new-tag",
 			td{
 				SuccessMsg: fmt.Sprintf("Tag %s created", form.Name),

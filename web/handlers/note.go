@@ -463,7 +463,7 @@ func NotePreviewPost(
 		}
 		rn.IsPreview = true
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note.tmpl", "rendered-note", rn)
+		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note", rn)
 	})
 
 }
@@ -558,7 +558,7 @@ func NoteSearchGet(
 
 		name := r.Header.Get("Hx-Source")
 		if name == "input#search" {
-			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table.tmpl", "note-table", data.SearchResults)
+			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table", data.SearchResults)
 			return
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", data)

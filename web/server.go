@@ -103,9 +103,9 @@ func checkAndRunPendingMigrations(
 		return err
 	}
 
-	for _, dbInfo := range dbsToUpgrade {
+	for _, userDB := range dbsToUpgrade {
 		// TODO: This is embarassingly parallelisable and should be rewritten for concurrency
-		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, dbInfo.DBPath)
+		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, userDB.Path)
 		notesDB, err := sqlitex.NewSQLiteDB(notesDBFP,
 			sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
 			sqlitex.WithCacheSize(conf.SQLite.CacheSize),
@@ -123,7 +123,7 @@ func checkAndRunPendingMigrations(
 		if err != nil {
 			return err
 		}
-		indexRepository.UpdateDBVersion(ctx, dbInfo.UserId, version)
+		indexRepository.UpdateDBVersion(ctx, userDB.UserId, version)
 
 	}
 

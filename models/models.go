@@ -113,26 +113,31 @@ type NotesRepository interface {
 }
 
 type User struct {
-	Id             int64
-	Name           string
-	PTPassword     string
-	HashedPassword []byte
-	IsAdmin        bool
-	DBPath         string
-	DBVersion      int
-	CreatedAtUTC   time.Time
+	Id           int64
+	Name         string
+	IsAdmin      bool
+	CreatedAtUTC time.Time
+	LastLoginUTC time.Time
 }
 
-type NotesDBInfo struct {
-	UserId    int64
-	DBPath    string
-	DBVersion int
+type UserDatabase struct {
+	Id      int64
+	UserId  int64
+	Path    string
+	Version int
 }
 
 type IndexRepository interface {
-	DBVersionBefore(ctx context.Context, latestVer int) ([]NotesDBInfo, error)
+	DBVersionBefore(ctx context.Context, latestVer int) ([]UserDatabase, error)
 	UpdateDBVersion(ctx context.Context, id int64, version int) error
-	GetUserDB(ctx context.Context, userId int64) (NotesDBInfo, error)
-	CreateUser(ctx context.Context, user User) (int64, error)
-	AuthenticateUser(ctx context.Context, username, password string) (int64, error)
+	GetUserDB(ctx context.Context, userId int64) (UserDatabase, error)
+	CreateAdminUser(ctx context.Context, username, password string) (int64, error)
+	CreateUserAndDB(ctx context.Context, userName, password string, isAdmin bool, dbPath string) (int64, error)
+	AuthenticateUser(ctx context.Context, username, password string) (User, error)
+	IsAdminUser(ctx context.Context, userId int64) (bool, error)
+	GetUser(ctx context.Context, userId int64) (User, error)
+	ListUsers(ctx context.Context) ([]User, error)
+	UpdateUser(ctx context.Context, id int64, name string, isAdmin bool) error
+	UpdateUserLastLoginToNow(ctx context.Context, id int64) error
+	DeleteUser(ctx context.Context, id int64) error
 }

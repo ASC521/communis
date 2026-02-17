@@ -64,7 +64,7 @@ func parseIdFromPath(r *http.Request) (int64, error) {
 
 	id, err := strconv.ParseInt(pathId, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("section id %v is not a valid int", pathId)
+		return 0, fmt.Errorf("id %v is not a valid int", pathId)
 	}
 
 	return id, nil

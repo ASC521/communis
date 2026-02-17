@@ -32,7 +32,8 @@ func main() {
 		globalFlags.PrintDefaults()
 		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
 		fmt.Fprint(os.Stdout, "database    create and manage database\n")
-		fmt.Fprint(os.Stdout, "web         run web server\n\n")
+		fmt.Fprint(os.Stdout, "web         run web server\n")
+		fmt.Fprint(os.Stdout, "user        manage application users\n\n")
 	}
 
 	globalFlags.Parse(os.Args[1:])
@@ -102,6 +103,8 @@ func main() {
 		err = DatabaseCMD(conf, subArgs)
 	case "web":
 		err = WebCMD(conf, subArgs)
+	case "user":
+		err = UserCMD(conf, subArgs)
 	default:
 		fmt.Fprintln(os.Stderr, fmt.Errorf("%s is not a valid command", cmd))
 		os.Exit(1)

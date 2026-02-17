@@ -122,7 +122,25 @@ func recoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 	}
 }
 
-func requireAuthentication(
+func requireAuth(sessionManager *scs.SessionManager) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authUserId := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
+			if authUserId == 0 {
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
+
+			// Set the "Cache-Control: no-store" header so that pages
+			// which require authentication are not stored in the users
+			// browser cache (or other intermediary cache).
+			w.Header().Add("Cache-Control", "no-store")
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func requireAuthAndDB(
 	sessionManager *scs.SessionManager,
 	notesDBCache *cache.TTLCache[int64, *sqlitex.SQLiteDB],
 	indexRepo models.IndexRepository,
@@ -148,7 +166,7 @@ func requireAuthentication(
 					return
 				}
 
-				dbFP := filepath.Join(conf.SQLite.DBDirectory, dbInfo.DBPath)
+				dbFP := filepath.Join(conf.SQLite.DBDirectory, dbInfo.Path)
 				notesDB, err = sqlitex.NewSQLiteDB(dbFP,
 					sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
 					sqlitex.WithCacheSize(conf.SQLite.CacheSize),
@@ -177,4 +195,36 @@ func requireAuthentication(
 
 		return http.HandlerFunc(hFunc)
 	}
+}
+
+func requireAdmin(
+	sessionManager *scs.SessionManager,
+	indexRepo models.IndexRepository,
+) func(http.Handler) http.Handler {
+
+	return func(next http.Handler) http.Handler {
+		handlerFunc := func(w http.ResponseWriter, r *http.Request) {
+			authUserId := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
+			if authUserId == 0 {
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
+
+			isAdmin, err := indexRepo.IsAdminUser(r.Context(), authUserId)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			if !isAdmin {
+				http.Redirect(w, r, "/login", http.StatusForbidden)
+				return
+			}
+
+			w.Header().Add("Cache-Control", "no-store")
+			next.ServeHTTP(w, r)
+		}
+
+		return http.HandlerFunc(handlerFunc)
+	}
+
 }
