@@ -71,7 +71,7 @@ func SectionGet(
 ) http.Handler {
 
 	type td struct {
-		FormData sectionForm
+		BaseData
 		Sections []models.Section
 	}
 
@@ -88,9 +88,9 @@ func SectionGet(
 			return
 		}
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			Sections:        sections,
+		data := td{
+			BaseData: newBase(r, sessionManager),
+			Sections: sections,
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "section-list.tmpl", data)
@@ -102,8 +102,7 @@ func SectionPost(
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
 ) http.Handler {
-	type td struct {
-	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		form, err := parseSectionFormFromRequest(r)
@@ -244,6 +243,7 @@ func SectionViewGet(
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 	type td struct {
+		BaseData
 		Section     models.Section
 		NoteDetails []models.NoteDetail
 	}
@@ -281,10 +281,10 @@ func SectionViewGet(
 			return
 		}
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			Section:         sec,
-			NoteDetails:     nds,
+		data := td{
+			BaseData:    newBase(r, sessionManager),
+			Section:     sec,
+			NoteDetails: nds,
 		}
 
 		tc.RenderPage(

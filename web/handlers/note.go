@@ -187,10 +187,19 @@ func parseNoteFromNoteForm(nf noteForm) models.Note {
 	}
 }
 
+type noteCreateData struct {
+	BaseData
+	Form         noteForm
+	Tags         []models.Tag
+	Sections     []models.Section
+	RenderedNote models.RenderedNote
+}
+
 func NoteNewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	newNotesRepo getNotesRepo,
+	sessionManager *scs.SessionManager,
 ) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -213,13 +222,14 @@ func NoteNewGet(
 			return
 		}
 
-		td := TemplateData{
+		data := noteCreateData{
+			BaseData:     newBase(r, sessionManager),
 			Form:         noteForm{SectionId: 1},
 			Tags:         tags,
 			Sections:     sec,
 			RenderedNote: models.RenderedNote{IsPreview: true},
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", td)
+		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
 	})
 }
 
@@ -229,6 +239,7 @@ func NotePost(
 	newNotesRepo getNotesRepo,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		nf, err := parseNoteForm(r)
@@ -263,11 +274,11 @@ func NotePost(
 				return
 			}
 
-			data := TemplateData{
-				IsAuthenticated: isAuthenticated(r, sessionManager),
-				Sections:        secs,
-				Tags:            allTags,
-				Form:            nf,
+			data := noteCreateData{
+				BaseData: newBase(r, sessionManager),
+				Sections: secs,
+				Tags:     allTags,
+				Form:     nf,
 			}
 			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", data)
 			return
@@ -340,12 +351,12 @@ func NoteEditGet(
 			Errors:    map[string]string{},
 		}
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			RenderedNote:    models.RenderedNote{IsPreview: true},
-			Sections:        sec,
-			Tags:            tags,
-			Form:            nf,
+		data := noteCreateData{
+			BaseData:     newBase(r, sessionManager),
+			RenderedNote: models.RenderedNote{IsPreview: true},
+			Sections:     sec,
+			Tags:         tags,
+			Form:         nf,
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
 	})
@@ -396,11 +407,11 @@ func NotePut(
 				return
 			}
 
-			data := TemplateData{
-				IsAuthenticated: isAuthenticated(r, sessionManager),
-				Sections:        secs,
-				Tags:            allTags,
-				Form:            nf,
+			data := noteCreateData{
+				BaseData: newBase(r, sessionManager),
+				Sections: secs,
+				Tags:     allTags,
+				Form:     nf,
 			}
 
 			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", data)
@@ -475,6 +486,11 @@ func NoteViewGet(
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
+	type td struct {
+		BaseData
+		RenderedNote models.RenderedNote
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		if err != nil || id < 1 {
@@ -511,9 +527,9 @@ func NoteViewGet(
 		}
 		rn.IsPreview = false
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			RenderedNote:    rn,
+		data := td{
+			BaseData:     newBase(r, sessionManager),
+			RenderedNote: rn,
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", data)
@@ -527,14 +543,15 @@ func NoteSearchGet(
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
-	type templateData struct {
-		Notes []models.NoteSearchResult
-		Query string
+	type td struct {
+		BaseData
+		SearchResults []models.NoteSearchResult
+		Form          searchForm
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
+		data := td{
+			BaseData: newBase(r, sessionManager),
 		}
 		q := r.URL.Query().Get("q")
 

@@ -33,7 +33,7 @@ func routes(
 	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
 
 	mux.Handle("GET /note/{id}/{slug}", authDBReq.then(handlers.NoteViewGet(tc, logger, handlers.GetSQLiteNotesRepo, sessionManager)))
-	mux.Handle("GET /note/new", authDBReq.then(handlers.NoteNewGet(tc, logger, handlers.GetSQLiteNotesRepo)))
+	mux.Handle("GET /note/new", authDBReq.then(handlers.NoteNewGet(tc, logger, handlers.GetSQLiteNotesRepo, sessionManager)))
 	mux.Handle("POST /note/preview", authDBReq.then(handlers.NotePreviewPost(tc, logger, handlers.GetSQLiteNotesRepo)))
 	mux.Handle("POST /note", authDBReq.then(handlers.NotePost(tc, logger, handlers.GetSQLiteNotesRepo, sessionManager)))
 	mux.Handle("PUT /note/{id}/{slug}", authDBReq.then(handlers.NotePut(tc, logger, handlers.GetSQLiteNotesRepo, sessionManager)))

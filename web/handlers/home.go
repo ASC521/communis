@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/ASC521/communis/models"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -13,6 +14,11 @@ func HomeGet(
 	newNotesRepo getNotesRepo,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
+
+	type td struct {
+		BaseData
+		NoteDetails []models.NoteDetail
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, ok := newNotesRepo(r)
@@ -25,11 +31,11 @@ func HomeGet(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		td := TemplateData{
-			NoteDetails:     mn,
-			IsAuthenticated: isAuthenticated(r, sessionManager),
+		data := td{
+			NoteDetails: mn,
+			BaseData:    newBase(r, sessionManager),
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", td)
+		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", data)
 	})
 }

@@ -180,11 +180,16 @@ func GetUserLogin(
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
+	type td struct {
+		BaseData
+		Form userForm
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		data := TemplateData{
-			Form:            userForm{},
-			IsAuthenticated: isAuthenticated(r, sessionManager),
+		data := td{
+			Form:     userForm{},
+			BaseData: newBase(r, sessionManager),
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "login.tmpl", data)
 
@@ -282,6 +287,12 @@ func GetUserEdit(
 	indexRepo models.IndexRepository,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
+
+	type td struct {
+		BaseData
+		User models.User
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId, err := parseIdFromPath(r)
 		if err != nil {
@@ -294,9 +305,9 @@ func GetUserEdit(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			User:            user,
+		data := td{
+			BaseData: newBase(r, sessionManager),
+			User:     user,
 		}
 
 		tc.RenderPartial(logger, w, r, http.StatusOK, "user-edit", data)

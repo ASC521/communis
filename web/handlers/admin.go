@@ -15,6 +15,11 @@ func GetAdmin(
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
+	type td struct {
+		BaseData
+		Users []models.User
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		users, err := indexRepo.ListUsers(r.Context())
@@ -23,9 +28,9 @@ func GetAdmin(
 			return
 		}
 
-		data := TemplateData{
-			IsAuthenticated: isAuthenticated(r, sessionManager),
-			Users:           users,
+		data := td{
+			BaseData: newBase(r, sessionManager),
+			Users:    users,
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "admin.tmpl", data)

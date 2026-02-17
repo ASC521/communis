@@ -1,6 +1,5 @@
-(A) Debug mode which prints server error on screen
-(B) Refactor organization of html templates to better fit htmx
-(C) Refactor TemplateData struct by having handlers handle struct sent to templates - remove struct
+(A) Refactor db connection cache - investage why connections aren't closing
+(D) Refactor organization of html templates to better fit htmx
 (E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (G) Fix note preview page -  buttons don't line up
@@ -17,8 +16,6 @@ Put update user information
 Rebuild inline section create/edit form +v1
 Refactor TemplateCache - don't like having to pass in file name and then defined template name
 Refactor css
-Refactor db connection cache - investage why connections aren't closing
-Refactor note, tag, and section repositories to single repository interface +v1
 Search results should contain rendered html from markdown not raw markdown
 Unit tests on note form parsing and validation +v1
 Unsaved changes will be lost warning on navigating away from page +v1
@@ -34,6 +31,7 @@ x (A) Add section view page - list associated notes in section, have links to ed
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Bug Fix: Note Edit page does not submit
 x (A) Build tag index +v1
+x (A) Debug mode which prints server error on screen
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Fix note preview page - section and tag names have to be pulled from DB
 x (A) Make textarea on edit notes screen automatically grow as more text is added +v1
@@ -50,6 +48,7 @@ x (A) Move to icons from text buttons +v1 +create-note-rework
 x (A) Move to pico css +v1
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
+x (A) Refactor TemplateData struct by having handlers handle struct sent to templates - remove struct
 x (A) Refactor migrations to support multiple databases +v1 +user-auth
 x (A) Tidy up note section, add tags dialog to view note screen +v1
 x (B) Refactor database repositories to support database connection in each handler +v1 +user-auth
@@ -60,4 +59,5 @@ x Data Model
 x Full Text Search for Notes
 x Implement Repository Pattern for SQLite backend
 x Redo tag selection on create note screen +v1 +create-note-rework
+x Refactor note, tag, and section repositories to single repository interface +v1
 x SQLite Migrations and DB Bootstrapping
