@@ -208,6 +208,7 @@ func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]models.
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	tags := []models.Tag{}
 	for rows.Next() {

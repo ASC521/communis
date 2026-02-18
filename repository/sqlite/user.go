@@ -30,6 +30,7 @@ func (r *indexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) 
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	userDBs := []models.UserDatabase{}
 	for rows.Next() {
@@ -247,6 +248,7 @@ func (r *indexDBRepository) ListUsers(ctx context.Context) ([]models.User, error
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	users := []models.User{}
 	for rows.Next() {

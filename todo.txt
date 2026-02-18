@@ -1,4 +1,6 @@
 (A) Refactor db connection cache - investage why connections aren't closing
+(B) App throws error on receiving invalid credentials when logging in
+(C)PostUser should be happening within a transaction
 (D) Refactor organization of html templates to better fit htmx
 (E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 (F) Add form validation feedback to note create +v1 +create-note-rework
