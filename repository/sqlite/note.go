@@ -316,6 +316,8 @@ func (r *NotesRepository) RecentlyUpdatedNotes(ctx context.Context, limit int) (
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	return parseNoteDetailsFromRows(rows)
 }
 
@@ -332,6 +334,7 @@ func (r *NotesRepository) NotesInSection(ctx context.Context, secId int64) ([]mo
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	return parseNoteDetailsFromRows(rows)
 }
@@ -350,6 +353,7 @@ func (r *NotesRepository) NotesWithTag(ctx context.Context, tagId int64) ([]mode
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	return parseNoteDetailsFromRows(rows)
 }

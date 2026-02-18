@@ -156,7 +156,13 @@ func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepo
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		_, err = migrations.Bootstrap(r.Context(), migs, notesDBMigrationDriver)
+		ver, err := migrations.Bootstrap(r.Context(), migs, notesDBMigrationDriver)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		err = indexRepo.UpdateDBVersion(r.Context(), userId, ver)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return

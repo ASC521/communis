@@ -104,6 +104,7 @@ func checkAndRunPendingMigrations(
 	}
 
 	for _, userDB := range dbsToUpgrade {
+		logger.Debug(fmt.Sprintf("upgrade database for %s", userDB.Path))
 		// TODO: This is embarassingly parallelisable and should be rewritten for concurrency
 		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, userDB.Path)
 		notesDB, err := sqlitex.NewSQLiteDB(notesDBFP,
@@ -117,13 +118,17 @@ func checkAndRunPendingMigrations(
 		if err != nil {
 			return err
 		}
+		defer notesDB.Close()
 
 		notesDBMigrationDriver := sqlitex.NewMigrationDriver(notesDB, ctx)
 		version, err := migrations.Up(ctx, notesMigrations, notesDBMigrationDriver)
 		if err != nil {
 			return err
 		}
-		indexRepository.UpdateDBVersion(ctx, userDB.UserId, version)
+		err = indexRepository.UpdateDBVersion(ctx, userDB.UserId, version)
+		if err != nil {
+			return err
+		}
 
 	}
 
@@ -174,6 +179,7 @@ func RunServer(conf *config.Config) error {
 		if err != nil {
 			logger.Error(fmt.Sprintf("failed to close %v db connection", key), "erMsg", err.Error())
 		}
+		logger.Debug(fmt.Sprintf("sqlite database connection for user %v", key))
 	})
 	defer notesConnCache.Shutdown()
 
