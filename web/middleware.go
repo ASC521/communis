@@ -5,16 +5,14 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"slices"
 	"time"
 
-	"github.com/ASC521/communis/cache"
-	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
 )
@@ -143,9 +141,7 @@ func requireAuth(sessionManager *scs.SessionManager) func(http.Handler) http.Han
 
 func requireAuthAndDB(
 	sessionManager *scs.SessionManager,
-	notesDBCache *cache.TTLCache[int64, *sqlitex.SQLiteDB],
-	indexRepo models.IndexRepository,
-	conf *config.SQLite,
+	sqliteConnSvc *services.SQLiteConnService,
 	logger *slog.Logger,
 	tc *handlers.TemplateCache,
 ) func(http.Handler) http.Handler {
@@ -159,40 +155,17 @@ func requireAuthAndDB(
 				return
 			}
 
-			notesDB, ok := notesDBCache.Get(authUserId)
-			if !ok {
-				logger.Debug("cache miss - create new db connection")
-				dbInfo, err := indexRepo.GetUserDB(r.Context(), authUserId)
-				if err != nil {
-					tc.RenderError(logger, w, r, err)
-					return
-				}
-
-				dbFP := filepath.Join(conf.DBDirectory, dbInfo.Path)
-				notesDB, err = sqlitex.NewSQLiteDB(dbFP,
-					sqlitex.WithBusyTimeout(conf.BusyTimeout),
-					sqlitex.WithCacheSize(conf.CacheSize),
-					sqlitex.WithForeignKeys(conf.ForeignKeys),
-					sqlitex.WithJournalMode(conf.JournalMode),
-					sqlitex.WithSynchronous(conf.Synchronous),
-					sqlitex.WithTempStore(conf.TempStore),
-				)
-
-				if err != nil {
-					tc.RenderError(logger, w, r, err)
-					return
-				}
-
-				notesDBCache.Set(authUserId, notesDB, 24*time.Hour)
-				logger.Debug(fmt.Sprintf("added connection to %s to cache", notesDB.DBPath))
-
+			db, err := sqliteConnSvc.GetConn(r.Context(), authUserId)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
 			}
 
 			// Set the "Cache-Control: no-store" header so that pages
 			// which require authentication are not stored in the users
 			// browser cache (or other intermediary cache).
 			w.Header().Add("Cache-Control", "no-store")
-			next.ServeHTTP(w, r.WithContext(sqlitex.NewContext(r.Context(), notesDB)))
+			next.ServeHTTP(w, r.WithContext(sqlitex.NewContext(r.Context(), db)))
 		}
 
 		return http.HandlerFunc(hFunc)

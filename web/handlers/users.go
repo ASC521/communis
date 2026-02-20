@@ -8,11 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ASC521/communis/cache"
-	"github.com/ASC521/communis/config"
-	"github.com/ASC521/communis/dbx/migrations"
-	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 	"github.com/mitchellh/go-homedir"
@@ -63,7 +60,7 @@ func DeleteUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	indexRepo models.IndexRepository,
-	connCache *cache.TTLCache[int64, *sqlitex.SQLiteDB],
+	sqliteConnSvc *services.SQLiteConnService,
 	dbDirectory string,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +70,11 @@ func DeleteUser(
 			return
 		}
 
-		connCache.Remove(userId)
+		err = sqliteConnSvc.RemoveConn(r.Context(), userId)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
 		userDB, err := indexRepo.GetUserDB(r.Context(), userId)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -115,7 +116,7 @@ func GetUserCreate(
 }
 
 // PostUser creates a new user in the index database and bootstraps a new user database.
-func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepository, conf *config.Config) http.HandlerFunc {
+func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepository, connSvc *services.SQLiteConnService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userForm, err := parseUserFormFromRequest(r)
 		if err != nil {
@@ -136,33 +137,7 @@ func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepo
 			return
 		}
 
-		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, dbPath)
-		notesDB, err := sqlitex.NewSQLiteDB(notesDBFP,
-			sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
-			sqlitex.WithCacheSize(conf.SQLite.CacheSize),
-			sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys),
-			sqlitex.WithJournalMode(conf.SQLite.JournalMode),
-			sqlitex.WithSynchronous(conf.SQLite.Synchronous),
-			sqlitex.WithTempStore(conf.SQLite.TempStore),
-		)
-		if err != nil {
-			tc.RenderError(logger, w, r, err)
-			return
-		}
-
-		notesDBMigrationDriver := sqlitex.NewMigrationDriver(notesDB, r.Context())
-		migs, err := migrations.Load(conf.SQLite.NotesDBMigrations)
-		if err != nil {
-			tc.RenderError(logger, w, r, err)
-			return
-		}
-		ver, err := migrations.Bootstrap(r.Context(), migs, notesDBMigrationDriver)
-		if err != nil {
-			tc.RenderError(logger, w, r, err)
-			return
-		}
-
-		err = indexRepo.UpdateDBVersion(r.Context(), userId, ver)
+		err = connSvc.CreateDB(r.Context(), userId)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return

@@ -327,7 +327,7 @@ type SQLiteMigrationDriver struct {
 	db *SQLiteDB
 }
 
-func NewMigrationDriver(db *SQLiteDB, ctx context.Context) *SQLiteMigrationDriver {
+func NewMigrationDriver(db *SQLiteDB) *SQLiteMigrationDriver {
 	return &SQLiteMigrationDriver{db: db}
 }
 

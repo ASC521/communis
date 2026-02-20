@@ -4,10 +4,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/cache"
 	"github.com/ASC521/communis/config"
-	"github.com/ASC521/communis/dbx/sqlitex"
-	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/repository/sqlite"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
 )
@@ -15,17 +14,18 @@ import (
 func routes(
 	logger *slog.Logger,
 	tc *handlers.TemplateCache,
-	indexRepo models.IndexRepository,
-	notesDBConnCache *cache.TTLCache[int64, *sqlitex.SQLiteDB],
+	sqliteConnSvc *services.SQLiteConnService,
 	sessionManager *scs.SessionManager,
 	conf *config.Config,
 ) http.Handler {
+
+	indexRepo := sqlite.NewIndexDBRepository(sqliteConnSvc.GetIndexConn())
 
 	mux := http.NewServeMux()
 
 	baseChain := chain{recoverPanic(logger), requestLogger([]string{}, logger)}
 	dynamic := chain{sessionManager.LoadAndSave}
-	authDBMiddleware := requireAuthAndDB(sessionManager, notesDBConnCache, indexRepo, &conf.SQLite, logger, tc)
+	authDBMiddleware := requireAuthAndDB(sessionManager, sqliteConnSvc, logger, tc)
 	authDBReq := append(dynamic, authDBMiddleware)
 	authReq := append(dynamic, requireAuth(sessionManager))
 	adminReq := append(dynamic, requireAdmin(sessionManager, indexRepo))
@@ -65,10 +65,10 @@ func routes(
 
 	mux.Handle("GET /admin", adminReq.thenFunc(handlers.GetAdmin(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("GET /user/new", adminReq.thenFunc(handlers.GetUserCreate(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("POST /user", adminReq.thenFunc(handlers.PostUser(tc, logger, indexRepo, conf)))
+	mux.Handle("POST /user", adminReq.thenFunc(handlers.PostUser(tc, logger, indexRepo, sqliteConnSvc)))
 	mux.Handle("GET /user/{id}", adminReq.thenFunc(handlers.GetUser(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("GET /user/{id}/edit", adminReq.thenFunc(handlers.GetUserEdit(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("DELETE /user/{id}", adminReq.thenFunc(handlers.DeleteUser(tc, logger, indexRepo, notesDBConnCache, conf.SQLite.DBDirectory)))
+	mux.Handle("DELETE /user/{id}", adminReq.thenFunc(handlers.DeleteUser(tc, logger, indexRepo, sqliteConnSvc, conf.SQLite.DBDirectory)))
 
 	return baseChain.then(mux)
 }

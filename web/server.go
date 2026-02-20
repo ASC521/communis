@@ -10,17 +10,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/ASC521/communis/cache"
 	"github.com/ASC521/communis/config"
-	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
-	"github.com/ASC521/communis/repository/sqlite"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers"
 
 	"github.com/alexedwards/scs/v2"
@@ -43,106 +40,11 @@ func setupLogging(c *config.Config) *slog.Logger {
 	return slog.New(h)
 }
 
-func checkAndRunPendingMigrations(
-	ctx context.Context,
-	conf *config.Config,
-	logger *slog.Logger,
-	indexDB *sqlitex.SQLiteDB,
-) error {
-
-	indexMigrations, err := migrations.Load(conf.SQLite.IndexDBMigrations)
-	if err != nil {
-		return err
-	}
-	indexDBMigrationDriver := sqlitex.NewMigrationDriver(indexDB, ctx)
-
-	emptyIndexDB, err := indexDBMigrationDriver.IsEmpty(ctx)
-	if err != nil {
-		return err
-	}
-
-	if emptyIndexDB {
-		logger.Info("fresh database - bootstrapping all the way up")
-		_, err = migrations.Bootstrap(ctx, indexMigrations, indexDBMigrationDriver)
-		if err != nil {
-			return fmt.Errorf("failed to bootstrap new datbase: %w", err)
-		}
-
-		return nil
-	}
-
-	isLatest, err := migrations.IsLatest(ctx, indexMigrations, indexDBMigrationDriver)
-	if err != nil {
-		return fmt.Errorf("failed to determine if database on latest migration: %w", err)
-	}
-
-	if !isLatest {
-		logger.Info("database not on latest version - running migrations up")
-		_, err = migrations.Up(ctx, indexMigrations, indexDBMigrationDriver)
-		if err != nil {
-			return fmt.Errorf("failed to run migrations up: %w", err)
-		}
-
-		return nil
-	}
-
-	// Check notes db for available migrations
-	notesMigrations, err := migrations.Load(conf.SQLite.NotesDBMigrations)
-	if err != nil {
-		return err
-	}
-
-	latestNotesMigration, err := migrations.Latest(notesMigrations)
-	if err != nil {
-		return err
-	}
-
-	indexRepository := sqlite.NewIndexDBRepository(indexDB)
-	dbsToUpgrade, err := indexRepository.DBVersionBefore(ctx, int(latestNotesMigration.Version))
-	if err != nil {
-		return err
-	}
-
-	for _, userDB := range dbsToUpgrade {
-		logger.Debug(fmt.Sprintf("upgrade database for %s", userDB.Path))
-		// TODO: This is embarassingly parallelisable and should be rewritten for concurrency
-		notesDBFP := filepath.Join(conf.SQLite.DBDirectory, userDB.Path)
-		notesDB, err := sqlitex.NewSQLiteDB(notesDBFP,
-			sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
-			sqlitex.WithCacheSize(conf.SQLite.CacheSize),
-			sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys),
-			sqlitex.WithJournalMode(conf.SQLite.JournalMode),
-			sqlitex.WithSynchronous(conf.SQLite.Synchronous),
-			sqlitex.WithTempStore(conf.SQLite.TempStore),
-		)
-		if err != nil {
-			return err
-		}
-		defer notesDB.Close()
-
-		notesDBMigrationDriver := sqlitex.NewMigrationDriver(notesDB, ctx)
-		version, err := migrations.Up(ctx, notesMigrations, notesDBMigrationDriver)
-		if err != nil {
-			return err
-		}
-		err = indexRepository.UpdateDBVersion(ctx, userDB.UserId, version)
-		if err != nil {
-			return err
-		}
-
-	}
-
-	logger.Info("database on latest version - leaving it be")
-	logger.Info("database configured", slog.Any("config", indexDB.LogDBConfig()))
-
-	return nil
-
-}
-
 func RunServer(conf *config.Config) error {
 	logger := setupLogging(conf)
 
 	ctx := context.Background()
+	wg := &sync.WaitGroup{}
 
 	fmt.Fprint(os.Stdout, `
 ------------------------------------------
@@ -160,45 +62,29 @@ func RunServer(conf *config.Config) error {
 		return err
 	}
 
-	indexDBFP := filepath.Join(conf.SQLite.DBDirectory, conf.SQLite.IndexDBFileName)
-	indexDB, err := sqlitex.NewSQLiteDB(indexDBFP,
-		sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
-		sqlitex.WithCacheSize(conf.SQLite.CacheSize),
-		sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys),
-		sqlitex.WithJournalMode(conf.SQLite.JournalMode),
-		sqlitex.WithSynchronous(conf.SQLite.Synchronous),
-		sqlitex.WithTempStore(conf.SQLite.TempStore),
-	)
+	connSvcConfig, err := services.ConfigToSQLiteConnConfig(*conf)
 	if err != nil {
 		return err
 	}
-	defer indexDB.Close()
-
-	notesConnCache := cache.NewTTL(func(key int64, value *sqlitex.SQLiteDB) {
-		err := value.Close()
-		if err != nil {
-			logger.Error(fmt.Sprintf("failed to close %v db connection", key), "erMsg", err.Error())
-		}
-		logger.Debug(fmt.Sprintf("sqlite database connection for user %v", key))
-	})
-	defer notesConnCache.Shutdown()
-
-	err = checkAndRunPendingMigrations(ctx, conf, logger, indexDB)
+	connSvc, err := services.NewSQLiteConnService(wg, time.Hour*12, connSvcConfig)
+	if err != nil {
+		return err
+	}
+	err = connSvc.RunMigrations(ctx)
 	if err != nil {
 		return err
 	}
 
 	sessionManager := scs.New()
-	sessionManager.Store = sqlitex.NewSessionStore(indexDB)
+	sessionManager.Store = sqlitex.NewSessionStore(connSvc.GetIndexConn())
 
-	handler := routes(logger, tc, sqlite.NewIndexDBRepository(indexDB), notesConnCache, sessionManager, conf)
+	handler := routes(logger, tc, connSvc, sessionManager, conf)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),
 		Handler: handler,
 	}
 
-	wg := sync.WaitGroup{}
 	shutdownError := make(chan error)
 	go func() {
 		quit := make(chan os.Signal, 1)
@@ -216,6 +102,8 @@ func RunServer(conf *config.Config) error {
 		}
 
 		logger.Info("completing background tasks", "addr", srv.Addr)
+
+		connSvc.Stop()
 
 		wg.Wait()
 		shutdownError <- nil

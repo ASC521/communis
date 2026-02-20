@@ -47,7 +47,7 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 		return err
 	}
 
-	migDriver := sqlitex.NewMigrationDriver(db, ctx)
+	migDriver := sqlitex.NewMigrationDriver(db)
 
 	cmd, _ := args[0], args[1:]
 	switch cmd {
@@ -157,7 +157,7 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 			return err
 		}
 
-		driver := sqlitex.NewMigrationDriver(db, ctx)
+		driver := sqlitex.NewMigrationDriver(db)
 		_, err = migrations.Bootstrap(ctx, migs, driver)
 		return err
 

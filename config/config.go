@@ -73,6 +73,7 @@ func DefaultConfig() *Config {
 			Host:                "localhost",
 			Port:                6789,
 			LoggingIgnoredPaths: []string{},
+			Debug:               false,
 		},
 		VerboseLogging: false,
 	}
