@@ -1,4 +1,3 @@
-x (A) Refactor db connection cache
 (B) App throws error on receiving invalid credentials when logging in
 (C) PostUser should be happening within a transaction
 (D) Refactor organization of html templates to better fit htmx
@@ -50,6 +49,7 @@ x (A) Move to pico css +v1
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
 x (A) Refactor TemplateData struct by having handlers handle struct sent to templates - remove struct
+x (A) Refactor db connection cache
 x (A) Refactor migrations to support multiple databases +v1 +user-auth
 x (A) Tidy up note section, add tags dialog to view note screen +v1
 x (B) Refactor database repositories to support database connection in each handler +v1 +user-auth
