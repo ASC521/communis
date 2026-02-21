@@ -1,14 +1,14 @@
+(A) Persistent theme preference +v1
 (B) App throws error on receiving invalid credentials when logging in
 (C) PostUser should be happening within a transaction
-(D) Refactor organization of html templates to better fit htmx
+(D) CSRF +v1
 (E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (G) Fix note preview page -  buttons don't line up
 Add advanced query support to search screen +v1
-Attempting to navigate outside /admin as admin should redirect not fail
+Bug Fix: As admin navigating outside to auth page should redict not through an error
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
-CSRF +v1
 Edit note screen - delete button should use native dialog +v1
 Error Screens +v1
 Have admin specfic navbar
@@ -16,6 +16,7 @@ New note screen delete button should be disabled +v1
 Put update user information
 Rebuild inline section create/edit form +v1
 Refactor css
+Refactor organization of html templates to better fit htmx
 Search results should contain rendered html from markdown not raw markdown
 Unit tests on note form parsing and validation +v1
 Unsaved changes will be lost warning on navigating away from page +v1

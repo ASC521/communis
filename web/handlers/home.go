@@ -14,14 +14,14 @@ func HomeGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
 	type td struct {
 		BaseData
 		NoteDetails []models.NoteDetail
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesRepo(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -39,5 +39,5 @@ func HomeGet(
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", data)
-	})
+	}
 }

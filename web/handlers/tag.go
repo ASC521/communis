@@ -72,14 +72,14 @@ func TagGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
 	type td struct {
 		BaseData
 		Tags []models.Tag
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesRepo(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -97,7 +97,7 @@ func TagGet(
 			Tags:     allTags,
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "tags-list.tmpl", data)
-	})
+	}
 }
 
 func TagViewGet(
@@ -105,13 +105,13 @@ func TagViewGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 	type td struct {
 		BaseData
 		Tag         models.Tag
 		NoteDetails []models.NoteDetail
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		tagId, err := parseIdFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -143,21 +143,21 @@ func TagViewGet(
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "tag-view.tmpl", data)
 
-	})
+	}
 }
 
 func TagEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
+) http.HandlerFunc {
 
 	type td struct {
 		Id          int64
 		Name        string
 		FieldErrors map[string]string
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		tagId, err := parseIdFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -178,15 +178,15 @@ func TagEditGet(
 
 		tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag", td{Id: tag.Id, Name: tag.Name, FieldErrors: map[string]string{}})
 
-	})
+	}
 }
 
 func TagPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesRepo(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -214,15 +214,15 @@ func TagPut(
 		w.Header().Add("HX-Redirect", fmt.Sprintf("/tag/%v/%v", form.Id, slugify(form.Name)))
 		w.WriteHeader(http.StatusSeeOther)
 
-	})
+	}
 }
 
 func TagDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		tagId, err := parseIdFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -242,14 +242,14 @@ func TagDelete(
 
 		w.Header().Add("HX-Redirect", "/index")
 		w.WriteHeader(http.StatusSeeOther)
-	})
+	}
 }
 
 func TagPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
+) http.HandlerFunc {
 
 	type td struct {
 		ErrMsg     string
@@ -257,7 +257,7 @@ func TagPost(
 		Tag        *models.Tag
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		form, err := parseTagFormFromRequest(r)
 		if err != nil {
@@ -304,5 +304,5 @@ func TagPost(
 			},
 		)
 
-	})
+	}
 }

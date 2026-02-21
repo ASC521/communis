@@ -69,14 +69,14 @@ func SectionGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
 	type td struct {
 		BaseData
 		Sections []models.Section
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		notesRepo, err := GetNotesRepo(r, dss)
 		if err != nil {
@@ -96,16 +96,16 @@ func SectionGet(
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "section-list.tmpl", data)
-	})
+	}
 }
 
 func SectionPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
+) http.HandlerFunc {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		form, err := parseSectionFormFromRequest(r)
 		if err != nil {
@@ -133,22 +133,22 @@ func SectionPost(
 
 		w.Header().Add("HX-Redirect", "/section")
 		w.WriteHeader(http.StatusSeeOther)
-	})
+	}
 }
 
-func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.Handler {
+func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.HandlerFunc {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		tc.RenderPartial(logger, w, r, http.StatusOK, "new-section-form", sectionForm{FieldErrors: map[string]string{}})
-	})
+	}
 }
 
 func SectionDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		sectionId, err := parseIdFromPath(r)
 		if err != nil {
@@ -169,7 +169,7 @@ func SectionDelete(
 		}
 		w.Header().Add("HX-Redirect", "/section")
 		w.WriteHeader(http.StatusSeeOther)
-	})
+	}
 
 }
 
@@ -177,8 +177,8 @@ func SectionPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		form, err := parseSectionFormFromRequest(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -204,15 +204,15 @@ func SectionPut(
 
 		w.Header().Add("HX-Redirect", fmt.Sprintf("/section/%v/%v", form.Id, slugify(form.Name)))
 		w.WriteHeader(http.StatusSeeOther)
-	})
+	}
 }
 
 func SectionEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		sectionId, err := parseIdFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -238,7 +238,7 @@ func SectionEditGet(
 
 		sectionForm := sectionForm{Id: section.Id, Name: section.Name, FieldErrors: map[string]string{}}
 		tc.RenderPartial(logger, w, r, http.StatusOK, "update-section", sectionForm)
-	})
+	}
 }
 
 func SectionViewGet(
@@ -246,13 +246,13 @@ func SectionViewGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 	type td struct {
 		BaseData
 		Section     models.Section
 		NoteDetails []models.NoteDetail
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		sid := r.PathValue("id")
 		if sid == "" {
 			http.Error(w, "section id not found", http.StatusNotFound)
@@ -301,5 +301,5 @@ func SectionViewGet(
 			"section-view.tmpl",
 			data,
 		)
-	})
+	}
 }

@@ -201,9 +201,9 @@ func NoteNewGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		notesRepo, err := GetNotesRepo(r, dss)
 		if err != nil {
@@ -231,7 +231,7 @@ func NoteNewGet(
 			RenderedNote: models.RenderedNote{IsPreview: true},
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
-	})
+	}
 }
 
 func NotePost(
@@ -239,9 +239,9 @@ func NotePost(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		nf, err := parseNoteForm(r)
 		if err != nil {
@@ -295,7 +295,7 @@ func NotePost(
 
 		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, slugify(nf.Title)), http.StatusSeeOther)
 
-	})
+	}
 }
 
 func NoteEditGet(
@@ -303,9 +303,9 @@ func NoteEditGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		if err != nil || id < 1 {
@@ -363,7 +363,7 @@ func NoteEditGet(
 			Form:         nf,
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
-	})
+	}
 }
 
 func NotePut(
@@ -371,8 +371,8 @@ func NotePut(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		nf, err := parseNoteForm(r)
 		if err != nil {
@@ -434,16 +434,16 @@ func NotePut(
 		ru := fmt.Sprintf("/note/%v/%s", nf.Id, slugify(nf.Title))
 		w.Header().Set("HX-Redirect", ru)
 		w.WriteHeader(http.StatusOK)
-	})
+	}
 }
 
 func NotePreviewPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
+) http.HandlerFunc {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		nf, err := parseNoteForm(r)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -481,7 +481,7 @@ func NotePreviewPost(
 		rn.IsPreview = true
 
 		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note", rn)
-	})
+	}
 
 }
 
@@ -490,14 +490,14 @@ func NoteViewGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
 	type td struct {
 		BaseData
 		RenderedNote models.RenderedNote
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		if err != nil || id < 1 {
 			http.NotFound(w, r)
@@ -541,7 +541,7 @@ func NoteViewGet(
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", data)
-	})
+	}
 }
 
 func NoteSearchGet(
@@ -549,14 +549,14 @@ func NoteSearchGet(
 	logger *slog.Logger,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-) http.Handler {
+) http.HandlerFunc {
 
 	type td struct {
 		BaseData
 		SearchResults []models.NoteSearchResult
 		Form          searchForm
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		data := td{
 			BaseData: newBase(r),
@@ -590,15 +590,15 @@ func NoteSearchGet(
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", data)
 
-	})
+	}
 }
 
 func NoteDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		if err != nil || id < 1 {
 			http.NotFound(w, r)
@@ -618,5 +618,5 @@ func NoteDelete(
 		}
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
-	})
+	}
 }

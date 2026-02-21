@@ -60,12 +60,12 @@ func routes(
 	mux.Handle("POST /login", dynamic.Then(handlers.PostUserLogin(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("POST /logout", authReq.Then(handlers.PostUserLogout(tc, logger, sessionManager)))
 
-	mux.Handle("GET /admin", adminReq.ThenFunc(handlers.GetAdmin(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("GET /user/new", adminReq.ThenFunc(handlers.GetUserCreate(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("POST /user", adminReq.ThenFunc(handlers.PostUser(tc, logger, indexRepo, dss)))
-	mux.Handle("GET /user/{id}", adminReq.ThenFunc(handlers.GetUser(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("GET /user/{id}/edit", adminReq.ThenFunc(handlers.GetUserEdit(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("DELETE /user/{id}", adminReq.ThenFunc(handlers.DeleteUser(tc, logger, indexRepo, dss, conf.SQLite.DBDirectory)))
+	mux.Handle("GET /admin", adminReq.Then(handlers.GetAdmin(tc, logger, indexRepo, sessionManager)))
+	mux.Handle("GET /user/new", adminReq.Then(handlers.GetUserCreate(tc, logger, indexRepo, sessionManager)))
+	mux.Handle("POST /user", adminReq.Then(handlers.PostUser(tc, logger, indexRepo, dss)))
+	mux.Handle("GET /user/{id}", adminReq.Then(handlers.GetUser(tc, logger, indexRepo, sessionManager)))
+	mux.Handle("GET /user/{id}/edit", adminReq.Then(handlers.GetUserEdit(tc, logger, indexRepo, sessionManager)))
+	mux.Handle("DELETE /user/{id}", adminReq.Then(handlers.DeleteUser(tc, logger, indexRepo, dss, conf.SQLite.DBDirectory)))
 
 	return baseChain.Then(mux)
 }
