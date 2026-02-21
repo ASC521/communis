@@ -10,17 +10,15 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"slices"
-
-	"github.com/alexedwards/scs/v2"
 )
 
 type BaseData struct {
 	IsAuthenticated bool
 }
 
-func newBase(r *http.Request, sessionManager *scs.SessionManager) BaseData {
+func newBase(r *http.Request) BaseData {
 	return BaseData{
-		IsAuthenticated: isAuthenticated(r, sessionManager),
+		IsAuthenticated: isAuthenticated(r),
 	}
 }
 

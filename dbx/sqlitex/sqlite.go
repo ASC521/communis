@@ -164,10 +164,6 @@ func (o sqliteOptions) pragmaStatements() []string {
 	}
 }
 
-type key string
-
-var dbKey key
-
 type SQLiteDB struct {
 	DBPath       string
 	Read         *sql.DB
@@ -273,17 +269,6 @@ func (d *SQLiteDB) Close() error {
 	}
 }
 
-// NewContext returns a new context that carries the db value.
-func NewContext(ctx context.Context, db *SQLiteDB) context.Context {
-	return context.WithValue(ctx, dbKey, db)
-}
-
-// FromContext returns the DB value stored in ctx, if any.
-func FromContext(ctx context.Context) (*SQLiteDB, bool) {
-	db, ok := ctx.Value(dbKey).(*SQLiteDB)
-	return db, ok
-}
-
 func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -327,7 +312,7 @@ type SQLiteMigrationDriver struct {
 	db *SQLiteDB
 }
 
-func NewMigrationDriver(db *SQLiteDB, ctx context.Context) *SQLiteMigrationDriver {
+func NewMigrationDriver(db *SQLiteDB) *SQLiteMigrationDriver {
 	return &SQLiteMigrationDriver{db: db}
 }
 

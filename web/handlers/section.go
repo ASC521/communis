@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -66,7 +67,7 @@ func validateSectionForm(form *sectionForm) {
 func SectionGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -76,9 +77,10 @@ func SectionGet(
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -89,7 +91,7 @@ func SectionGet(
 		}
 
 		data := td{
-			BaseData: newBase(r, sessionManager),
+			BaseData: newBase(r),
 			Sections: sections,
 		}
 
@@ -100,7 +102,7 @@ func SectionGet(
 func SectionPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -117,9 +119,9 @@ func SectionPost(
 			return
 		}
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -144,7 +146,7 @@ func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.Handler {
 func SectionDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -154,11 +156,12 @@ func SectionDelete(
 			return
 		}
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		err = notesRepo.DeleteSection(r.Context(), sectionId)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -173,7 +176,7 @@ func SectionDelete(
 func SectionPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		form, err := parseSectionFormFromRequest(r)
@@ -187,9 +190,9 @@ func SectionPut(
 			return
 		}
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -207,7 +210,7 @@ func SectionPut(
 func SectionEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sectionId, err := parseIdFromPath(r)
@@ -215,11 +218,13 @@ func SectionEditGet(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		section, err := notesRepo.FindSectionById(r.Context(), sectionId)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -239,7 +244,7 @@ func SectionEditGet(
 func SectionViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 	type td struct {
@@ -260,11 +265,12 @@ func SectionViewGet(
 			return
 		}
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		sec, err := notesRepo.FindSectionById(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -282,7 +288,7 @@ func SectionViewGet(
 		}
 
 		data := td{
-			BaseData:    newBase(r, sessionManager),
+			BaseData:    newBase(r),
 			Section:     sec,
 			NoteDetails: nds,
 		}

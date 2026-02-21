@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -69,7 +70,7 @@ func validateTagForm(ctx context.Context, tf *tagForm, nr models.NotesRepository
 func TagGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -79,12 +80,12 @@ func TagGet(
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		allTags, err := notesRepo.ListAllTags(r.Context())
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -92,7 +93,7 @@ func TagGet(
 		}
 
 		data := td{
-			BaseData: newBase(r, sessionManager),
+			BaseData: newBase(r),
 			Tags:     allTags,
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "tags-list.tmpl", data)
@@ -102,7 +103,7 @@ func TagGet(
 func TagViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 	type td struct {
@@ -116,10 +117,9 @@ func TagViewGet(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -136,7 +136,7 @@ func TagViewGet(
 		}
 
 		data := td{
-			BaseData:    newBase(r, sessionManager),
+			BaseData:    newBase(r),
 			NoteDetails: noteDetails,
 			Tag:         tag,
 		}
@@ -149,7 +149,7 @@ func TagViewGet(
 func TagEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 
 	type td struct {
@@ -164,9 +164,9 @@ func TagEditGet(
 			return
 		}
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -184,14 +184,15 @@ func TagEditGet(
 func TagPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		form, err := parseTagFormFromRequest(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -219,7 +220,7 @@ func TagPut(
 func TagDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tagId, err := parseIdFromPath(r)
@@ -227,10 +228,9 @@ func TagDelete(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -248,7 +248,7 @@ func TagDelete(
 func TagPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 
 	type td struct {
@@ -264,9 +264,9 @@ func TagPost(
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 

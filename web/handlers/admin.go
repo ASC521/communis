@@ -29,7 +29,7 @@ func GetAdmin(
 		}
 
 		data := td{
-			BaseData: newBase(r, sessionManager),
+			BaseData: newBase(r),
 			Users:    users,
 		}
 
