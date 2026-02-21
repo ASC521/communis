@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/services"
 	"github.com/alexedwards/scs/v2"
 )
 
 func HomeGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -21,11 +22,12 @@ func HomeGet(
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		mn, err := notesRepo.RecentlyUpdatedNotes(r.Context(), 5)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -33,7 +35,7 @@ func HomeGet(
 		}
 		data := td{
 			NoteDetails: mn,
-			BaseData:    newBase(r, sessionManager),
+			BaseData:    newBase(r),
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", data)

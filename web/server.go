@@ -62,23 +62,23 @@ func RunServer(conf *config.Config) error {
 		return err
 	}
 
-	connSvcConfig, err := services.ConfigToSQLiteConnConfig(*conf)
+	dataStoreConfig, err := services.ConfigToSQLiteDataStoreConfig(*conf)
 	if err != nil {
 		return err
 	}
-	connSvc, err := services.NewSQLiteConnService(wg, time.Hour*12, connSvcConfig)
+	dataStoreSvc, err := services.NewSQLiteDataStoreService(wg, time.Hour*12, dataStoreConfig)
 	if err != nil {
 		return err
 	}
-	err = connSvc.RunMigrations(ctx)
+	err = dataStoreSvc.RunMigrations(ctx)
 	if err != nil {
 		return err
 	}
 
 	sessionManager := scs.New()
-	sessionManager.Store = sqlitex.NewSessionStore(connSvc.GetIndexConn())
+	sessionManager.Store = sqlitex.NewSessionStore(dataStoreSvc.GetIndexDatabase())
 
-	handler := routes(logger, tc, connSvc, sessionManager, conf)
+	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),
@@ -103,7 +103,7 @@ func RunServer(conf *config.Config) error {
 
 		logger.Info("completing background tasks", "addr", srv.Addr)
 
-		connSvc.Stop()
+		dataStoreSvc.Stop()
 
 		wg.Wait()
 		shutdownError <- nil

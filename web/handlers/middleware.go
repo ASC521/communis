@@ -1,6 +1,7 @@
-package web
+package handlers
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,20 +11,17 @@ import (
 	"slices"
 	"time"
 
-	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/services"
-	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
 )
 
-type chain []func(http.Handler) http.Handler
+type Chain []func(http.Handler) http.Handler
 
-func (c chain) thenFunc(h http.HandlerFunc) http.Handler {
-	return c.then(h)
+func (c Chain) ThenFunc(h http.HandlerFunc) http.Handler {
+	return c.Then(h)
 }
 
-func (c chain) then(h http.Handler) http.Handler {
+func (c Chain) Then(h http.Handler) http.Handler {
 	for _, mw := range slices.Backward(c) {
 		h = mw(h)
 	}
@@ -55,7 +53,7 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.wroteHeader = true
 }
 
-func requestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
+func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
 
 	var ignore []*regexp.Regexp
 	for _, re := range ignoreRE {
@@ -96,7 +94,7 @@ func requestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handle
 	}
 }
 
-func recoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
+func RecoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
@@ -121,13 +119,24 @@ func recoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 	}
 }
 
-func requireAuth(sessionManager *scs.SessionManager) func(http.Handler) http.Handler {
+func Authenticate(sessionManager *scs.SessionManager, userStore models.IndexRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authUserId := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
 			if authUserId == 0 {
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
-				return
+				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, false)
+				ctx = context.WithValue(ctx, isAdminContextKey, false)
+				r = r.WithContext(ctx)
+			} else {
+				user, err := userStore.GetUser(r.Context(), authUserId)
+				if err != nil {
+					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+					return
+				}
+				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, true)
+				ctx = context.WithValue(ctx, isAdminContextKey, user.IsAdmin)
+				ctx = context.WithValue(ctx, userIdContextKey, user.Id)
+				r = r.WithContext(ctx)
 			}
 
 			// Set the "Cache-Control: no-store" header so that pages
@@ -135,71 +144,55 @@ func requireAuth(sessionManager *scs.SessionManager) func(http.Handler) http.Han
 			// browser cache (or other intermediary cache).
 			w.Header().Add("Cache-Control", "no-store")
 			next.ServeHTTP(w, r)
+
 		})
 	}
 }
 
-func requireAuthAndDB(
-	sessionManager *scs.SessionManager,
-	sqliteConnSvc *services.SQLiteConnService,
-	logger *slog.Logger,
-	tc *handlers.TemplateCache,
-) func(http.Handler) http.Handler {
+func RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-	return func(next http.Handler) http.Handler {
-		hFunc := func(w http.ResponseWriter, r *http.Request) {
-
-			authUserId := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
-			if authUserId == 0 {
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
-				return
-			}
-
-			db, err := sqliteConnSvc.GetConn(r.Context(), authUserId)
-			if err != nil {
-				tc.RenderError(logger, w, r, err)
-				return
-			}
-
-			// Set the "Cache-Control: no-store" header so that pages
-			// which require authentication are not stored in the users
-			// browser cache (or other intermediary cache).
-			w.Header().Add("Cache-Control", "no-store")
-			next.ServeHTTP(w, r.WithContext(sqlitex.NewContext(r.Context(), db)))
+		isAuthenticated, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
 
-		return http.HandlerFunc(hFunc)
-	}
+		if !isAuthenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
-func requireAdmin(
-	sessionManager *scs.SessionManager,
-	indexRepo models.IndexRepository,
-) func(http.Handler) http.Handler {
+func RequireAdmin(next http.Handler) http.Handler {
 
-	return func(next http.Handler) http.Handler {
-		handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-			authUserId := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
-			if authUserId == 0 {
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
-				return
-			}
-
-			isAdmin, err := indexRepo.IsAdminUser(r.Context(), authUserId)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			if !isAdmin {
-				http.Redirect(w, r, "/login", http.StatusForbidden)
-				return
-			}
-
-			w.Header().Add("Cache-Control", "no-store")
-			next.ServeHTTP(w, r)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		isAuthenticated, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
 
-		return http.HandlerFunc(handlerFunc)
-	}
+		if !isAuthenticated {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		isAdmin, ok := r.Context().Value(isAdminContextKey).(bool)
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		if !isAdmin {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 
 }

@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 	"github.com/yuin/goldmark"
@@ -198,15 +199,15 @@ type noteCreateData struct {
 func NoteNewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
 
@@ -223,7 +224,7 @@ func NoteNewGet(
 		}
 
 		data := noteCreateData{
-			BaseData:     newBase(r, sessionManager),
+			BaseData:     newBase(r),
 			Form:         noteForm{SectionId: 1},
 			Tags:         tags,
 			Sections:     sec,
@@ -236,7 +237,7 @@ func NoteNewGet(
 func NotePost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -247,11 +248,13 @@ func NotePost(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		fe, err := validateNoteForm(r.Context(), nf, notesRepo)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -275,7 +278,7 @@ func NotePost(
 			}
 
 			data := noteCreateData{
-				BaseData: newBase(r, sessionManager),
+				BaseData: newBase(r),
 				Sections: secs,
 				Tags:     allTags,
 				Form:     nf,
@@ -298,7 +301,7 @@ func NotePost(
 func NoteEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -310,11 +313,12 @@ func NoteEditGet(
 			return
 		}
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		n, err := notesRepo.FindNoteById(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -352,7 +356,7 @@ func NoteEditGet(
 		}
 
 		data := noteCreateData{
-			BaseData:     newBase(r, sessionManager),
+			BaseData:     newBase(r),
 			RenderedNote: models.RenderedNote{IsPreview: true},
 			Sections:     sec,
 			Tags:         tags,
@@ -365,7 +369,7 @@ func NoteEditGet(
 func NotePut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -375,11 +379,12 @@ func NotePut(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		fe, err := validateNoteForm(r.Context(), nf, notesRepo)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
@@ -408,7 +413,7 @@ func NotePut(
 			}
 
 			data := noteCreateData{
-				BaseData: newBase(r, sessionManager),
+				BaseData: newBase(r),
 				Sections: secs,
 				Tags:     allTags,
 				Form:     nf,
@@ -435,7 +440,7 @@ func NotePut(
 func NotePreviewPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -446,11 +451,12 @@ func NotePreviewPost(
 		}
 		n := parseNoteFromNoteForm(nf)
 
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		for i, tag := range n.Tags {
 			et, err := notesRepo.FindTagById(r.Context(), tag.Id)
 			if err != nil {
@@ -482,7 +488,7 @@ func NotePreviewPost(
 func NoteViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -497,11 +503,13 @@ func NoteViewGet(
 			http.NotFound(w, r)
 			return
 		}
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		n, err := notesRepo.FindNoteById(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -528,7 +536,7 @@ func NoteViewGet(
 		rn.IsPreview = false
 
 		data := td{
-			BaseData:     newBase(r, sessionManager),
+			BaseData:     newBase(r),
 			RenderedNote: rn,
 		}
 
@@ -539,7 +547,7 @@ func NoteViewGet(
 func NoteSearchGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -551,16 +559,18 @@ func NoteSearchGet(
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		data := td{
-			BaseData: newBase(r, sessionManager),
+			BaseData: newBase(r),
 		}
 		q := r.URL.Query().Get("q")
 
 		if q != "" {
-			notesRepo, ok := newNotesRepo(r)
-			if !ok {
-				tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+
+			notesRepo, err := GetNotesRepo(r, dss)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
 				return
 			}
+
 			srs, err := notesRepo.SearchNotes(r.Context(), `"`+q+`"`)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
@@ -586,7 +596,7 @@ func NoteSearchGet(
 func NoteDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	newNotesRepo getNotesRepo,
+	dss services.DataStoreService,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
@@ -594,11 +604,13 @@ func NoteDelete(
 			http.NotFound(w, r)
 			return
 		}
-		notesRepo, ok := newNotesRepo(r)
-		if !ok {
-			tc.RenderError(logger, w, r, ErrNotesRepoNotFound)
+
+		notesRepo, err := GetNotesRepo(r, dss)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
 			return
 		}
+
 		err = notesRepo.DeleteNote(r.Context(), id)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)

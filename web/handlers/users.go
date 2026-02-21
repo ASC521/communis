@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
-	"github.com/mitchellh/go-homedir"
 )
 
 type userForm struct {
@@ -60,7 +57,7 @@ func DeleteUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	indexRepo models.IndexRepository,
-	sqliteConnSvc *services.SQLiteConnService,
+	dss services.DataStoreService,
 	dbDirectory string,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -70,30 +67,7 @@ func DeleteUser(
 			return
 		}
 
-		err = sqliteConnSvc.RemoveConn(r.Context(), userId)
-		if err != nil {
-			tc.RenderError(logger, w, r, err)
-			return
-		}
-		userDB, err := indexRepo.GetUserDB(r.Context(), userId)
-		if err != nil {
-			tc.RenderError(logger, w, r, err)
-			return
-		}
-
-		err = indexRepo.DeleteUser(r.Context(), userId)
-		if err != nil {
-			tc.RenderError(logger, w, r, err)
-			return
-		}
-
-		// TODO: this shouldn't be happening here - config object should have aboslute path
-		dbd, err := homedir.Expand(dbDirectory)
-		if err != nil {
-			tc.RenderError(logger, w, r, err)
-			return
-		}
-		err = os.Remove(filepath.Join(dbd, userDB.Path))
+		err = dss.DeleteDB(r.Context(), userId)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -116,7 +90,12 @@ func GetUserCreate(
 }
 
 // PostUser creates a new user in the index database and bootstraps a new user database.
-func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepository, connSvc *services.SQLiteConnService) http.HandlerFunc {
+func PostUser(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	dss services.DataStoreService,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userForm, err := parseUserFormFromRequest(r)
 		if err != nil {
@@ -137,7 +116,7 @@ func PostUser(tc *TemplateCache, logger *slog.Logger, indexRepo models.IndexRepo
 			return
 		}
 
-		err = connSvc.CreateDB(r.Context(), userId)
+		err = dss.CreateDB(r.Context(), userId)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -170,7 +149,7 @@ func GetUserLogin(
 
 		data := td{
 			Form:     userForm{},
-			BaseData: newBase(r, sessionManager),
+			BaseData: newBase(r),
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "login.tmpl", data)
 
@@ -287,7 +266,7 @@ func GetUserEdit(
 			return
 		}
 		data := td{
-			BaseData: newBase(r, sessionManager),
+			BaseData: newBase(r),
 			User:     user,
 		}
 

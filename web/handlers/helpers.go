@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/repository/sqlite"
-	"github.com/alexedwards/scs/v2"
+	"github.com/ASC521/communis/services"
 )
+
+var ErrUserIdNotFound = errors.New("user id not found in request context")
 
 func slugify(s string) string {
 
@@ -63,17 +63,24 @@ func parseIdFromPath(r *http.Request) (int64, error) {
 
 var ErrNotesRepoNotFound = errors.New("notes repository not found in context")
 
-type getNotesRepo func(*http.Request) (models.NotesRepository, bool)
+func GetNotesRepo(r *http.Request, dss services.DataStoreService) (models.NotesRepository, error) {
 
-func GetSQLiteNotesRepo(r *http.Request) (models.NotesRepository, bool) {
-
-	db, ok := sqlitex.FromContext(r.Context())
+	userId, ok := r.Context().Value(userIdContextKey).(int64)
 	if !ok {
-		return nil, false
+		return nil, ErrUserIdNotFound
 	}
-	return sqlite.NewNotesRepository(db), true
+	notesRepo, err := dss.GetNotesStore(r.Context(), userId)
+	if err != nil {
+		return nil, err
+	}
+	return notesRepo, nil
 }
 
-func isAuthenticated(r *http.Request, sm *scs.SessionManager) bool {
-	return sm.Exists(r.Context(), "authenticatedUserId")
+func isAuthenticated(r *http.Request) bool {
+	isAuth, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
+	if !ok {
+		return false
+	}
+
+	return isAuth
 }
