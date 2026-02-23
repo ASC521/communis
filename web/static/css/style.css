@@ -73,6 +73,29 @@ https://rstacruz.github.io/rscss/index.html
     }
 }
 
+.sections-header {
+    display: flex;
+    align-items: center;
+    > .title {
+	padding-right: 10px;
+    }
+    > .newbtn {
+	cursor: pointer;
+	max-width: 1.75em;
+	max-height: 1.75em;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+    }
+}
+
+.sections-link-list {
+    > .links {
+		list-style: none;
+	padding-left: 0;
+    }
+}
+
 /* COMPONENTS */
 
 /* LAYOUTS */
@@ -91,6 +114,13 @@ https://rstacruz.github.io/rscss/index.html
 
     > .note-links {
 	flex: 1;
+    }
 }
 
+.sections-list-page {
+    width: 80%;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 0%;
+}
 /* LAYOUTS */

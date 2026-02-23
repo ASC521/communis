@@ -1,23 +1,24 @@
 {{ define "title" }} Sections {{ end }}
 
 {{ define "main" }}
-<div class="thin-container">
-  <div class="section-list-header">
-    <h2>Sections</h2>
-    <button type="button" class="icon-button" hx-get="/section/new" hx-target="#section-list" hx-swap="append">
+<main class="sections-list-page">
+  <div class="sections-header">
+    <h2 class="title">Sections</h2>
+    <button type="button" class="newbtn" hx-get="/section/new" hx-target="#section-list" hx-swap="append">
       <svg>
-	<use href="/static/vendor/svg/lucide-icons-sprite.svg#plus">
+	<use href="/static/vendor/svg/lucide-icons-sprite.svg#plus"/>
       </svg>
     </button>
 </div>
 <hr>
-  <div id="section-list" class="header-list">
+  <div id="section-list" class="sections-link-list">
+    <ul class="links">
     {{ range .Sections }}
 
-    <h5><a href="/section/{{ .Id }}/{{ slugify .Name }}"> {{ .Name }}</a></h5>
+    <li><a href="/section/{{ .Id }}/{{ slugify .Name }}"> {{ .Name }}</a></li>
     {{ end }}
-
+    </ul>
   </div>
-</div>
+</main>
 
 {{ end }}

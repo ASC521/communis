@@ -2,10 +2,10 @@
 
 {{define "main"}}
 
-<div class="home-page">
+<main class="home-page">
   <form class="search-form" action="/search" method="GET" role="search" autocomplete="off">
     <svg class="icon">
-      <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-search">
+      <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-search"/>
     </svg>
     <input class="field" id="search-home" type="search" name="q" aria-label="search" placeholder="Search..." autofocus>
   </form>
@@ -20,6 +20,6 @@
   {{ end }}
   </ul>
   </div>
-</div>
+</main>
 {{end}}
 
