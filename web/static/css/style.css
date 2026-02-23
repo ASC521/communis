@@ -1,0 +1,96 @@
+/*
+
+Reasonable System for CSS (RSCSS) - A set of ideas to guide your process of building maintainable CSS
+https://rstacruz.github.io/rscss/index.html
+
+* Components - Each piece of UI is an individual component
+  Naming: At least two words seperated by a dash (.search-form)
+  Avoid including positioin properites in components - should be included in layouts
+
+   ** Elements - the things inside of a component
+       Naming: Only one word (.field) - if two or more words, concatenate them without dashes or underscores
+       Prefer to use the `>` child selector when possible
+       Use classnames whenever possible.
+       ```
+	.search-form {
+	  > .field { }
+	  > .action { }
+	}
+       ```
+
+  ** Variants - components may have variants (elements to)
+       Naming: classnames will be prefixed with a `-`
+
+  ** Nested Components - It's necessary at times to next components.
+       Avoid modifying the nested component by reacing into it from the containing component.  Prefer to add a variant to the nested component and apply it from the containing component.
+
+* Layouts
+  Naming: Two words seperated by a `-`
+  Contain the position of one or more components
+*/
+
+
+/* COMPONENETS */
+
+.nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    height: 60px;
+
+    > .links {
+	display: flex;
+	gap: 1rem;
+	list-style: none;
+    }
+}
+
+
+.search-form {
+    display: flex;
+    width: 40%;
+    /* TODO: Icon will float if resized to thin */
+    > .icon {
+	height: 1.5em;
+	width: 1.5em;
+	position: absolute;
+	padding: 10px;
+    }
+    > .field {
+	height: 20%;
+	border-radius: 8px;
+	padding-left: 40px;
+    }
+}
+
+.note-links {
+    text-align: center;
+    > .header {}
+    > .links {
+	list-style: none;
+	padding-left: 0;
+    }
+}
+
+/* COMPONENTS */
+
+/* LAYOUTS */
+.home-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 50vh;
+    
+    > .search-form {
+	flex: 1;
+	display: flex;
+	justify-content: flex-end;
+	flex-direction: column;
+    }
+
+    > .note-links {
+	flex: 1;
+}
+
+/* LAYOUTS */

@@ -2,17 +2,24 @@
 
 {{define "main"}}
 
-<div class="homepage">
-  <form  action="/search" method="GET" role="search" autocomplete="off">
-    <input id="search-home" type="search" name="q" placeholder="Search..." autofocus>
+<div class="home-page">
+  <form class="search-form" action="/search" method="GET" role="search" autocomplete="off">
+    <svg class="icon">
+      <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-search">
+    </svg>
+    <input class="field" id="search-home" type="search" name="q" aria-label="search" placeholder="Search..." autofocus>
   </form>
 
-  <h5>RECENTLY MODIFIED</h5>
+  <div class="note-links">
+    <p class="header"><strong>RECENTLY MODIFIED</strong></p>
+    <ul class="links">
   {{ range .NoteDetails }}
-  <p>
+  <li>
     <a class="flex-1" href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
-  </p>
+  </li>
   {{ end }}
+  </ul>
+  </div>
 </div>
 {{end}}
 
