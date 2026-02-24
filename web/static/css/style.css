@@ -30,6 +30,15 @@ https://rstacruz.github.io/rscss/index.html
 */
 
 
+
+main {
+    width: 80%;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 0%;
+}
+
+
 /* COMPONENETS */
 
 .nav-bar {
@@ -116,27 +125,6 @@ https://rstacruz.github.io/rscss/index.html
     > .note-links {
 	flex: 1;
     }
-}
-
-.sections-list-page {
-    width: 80%;
-    margin-left: 10%;
-    margin-right: 10%;
-    margin-top: 0%;
-}
-
-.section-view-page {
-    width: 80%;
-    margin-left: 10%;
-    margin-right: 10%;
-    margin-top: 0%;
-}
-
-.tag-index-page {
-    width: 80%;
-    margin-left: 10%;
-    margin-right: 10%;
-    margin-top: 0%;
 }
 
 .header-with-buttons {
