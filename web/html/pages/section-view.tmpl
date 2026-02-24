@@ -19,16 +19,14 @@
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#pencil">
 	</svg>
       </button>
-      </div>
+    </div>
   </div>
   <hr>
-  <div class="sections-link-list">
-    <ul class="links">
+  <ul class="list-of-links">
     {{ range .NoteDetails }}
     <li><a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a></li>
     {{ end }}
-    </ul>
-  </div>
+  </ul>
 </main>
 
 <dialog id="section-delete-confirm">

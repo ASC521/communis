@@ -5,22 +5,20 @@
   <div class="header-with-buttons">
     <h2 class="title">Sections</h2>
     <div class="buttons">
-    <button type="button" class="svg-button" hx-get="/section/new" hx-target="#section-list" hx-swap="append">
-      <svg>
-	<use href="/static/vendor/svg/lucide-icons-sprite.svg#plus"/>
-      </svg>
-    </button>
+      <button type="button" class="svg-button" hx-get="/section/new" hx-target="#section-list" hx-swap="append">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#plus"/>
+	</svg>
+      </button>
     </div>
-</div>
-<hr>
-  <div id="section-list" class="sections-link-list">
-    <ul class="links">
+  </div>
+  <hr>
+  <ul class="list-of-links">
     {{ range .Sections }}
 
     <li><a href="/section/{{ .Id }}/{{ slugify .Name }}"> {{ .Name }}</a></li>
     {{ end }}
-    </ul>
-  </div>
+  </ul>
 </main>
 
 {{ end }}

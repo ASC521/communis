@@ -66,7 +66,6 @@ https://rstacruz.github.io/rscss/index.html
 
 .note-links {
     text-align: center;
-    > .header {}
     > .links {
 	list-style: none;
 	padding-left: 0;
@@ -88,14 +87,15 @@ https://rstacruz.github.io/rscss/index.html
     margin: 3px;
 }
 
-.sections-link-list {
-    > .links {
-	list-style: none;
-	padding-left: 0;
+
+.list-of-links {
+    list-style: none;
+    padding-left: 0;
+
+    &.-center {
+	text-align: center;
     }
 }
-
-
 
 /* COMPONENTS */
 
@@ -126,6 +126,13 @@ https://rstacruz.github.io/rscss/index.html
 }
 
 .section-view-page {
+    width: 80%;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 0%;
+}
+
+.tag-index-page {
     width: 80%;
     margin-left: 10%;
     margin-right: 10%;

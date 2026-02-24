@@ -11,8 +11,8 @@
   </form>
 
   <div class="note-links">
-    <p class="header"><strong>RECENTLY MODIFIED</strong></p>
-    <ul class="links">
+    <p><strong>RECENTLY MODIFIED</strong></p>
+    <ul class="list-of-links -center">
   {{ range .NoteDetails }}
   <li>
     <a class="flex-1" href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
