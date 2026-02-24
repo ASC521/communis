@@ -2,13 +2,15 @@
 
 {{ define "main" }}
 <main class="sections-list-page">
-  <div class="sections-header">
+  <div class="header-with-buttons">
     <h2 class="title">Sections</h2>
-    <button type="button" class="newbtn" hx-get="/section/new" hx-target="#section-list" hx-swap="append">
+    <div class="buttons">
+    <button type="button" class="svg-button" hx-get="/section/new" hx-target="#section-list" hx-swap="append">
       <svg>
 	<use href="/static/vendor/svg/lucide-icons-sprite.svg#plus"/>
       </svg>
     </button>
+    </div>
 </div>
 <hr>
   <div id="section-list" class="sections-link-list">

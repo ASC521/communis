@@ -73,28 +73,29 @@ https://rstacruz.github.io/rscss/index.html
     }
 }
 
-.sections-header {
+
+.svg-button {
+    cursor: pointer;
+    max-width: 1.75rem;
+    max-height: 1.75rem;
     display: flex;
     align-items: center;
-    > .title {
-	padding-right: 10px;
-    }
-    > .newbtn {
-	cursor: pointer;
-	max-width: 1.75em;
-	max-height: 1.75em;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-    }
+    justify-content: center;
+    margin: 3px;
+}
+
+.text-button {
+    margin: 3px;
 }
 
 .sections-link-list {
     > .links {
-		list-style: none;
+	list-style: none;
 	padding-left: 0;
     }
 }
+
+
 
 /* COMPONENTS */
 
@@ -123,4 +124,48 @@ https://rstacruz.github.io/rscss/index.html
     margin-right: 10%;
     margin-top: 0%;
 }
+
+.section-view-page {
+    width: 80%;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 0%;
+}
+
+.header-with-buttons {
+        display: flex;
+	align-items: center;
+	justify-content: space-between;
+	> .title {
+	    padding-right: 10px;
+	}
+
+	> .buttons {
+	    display: flex;
+	    align-items: center;
+	}
+}
+
+.dialog-modal {
+    > .header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+    }
+
+    > .header > .svg-button {
+	align-self: flex-start;
+    }
+
+    > .content {
+	padding: 10px;
+    }
+
+    > .footer {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+    }
+}
+
 /* LAYOUTS */
