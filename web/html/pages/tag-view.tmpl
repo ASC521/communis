@@ -5,7 +5,9 @@
 <main>
 
   <div class="header-with-buttons">
-    <h2>{{ .Tag.Name }}</h2>
+    <div id="title" class="title">
+      <h2>{{ .Tag.Name }}</h2>
+      </div>
     <div class="buttons">
       <button type="button" class="svg-button" command="show-modal" commandFor="tag-delete-confirm">
 	<svg>

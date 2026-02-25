@@ -1,12 +1,12 @@
 {{ define "put-tag" }}
-<form id="inline-section-form" autocomplete="off" class="section-form" hx-put="/tag/{{ .Id }}" hx-swap="outerHTML">
+<form id="inline-section-form" autocomplete="off" class="header-edit-form" hx-put="/tag/{{ .Id }}" hx-swap="outerHTML">
   {{ with .FieldErrors.name }}
-  <input type="text" name="tag-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper">
+  <input type="text" name="tag-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper" class="header">
   <small id="invalid-helper">{{ . }}</small>
   {{ else }}
-  <input type="text" name="tag-name" autofocus="true" value="{{ $.Name }}">
+  <input type="text" name="tag-name" autofocus="true" value="{{ $.Name }}" class="header">
   {{ end }}
-  <div role="group">
+  <div role="buttons">
   <button hx-get="/tag/{{ .Id }}/{{ slugify .Name }}" hx-target="body" type="button" class="secondary">Cancel</button>
   <button type="submit">Save</button>
   </group>

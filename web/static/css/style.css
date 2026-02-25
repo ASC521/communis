@@ -177,6 +177,8 @@ main {
         display: flex;
 	align-items: center;
 	justify-content: space-between;
+	margin: .67em;
+	height: 2rem;
 	> .title {
 	    padding-right: 10px;
 	}
@@ -261,6 +263,14 @@ main {
 
     > .textarea {
 	flex: 0 0 100%;
+    }
+}
+
+.header-edit-form {
+    display: flex;
+    
+    > .header {
+	margin-right: .25rem;
     }
 }
 

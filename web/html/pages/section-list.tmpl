@@ -13,7 +13,7 @@
     </div>
   </div>
   <hr>
-  <ul class="list-of-links">
+  <ul class="list-of-links" id="section-list">
     {{ range .Sections }}
 
     <li><a href="/section/{{ .Id }}/{{ slugify .Name }}"> {{ .Name }}</a></li>
