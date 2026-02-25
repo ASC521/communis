@@ -49,12 +49,14 @@ type Note struct {
 }
 
 type RenderedNote struct {
-	Id          int64
-	Title       string
-	Section     Section
-	HTMLContent template.HTML
-	Tags        []Tag
-	IsPreview   bool
+	Id            int64
+	Title         string
+	Section       Section
+	HTMLContent   template.HTML
+	Tags          []Tag
+	IsPreview     bool
+	CreatedAt     time.Time
+	LastUpdatedAt time.Time
 }
 
 type NoteDetail struct {

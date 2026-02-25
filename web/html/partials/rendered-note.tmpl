@@ -1,76 +1,59 @@
 {{ define "rendered-note" }}
 
-<div class="rendered-note">
-  <div class="breadcrumb-row">
+<main class="rendered-note">
+  <div class="title-row">
+    <h1> {{ .Title }}</h1>
 
-     <div class="breadcrumb">
-        <a href="/section/{{ .Section.Id }}/{{ .Section.Name }}">{{ .Section.Name }}</a>
-        <span class="separator">/</span>
-        <span>{{ .Title }}</span>
-     </div>
-
-
-     <div class="breadcrumb-buttons">
-     <button id="btn-tag-modal" type="button" command="show-modal" commandFor="tag-modal" class="icon-button">
-       <svg>
-	 <use href="/static/vendor/svg/lucide-icons-sprite.svg#tags">
-       </svg>
-     </button>
-
-     <button id="btn-select-ref-notes" type="button" class="icon-button">
-       <svg>
-	 <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-symlink">
-       </svg>
-     </button>
-    
-    {{ if .IsPreview }}
-        <button type="button" hx-target="body" hx-delete="/note/{{ .Id }}/{{ slugify .Title }}"  hx-confirm="Delete {{ .Title }}?" class="icon-button">
-      <svg>
-	<use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
-      </svg>
-    </button>
-    <button id="mde-preview-btn" type="button" class="icon-button">
-      <svg class="icon">
-	<use href="/static/vendor/svg/lucide-icons-sprite.svg#eye-off">
-      </svg>
-    </button>
-    <button type="submit" class="icon-button">
-      <svg>
-	<use href="/static/vendor/svg/lucide-icons-sprite.svg#save">
-      </svg>
-    </button>
-    {{ else }}
-    <a class="icon-button" href="/edit/{{ .Id }}/{{ slugify .Title }}">
-      <svg>
-	<use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line">
-      </svg>
-    </a>
-    {{ end}}
-
-
+    <div class="buttons">
+      {{ if .IsPreview }}
+      <button type="button" hx-target="body" hx-delete="/note/{{ .Id }}/{{ slugify .Title }}"  hx-confirm="Delete {{ .Title }}?" class="svg-button">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
+	</svg>
+      </button>
+      <button id="mde-preview-btn" type="button" class="svg-button">
+	<svg class="icon">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#eye-off">
+	</svg>
+      </button>
+      <button type="submit" class="svg-button">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#save">
+	</svg>
+      </button>
+      {{ else }}
+      <a class="svg-button" href="/edit/{{ .Id }}/{{ slugify .Title }}">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line">
+	</svg>
+      </a>
+      {{ end}}
     </div>
   </div>
-
-  <h1> {{ .Title }}</h1>
-
-  {{ .HTMLContent }}
-
-
-  <dialog id="tag-modal" closedBy="any">
-    <article>
-      <header>
-	<button rel="prev" class="close-btn" type="button" command="close" commandFor="tag-modal" aria-label="Close"></button>
-	<h4>Tags</h4>
-      </header>
-      <ul>
-      {{ range .Tags }}
-      <li><a href="/tag/{{ .Id }}/{{ .Name }}">{{ .Name }}</a></li>
-      {{ end }}
-      </ul>
-    </article>
-  </dialog>
-
   
-</div>
+  <details class="note-details">
+    <summary>Details</summary>
+    <dl class="details -compact">
+      <dt><strong>Section:</strong></dt>
+      <dd><a href="/section/{{ .Section.Id }}/{{ .Section.Name }}">{{ .Section.Name }}</a></dd>
+
+      <dt><strong>Tags:</strong></dt>
+      <dd>
+	{{ range .Tags }}
+	<a href="/tag/{{ .Id }}/{{ .Name }}">{{ .Name }}</a>
+	{{ end }}
+      </dd>
+
+      <dt><strong>Last Updated:</strong></dt>
+      <dd><time class="local-time" datetime="{{ .LastUpdatedAt }}"></time></dd>
+
+      <dt><strong>Created:</strong></dt>
+      <dd><time class="local-time" datetime="{{ .CreatedAt }}"></time></dd>
+    </dl>
+  </details>
+  
+  {{ .HTMLContent }}
+  
+</main>
 
 {{ end }}

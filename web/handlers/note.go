@@ -49,11 +49,13 @@ func renderNote(n models.Note) (models.RenderedNote, error) {
 	}
 
 	rn := models.RenderedNote{
-		Id:          n.Id,
-		Title:       n.Title,
-		Section:     n.Section,
-		HTMLContent: template.HTML(b.String()),
-		Tags:        n.Tags,
+		Id:            n.Id,
+		Title:         n.Title,
+		Section:       n.Section,
+		HTMLContent:   template.HTML(b.String()),
+		Tags:          n.Tags,
+		CreatedAt:     n.CreatedAt,
+		LastUpdatedAt: n.LastUpdatedAt,
 	}
 	return rn, nil
 }
