@@ -1,6 +1,6 @@
 {{ define "rendered-note" }}
 
-<main class="rendered-note">
+<div class="rendered-note">
   <div class="title-row">
     <h1> {{ .Title }}</h1>
 
@@ -8,23 +8,23 @@
       {{ if .IsPreview }}
       <button type="button" hx-target="body" hx-delete="/note/{{ .Id }}/{{ slugify .Title }}"  hx-confirm="Delete {{ .Title }}?" class="svg-button">
 	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	</svg>
       </button>
       <button id="mde-preview-btn" type="button" class="svg-button">
 	<svg class="icon">
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#eye-off">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#eye-off"/>
 	</svg>
       </button>
       <button type="submit" class="svg-button">
 	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#save">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#save"/>
 	</svg>
       </button>
       {{ else }}
       <a class="svg-button" href="/edit/{{ .Id }}/{{ slugify .Title }}">
 	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line"/>
 	</svg>
       </a>
       {{ end}}
@@ -54,6 +54,6 @@
   
   {{ .HTMLContent }}
   
-</main>
+</div>
 
 {{ end }}

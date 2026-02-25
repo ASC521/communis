@@ -53,7 +53,7 @@ function filterFieldSet(id, filter) {
 		label.style.display = 'none';
 	    }
 	}
-n	
+	
     });
 }
 
