@@ -7,8 +7,8 @@
   <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" class="header">
   {{ end }}
   <div role="group" class="buttons">
-    <button hx-get="/section/{{ .Id }}/{{ slugify .Name }}" hx-target="body" type="button" class="secondary">Cancel</button>
-    <button type="submit">Save</button>
+    <button hx-get="/section/{{ .Id }}/{{ slugify .Name }}" hx-target="body" type="button" class="text-button">Cancel</button>
+    <button type="submit" class="text-button">Save</button>
 </group>
 </form>
 {{ end }}

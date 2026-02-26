@@ -5,6 +5,7 @@
 (E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (G) Fix note preview page -  buttons don't line up
+PutUser end point needs to be implemented
 Add advanced query support to search screen +v1
 Bug Fix: As admin navigating outside to auth page should redict not through an error
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1

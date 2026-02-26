@@ -1,6 +1,8 @@
 package chanutil
 
-import "io"
+import (
+	"io"
+)
 
 type WithResult[T any] interface {
 	WithResult(c chan any) T
@@ -39,7 +41,10 @@ func SendReceiveError[C WithResult[C]](commands chan C, msg C) (err error) {
 
 	resp := make(chan any)
 	commands <- msg.WithResult(resp)
-	value := <-resp
+	value, ok := <-resp
+	if !ok {
+		return nil
+	}
 	if value == nil {
 		return nil
 	}

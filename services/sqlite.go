@@ -198,11 +198,13 @@ func (s *SQLiteDataStoreService) run() {
 			case cmdRemoveConn:
 				cc, ok := s.connections[msg.key]
 				if !ok {
+					msg.result <- error(nil)
 					continue
 				}
 				err := cc.conn.Close()
 				if err != nil {
 					msg.result <- err
+					continue
 				}
 				delete(s.connections, msg.key)
 				msg.result <- error(nil)
@@ -332,6 +334,7 @@ func (s *SQLiteDataStoreService) run() {
 						msg.result <- error(nil)
 					}
 				}
+				msg.result <- error(nil)
 
 			}
 			close(msg.result)

@@ -114,3 +114,14 @@ document.addEventListener('DOMContentLoaded', convertToLocalTime);
 document.addEventListener('htmx:after:swap', convertToLocalTime)
 
 // DATETIME FORMAT
+
+// DELETE CONTAINING TABLE ROW
+
+document.addEventListener("click", (e) => {
+    if (e.target.id === "remove-table-row") {
+	e.target.closest("tr").remove();
+    }
+
+});
+
+// DELETE CONTAINING TABLE ROW

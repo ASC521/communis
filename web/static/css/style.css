@@ -302,4 +302,22 @@ main {
     }
 }
 
+.users-table {
+    table-layout: fixed;
+    width: 90%;
+    margin: 10px auto;
+    text-align: left;
+    border-top: solid;
+    border-bottom: solid;
+
+    > thead > tr > .date {
+	width: 20%;
+    }
+
+    > tbody > tr > td > .input {
+	width: 100%;
+	box-sizing: border-box;
+    }
+}
+
 /* LAYOUTS */
