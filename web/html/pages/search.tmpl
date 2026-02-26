@@ -2,21 +2,23 @@
 
 {{ define "main" }}
 
-<div class="thin-container search-page">
-  <form action="/search" method="GET" role="search" autocomplete="off">
-    <input class="search-input" id="search" type="search" name="q" placeholder="Search..."
+<main class="search-page">
+  <form action="/search" method="GET" role="search" autocomplete="off" class="search-form">
+    <svg class="icon">
+      <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-search"/>
+    </svg>
+    <input class="field" id="search" type="search" name="q" placeholder="Search..."
 	   autofocus
 	   value="{{ .Form.Query }}"
 	   hx-get="/search"
 	   hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
 	   hx-target="#search-results"
 	   hx-push-url="true">
-    <input type="submit" value="Search" />
   </form>
   <br>
 
-  <div id="search-results">
+  <div id="search-results" class="search-results">
     {{ template "note-table" .SearchResults }}
   </div>
-</div>
+</main>
 {{ end }}

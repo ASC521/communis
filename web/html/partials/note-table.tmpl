@@ -1,8 +1,7 @@
 {{ define "note-table" }}
-<div class="article-container">
 {{ range . }}
 
-<article>
+<article class="search-result">
   <header>
     <h2>
       <a href="/note/{{.Id}}/{{ slugify .Title }}" hx-boost="true">{{ safeHTML .TitleHighlight }}</a>
@@ -10,11 +9,9 @@
   </header>
   {{ safeHTML .ContentSnippet }}
   <footer>
-    <p>Section: </p>
     <p>Tags: {{safeHTML .TagNames }}</p>
   </footer>
 </article>
 
 {{ end }}
-</div>
 {{ end }}

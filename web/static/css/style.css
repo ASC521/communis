@@ -58,19 +58,34 @@ main {
 
 .search-form {
     display: flex;
-    width: 40%;
+    align-items: center;
+    width: min(380px, 100%);   /* caps width but stays fluid */
+    padding: 0.75rem 1.125rem; /* scales with user font prefs */
+    border-radius: 0.875rem;
+    font-size: 0.9375rem;
+    border: solid;
+    
+
     /* TODO: Icon will float if resized to thin */
     > .icon {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
 	height: 1.5em;
 	width: 1.5em;
-	position: absolute;
-	padding: 10px;
+	/* position: absolute; */
+	/* left: 10px; */
+	pointer-events: none;
     }
     > .field {
-	height: 20%;
-	border-radius: 8px;
-	padding-left: 40px;
+	flex: 1;
+	border: none;
+	outline: none;
     }
+}
+
+.search-result {
+    padding: 8px;
 }
 
 .note-links {
@@ -157,19 +172,32 @@ main {
 /* LAYOUTS */
 .home-page {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: center;
+    align-content: center;
+    justify-content: center;
     height: 50vh;
     
     > .search-form {
-	flex: 1;
-	display: flex;
-	justify-content: flex-end;
-	flex-direction: column;
+	flex: 0 0 50%;
     }
 
     > .note-links {
-	flex: 1;
+	flex: 0 0 100%;
+    }
+}
+
+.search-page {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+
+    > .search-form {
+	margin-bottom: 16px;
+    }
+    
+    > .search-results {
+	width: 75%;
     }
 }
 
