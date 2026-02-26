@@ -3,12 +3,12 @@
 
 {{ define "main" }}
 
-<div class="homepage">
+<main class="login-page">
   <form action="/login" method="POST">
     <input name="username" id="username" placeholder="username" type="text" value="{{ .Form.Name }}"></input>
     <input name="password" id="password" placeholder="password" type="password"></input>
-    <button type="submit">Login</button>
+    <button type="submit" class="text-button">Login</button>
   </form>
-</div>
+</main>
 
 {{ end }}

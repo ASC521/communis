@@ -191,7 +191,7 @@ main {
     display: flex;
     align-items: center;
     flex-direction: column;
-
+    
     > .search-form {
 	margin-bottom: 16px;
     }
@@ -199,6 +199,14 @@ main {
     > .search-results {
 	width: 75%;
     }
+}
+
+.login-page {
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    height: 50vh;
 }
 
 .header-with-buttons {
