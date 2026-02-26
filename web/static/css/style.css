@@ -52,6 +52,23 @@ main {
 	display: flex;
 	gap: 1rem;
 	list-style: none;
+	width: 100%;
+    }
+
+    > .links > .dropdown {
+	position: relative;
+	margin-left: auto;
+    }
+    
+    > .links > .dropdown > details > ul {
+	position: absolute;
+	right: 0;
+	top: 100%;
+	z-index: 100;
+	padding: 0.5rem;
+	list-style: none;
+	min-width: max-content;
+	border: solid;
     }
 }
 
