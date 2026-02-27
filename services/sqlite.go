@@ -139,7 +139,7 @@ type SQLiteDataStoreService struct {
 	logger      *slog.Logger
 }
 
-func NewSQLiteDataStoreService(wg *sync.WaitGroup, ttl time.Duration, conf SQLiteDataStoreConfig) (*SQLiteDataStoreService, error) {
+func NewSQLiteDataStoreService(wg *sync.WaitGroup, ttl time.Duration, conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreService, error) {
 
 	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
 	if err != nil {
@@ -153,6 +153,7 @@ func NewSQLiteDataStoreService(wg *sync.WaitGroup, ttl time.Duration, conf SQLit
 		commands:    make(chan sqliteConnCmd),
 		conf:        conf,
 		indexDB:     indexDB,
+		logger:      logger,
 	}
 
 	go svc.run()

@@ -122,6 +122,7 @@ func Authenticate(sessionManager *scs.SessionManager, userStore models.IndexRepo
 			if authUserId == 0 {
 				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, false)
 				ctx = context.WithValue(ctx, isAdminContextKey, false)
+				ctx = context.WithValue(ctx, userThemeContextKey, "light")
 				r = r.WithContext(ctx)
 			} else {
 				user, err := userStore.GetUser(r.Context(), authUserId)
@@ -132,6 +133,7 @@ func Authenticate(sessionManager *scs.SessionManager, userStore models.IndexRepo
 				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, true)
 				ctx = context.WithValue(ctx, isAdminContextKey, user.IsAdmin)
 				ctx = context.WithValue(ctx, userIdContextKey, user.Id)
+				ctx = context.WithValue(ctx, userThemeContextKey, user.Theme)
 				r = r.WithContext(ctx)
 			}
 

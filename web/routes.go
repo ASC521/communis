@@ -66,6 +66,7 @@ func routes(
 	mux.Handle("GET /user/{id}", adminReq.Then(handlers.GetUser(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("GET /user/{id}/edit", adminReq.Then(handlers.GetUserEdit(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("DELETE /user/{id}", adminReq.Then(handlers.DeleteUser(tc, logger, indexRepo, dss, conf.SQLite.DBDirectory)))
+	mux.Handle("PUT /user/{id}/theme", authReq.Then(handlers.PutUserTheme(tc, logger, indexRepo)))
 
 	return baseChain.Then(mux)
 }

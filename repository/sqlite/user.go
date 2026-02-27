@@ -184,14 +184,14 @@ func (r *indexDBRepository) IsAdminUser(ctx context.Context, userId int64) (bool
 }
 
 func (r *indexDBRepository) GetUser(ctx context.Context, id int64) (models.User, error) {
-	q := `SELECT id, name, is_admin, created_at_utc, last_login_utc FROM users WHERE id = ?;`
+	q := `SELECT id, name, is_admin, created_at_utc, last_login_utc, theme FROM users WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	user := models.User{}
 	var createdStr, lastLoginStr sql.NullString
 	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
-	err := row.Scan(&user.Id, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr)
+	err := row.Scan(&user.Id, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, models.ErrInvalidCredentials
@@ -290,5 +290,14 @@ func (r *indexDBRepository) DeleteUser(ctx context.Context, id int64) error {
 	defer cancel()
 
 	_, err := r.db.Write.ExecContext(ctxWTO, s, id)
+	return err
+}
+
+func (r *indexDBRepository) UpdateUserTheme(ctx context.Context, id int64, theme string) error {
+	s := `UPDATE users SET theme = ? WHERE id =?;`
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	_, err := r.db.Write.ExecContext(ctxWTO, s, theme, id)
 	return err
 }

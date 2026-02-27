@@ -1,11 +1,11 @@
-(A) Persistent theme preference +v1
 (B) App throws error on receiving invalid credentials when logging in
+(B) PutUser end point needs to be implemented
 (C) PostUser should be happening within a transaction
+(D) Change password needs to be implemented
 (D) CSRF +v1
 (E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (G) Fix note preview page -  buttons don't line up
-PutUser end point needs to be implemented
 Add advanced query support to search screen +v1
 Bug Fix: As admin navigating outside to auth page should redict not through an error
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
@@ -14,7 +14,6 @@ Edit note screen - delete button should use native dialog +v1
 Error Screens +v1
 Have admin specfic navbar
 New note screen delete button should be disabled +v1
-Put update user information
 Rebuild inline section create/edit form +v1
 Refactor css
 Refactor organization of html templates to better fit htmx
@@ -48,6 +47,7 @@ x (A) Markdown Quote +v1 +create-note-rework
 x (A) Markdown Unordered List Button +v1 +create-note-rework
 x (A) Move to icons from text buttons +v1 +create-note-rework
 x (A) Move to pico css +v1
+x (A) Persistent theme preference +v1
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
 x (A) Refactor TemplateData struct by having handlers handle struct sent to templates - remove struct

@@ -84,3 +84,21 @@ func isAuthenticated(r *http.Request) bool {
 
 	return isAuth
 }
+
+func getUserIdFromRequest(r *http.Request) int64 {
+	userId, ok := r.Context().Value(userIdContextKey).(int64)
+	if !ok {
+		return 0
+	}
+
+	return userId
+}
+
+func getUserThemeFromRequest(r *http.Request) string {
+	userTheme, ok := r.Context().Value(userThemeContextKey).(string)
+	if !ok {
+		return ""
+	}
+
+	return userTheme
+}
