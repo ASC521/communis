@@ -2,20 +2,19 @@
 
 {{ define "main" }}
 
-<div class="thin-container">
+<main>
+  <div class="header-with-buttons">
+    <h2>Index</h2>
+  </div>
+  <hr>
+  <ul class="list-of-links">
+    {{ range .Tags }}
+    <li>
+      <a href="/tag/{{ .Id }}/{{ slugify .Name}}">{{ .Name }}</a>
+    <li>
+    {{ end }}
+  </ul>
 
-<h2>Index</h2>
-<hr>
-<div class="tag-index">
-{{ range .Tags }}
-
-<h5>
-    <a href="/tag/{{ .Id }}/{{ slugify .Name}}">{{ .Name }}</a>
-</h5>
-
-{{ end }}
-</div>
-
-</div>
+</main>
 
 {{ end }}

@@ -1,14 +1,14 @@
 {{ define "update-section" }}
-<form id="inline-section-form" autocomplete="off" class="section-form" hx-put="/section/{{ .Id }}" hx-swap="outerHTML">
+<form id="inline-section-form" autocomplete="off" class="header-edit-form" hx-put="/section/{{ .Id }}" hx-swap="outerHTML">
   {{ with .FieldErrors.name }}
-  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper">
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper" class="text-input">
   <small id="invalid-helper">{{ . }}</small>
   {{ else }}
-  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}">
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" class="text-input">
   {{ end }}
-  <div role="group">
-  <button hx-get="/section/{{ .Id }}/{{ slugify .Name }}" hx-target="body" type="button" class="secondary">Cancel</button>
-  <button type="submit">Save</button>
-  </group>
+  <div role="group" class="buttons">
+    <button hx-get="/section/{{ .Id }}/{{ slugify .Name }}" hx-target="body" type="button" class="text-button">Cancel</button>
+    <button type="submit" class="text-button -positive">Save</button>
+</group>
 </form>
 {{ end }}

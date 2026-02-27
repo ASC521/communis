@@ -1,26 +1,27 @@
 {{ define "navbar" }}
-<nav>
-  <ul>
+<header>
+<nav class="nav-bar">
+  <ul class="links">
     <li><strong><a href="/">Home</a></strong></li>
     <li><strong><a href="/note/new">New Note</a></strong></li>
     <li><strong><a href="/section">Sections</a></strong></li>
     <li><strong><a href="/index">Index</a></strong></li>
-  </ul>
-  <ul>
-    <details id="navbar-dropdown" class="dropdown">
-      <summary>
-	Settings
-      </summary>
-      <ul dir="rtl">
-	<li><a id="theme-toggle-btn" href="#">Toggle Theme</a></li>
-	{{ if .IsAuthenticated }}
-	<li><a hx-post="/logout">Logout</a></li>
-	{{ else }}
-	<li><a href="/login">Login</a></li>
-	{{ end }}
-      </ul>
-    </details>
+    <li class="dropdown">
+      <details>
+	<summary>
+	  Settings
+	</summary>
+	<ul>
+	  <li><button class="text-button" id="theme-toggle-btn" href="#">Toggle Theme</button></li>
+	  {{ if .IsAuthenticated }}
+	  <li><button class="text-button" hx-post="/logout">Logout</button></li>
+	  {{ else }}
+	  <li><button class="text-button" href="/login">Login</button></li>
+	  {{ end }}
+	</ul>
+      </details>
+    </li>
   </ul>
 </nav>
-
+</header>
 {{ end }}

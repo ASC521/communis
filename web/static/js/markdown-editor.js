@@ -319,8 +319,13 @@ function mdeTogglePreview() {
 	return
     }
 
-    form.hidden = !form.hidden;
-    previewDiv.hidden = !form.hidden;
+    if (form.style.display === "none") {
+	form.style.display = "";
+	previewDiv.hidden = true;
+    } else {
+	form.style.display = "none"
+	previewDiv.hidden = false;
+    }
     
 }
 

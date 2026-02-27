@@ -2,49 +2,57 @@
 
 {{ define "main" }}
 
-<div class="thin-container">
+<main>
 
-  <div class="page-header">
+  <div class="header-with-buttons">
     <div id="title" class="title">
       <h2>{{ .Section.Name }}</h2>
     </div>
     <div class="buttons">
-      <button type="button" class="icon-button" command="show-modal" commandFor="section-delete-confirm">
+      <button type="button" class="svg-button" command="show-modal" commandFor="section-delete-confirm">
 	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	</svg>
       </button>
-      <button type="button" class="icon-button" hx-get="/section/{{ .Section.Id }}/edit" hx-target="#title">
+      <button type="button" class="svg-button" hx-get="/section/{{ .Section.Id }}/edit" hx-target="#title">
 	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#pencil">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#pencil"/>
 	</svg>
       </button>
     </div>
   </div>
   <hr>
-  <div class="header-list">
+  <ul class="list-of-links">
     {{ range .NoteDetails }}
-    <h5><a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a></h5>
+    <li><a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a></li>
     {{ end }}
-  </div>
-</div>
+  </ul>
+</main>
 
 <dialog id="section-delete-confirm">
-  <article>
-    <header>
-      <button rel="prev" class="close-btn" type="button" command="close" commandFor="section-delete-confirm" aria-label="Close"></button>
+  <article class="dialog-modal">
+    <header class="header">
       <h4>Confirm</h4>
+      <button rel="prev" class="svg-button" type="button" command="close" commandFor="section-delete-confirm" aria-label="Close">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#x"/>
+	</svg>
+      </button>
     </header>
     {{ if (gt (len .NoteDetails) 0)}}
-    Cannot delete section until all associated notes are moved to a different section.
-    <footer>
-      <button command="close" commandFor="section-delete-confirm" class="secondary">Close</button>
+    <div class="content">
+      Cannot delete section until all associated notes are moved to a different section.
+      </div>
+    <footer class="footer">
+      <button command="close" commandFor="section-delete-confirm" class="text-button">Close</button>
     </footer>
     {{ else }}
-    Delete Section {{ .Section.Name }}?
-    <footer>
-      <button command="close" commandFor="section-delete-confirm" class="secondary">Cancel</button>
-      <button hx-delete="/section/{{ .Section.Id }}">Delete</button>
+    <div class="content">
+      Delete Section {{ .Section.Name }}?
+      </div>
+    <footer class="footer">
+      <button command="close" commandFor="section-delete-confirm" class="text-button">Cancel</button>
+      <button hx-delete="/section/{{ .Section.Id }}" class="text-button -warn">Delete</button>
     </footer>
     {{ end }}
 

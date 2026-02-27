@@ -6,33 +6,16 @@
 {{ define "user-edit" }}
 <tr>
   <td>{{ .User.Id }}</td>
-  <td><input name="name" value="{{ .User.Name }}"></td>
+  <td><input name="name" value="{{ .User.Name }}" class="text-input"></td>
   <td><a>Change Password</a></td>
   <td><input type="checkbox" {{ if .User.IsAdmin }} checked {{ end }} ></td>
   <td>{{ template "local-datetime" .User.CreatedAtUTC }}</td>
   <td>{{ template "local-datetime" .User.LastLoginUTC }}</td>
   <td>
-    <button command="show-modal" commandFor="delete-user-{{ .User.Id}}">Delete</button>
-    <button hx-get="/user/{{ .User.Id }}" hx-target="closest tr" hx-swap="outerHTML">Cancel</button>
-    <button hx-put="/user/{{ .User.Id }}" hx-include="closest tr">Save</button>
+    <button hx-get="/user/{{ .User.Id }}" hx-target="closest tr" hx-swap="outerHTML" class="text-button">Cancel</button>
+    <button hx-put="/user/{{ .User.Id }}" hx-include="closest tr" class="text-button -positive">Save</button>
   </td>
 </tr>
-
-<dialog id="delete-user-{{ .User.Id }}">
-  <article>
-    <header>
-      <button rel="prev" class="close-btn" type="button" command="close" commandFor="delete-user-{{ .User.Id}}" aria-label="Close"></button>
-      <h4>Confirm Deletion</h4>
-    </header>
-    <p>Delete user {{ .User.Name }}?  This is irreversible and will delete all user data.</p>
-    <footer>
-      <button class="secondary" command="close" commandFor="delete-user-{{ .User.Id }}">Cancel</button>
-      <button hx-delete="/user/{{ .User.Id}}">Delete</button>
-    </footer>
-  </article>
-
-</dialog>
-
 {{ end }}
 
 
@@ -46,9 +29,33 @@
   <td>{{ template "local-datetime" .CreatedAtUTC }}</td>
   <td>{{ template "local-datetime" .LastLoginUTC }}</td>
   <td>
-    <button hx-get="/user/{{ .Id }}/edit" hx-target="closest tr" hx-swap="outerHTML">Edit</button>
+    <button class="text-button" hx-get="/user/{{ .Id }}/edit" hx-target="closest tr" hx-swap="outerHTML">Edit</button>
+    <button class="text-button -warn" command="show-modal" commandFor="delete-user-{{ .Id }}">Delete</button>
   </td>
 </tr>
+
+{{ end }}
+
+{{ define "user-delete-dialog" }}
+<dialog id="delete-user-{{ .Id }}">
+  <article class="dialog-modal">
+    <header class="header">
+      <h4>Confirm Deletion</h4>
+      <button rel="prev" class="svg-button" type="button" command="close" commandFor="delete-user-{{ .Id }}" aria-label="Close">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#x"/>
+	</svg>
+      </button>
+    </header>
+    <div class="content">
+      <p>Delete user {{ .Name }}?  This is irreversible and will delete all user data.</p>
+    </div>
+    <footer class="footer">
+      <button class="text-button" command="close" commandFor="delete-user-{{ .Id }}">Cancel</button>
+      <button class="text-button" hx-delete="/user/{{ .Id }}">Delete</button>
+    </footer>
+  </article>
+</dialog>
 
 {{ end }}
 
@@ -57,13 +64,13 @@
 <tr>
   <td></td>
   <td>    
-    <input name="username" value="{{ .Name }}">
+    <input name="username" class="text-input">
     {{ with .FieldErrors.name }}
     <label>{{ . }}</label>
     {{end }}
   </td>
   <td>
-    <input name="password">
+    <input name="password" class="text-input">
     {{ with .FieldErrors.password }}
     <label>{{ . }}<label>
     {{ end }}
@@ -72,8 +79,8 @@
   <td></td>
   <td></td>
   <td>
-    <a>Cancel</a>
-    <a hx-post="/user" hx-include="closest tr" hx-target="closest tr" hx-swap="outerHTML">Save</a>
+    <button id="remove-table-row" type="button" class="text-button">Cancel</button>
+    <button class="text-button -positive" hx-post="/user" hx-include="closest tr" hx-target="closest tr" hx-swap="outerHTML">Save</button>
   </td>
 </tr>
 

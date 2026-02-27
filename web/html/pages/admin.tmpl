@@ -2,26 +2,31 @@
 
 
 {{ define "main" }}
-<div class="thin-container">
-  <h4>Users</h4>
-  <button hx-get="/user/new" hx-swap="prepend" hx-target="#users-table">Add User</button>
-  <table id="users-table">
+<main>
+  <table id="users-table" class="users-table">
+    <caption>Users</caption>
     <thead>
       <tr>
-	<th>ID</th>
-	<th>Name</th>
-	<th>Password</th>
-	<th>IsAdmin</th>
-	<th>Created At</th>
-	<th>Last Login</th>
-	<th></th>
+	<th scope="col">ID</th>
+	<th scope="col">Name</th>
+	<th scope="col">Password</th>
+	<th scope="col">Administrator</th>
+	<th scope="col" class="date">Created At</th>
+	<th scope="col" class="date">Last Login</th>
+	<th scope="col" class="buttons"><button class="text-button" hx-get="/user/new" hx-swap="append show:bottom" hx-target="#user-rows">Add User</button></th>
       </tr>
     </thead>
+    <tbody id="user-rows">
     {{ range .Users }}
-    	{{ template "user-row" . }}
+    {{ template "user-row" . }}
     {{ end }}
-    
+    </tbody>
   </table>
-</div>
+  
+</main>
+
+{{ range .Users }}
+{{ template "user-delete-dialog" . }}
+{{ end }}
 
 {{ end }}
