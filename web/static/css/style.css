@@ -306,6 +306,14 @@ main {
     }
 }
 
+.rendered-markdown {
+    font-size: larger;
+    > pre {
+	background-color: var(--color-surface) !important;
+    }
+}
+
+
 /* COMPONENTS */
 
 /* LAYOUTS */

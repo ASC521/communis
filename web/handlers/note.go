@@ -15,6 +15,7 @@ import (
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers/validator"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alexedwards/scs/v2"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -39,10 +40,14 @@ func renderNote(n models.Note) (models.RenderedNote, error) {
 		goldmark.WithExtensions(
 			highlighting.NewHighlighting(
 				highlighting.WithStyle("dracula"),
+				highlighting.WithFormatOptions(
+					chromahtml.WithLineNumbers(true),
+				),
 			),
 		),
 	)
 	b := new(bytes.Buffer)
+
 	err := md.Convert([]byte(n.Content), b)
 	if err != nil {
 		return models.RenderedNote{}, err
