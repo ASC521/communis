@@ -29,6 +29,30 @@ https://rstacruz.github.io/rscss/index.html
   Contain the position of one or more components
 */
 
+
+/* Warm & Friendly */
+:root {
+    --color-background: #FFFDF7;
+    --color-surface: #FFFFFF;
+    --color-accent: #F59E0B;
+    --color-text: #2D2D2D;
+    --color-muted: #B0A99A;
+    --color-warn: #E03B2F;
+      --color-positive: #2E8F5B;
+}
+
+/* Dark Mode */
+:root[data-theme="dark"] {
+    --color-background: #2E2E2E;
+    --color-surface: #3A3A3A;
+    --color-accent: #4CAF8C;
+    --color-text: #F2F2F7;
+    --color-muted: #848484;
+    --color-warn: #FF5F52;
+    --color-positive: #3A9E6F;
+}
+
+
 @font-face {
     font-family: 'IBMPlexMono';
     src: url('/static/vendor/fonts/IBMPlexMono-Regular.ttf') format('truetype');
@@ -73,10 +97,29 @@ https://rstacruz.github.io/rscss/index.html
 
 body {
     font-family: 'IBMPlexMono', sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text);
+}
+
+a {
+    color: var(--color-text);
+}
+
+a:hover {
+    color: var(--color-accent);
 }
 
 textarea, input {
     font-family: 'IBMPlexMono', monospace;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-muted);
+}
+
+dialog {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-muted);
 }
 
 main {
@@ -129,6 +172,8 @@ main {
     border-radius: 0.875rem;
     font-size: 0.9375rem;
     border: solid;
+    background-color: var(--color-surface);
+    color: var(--color-text);
     
 
     /* TODO: Icon will float if resized to thin */
@@ -146,6 +191,8 @@ main {
 	flex: 1;
 	border: none;
 	outline: none;
+	background-color: inherit;
+	color: inherit;
     }
 }
 
@@ -178,7 +225,24 @@ main {
 }
 
 .text-button {
-    margin: 3px;
+    cursor: pointer;
+    margin: .15rem;
+    border-radius: 8px;
+    width: 5rem;
+    
+    &.-warn {
+	background-color: var(--color-warn);
+    }
+    &.-alt {
+	background-color: var(--color-accent);
+    }
+    &.-positive {
+	background-color: var(--color-positive);
+    }
+}
+
+.text-input {
+    border-radius: 8px;
 }
 
 
@@ -272,6 +336,13 @@ main {
     align-content: center;
     justify-content: center;
     height: 50vh;
+}
+
+.section-list-page {
+
+    > .list-of-links > .header-edit-form {
+	margin-top: .5rem;
+    }
 }
 
 .header-with-buttons {
@@ -370,9 +441,10 @@ main {
 .header-edit-form {
     display: flex;
     
-    > .header {
+    > .text-input {
 	margin-right: .25rem;
     }
+
 }
 
 .users-table {
@@ -387,9 +459,13 @@ main {
 	width: 20%;
     }
 
-    > tbody > tr > td > .input {
+    > tbody > tr > td > .text-input {
 	width: 100%;
 	box-sizing: border-box;
+    }
+
+    > thead > tr > .buttons {
+	width: 15%;
     }
 }
 

@@ -1,14 +1,14 @@
 {{ define "new-section-form" }}
 <form id="inline-section-form" autocomplete="off" class="header-edit-form" hx-post="/section" hx-swap="outerHTML">
   {{ with .FieldErrors.name }}
-  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper" class="header">
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper" class="text-input">
   <small id="invalid-helper">{{ . }}</small>
   {{ else }}
-  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" class="header">
+  <input type="text" name="section-name" autofocus="true" value="{{ $.Name }}" class="text-input">
   {{ end }}
   <div class="buttons">
-  <button id="btn-remove-section-form" type="button" class="secondary">Cancel</button>
-  <button type="submit">Save</button>
+  <button id="btn-remove-section-form" type="button" class="text-button">Cancel</button>
+  <button type="submit" class="text-button -positive">Save</button>
   </group>
 </form>
 {{ end }}
