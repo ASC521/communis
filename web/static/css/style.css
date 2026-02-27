@@ -253,8 +253,19 @@ main {
 
 .text-input {
     border-radius: 8px;
+
+    &.-bold {
+	font-weight: bold;
+    }
 }
 
+.select-dropdown {
+    font-family: 'IBMPlexMono', monospace;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border-color: var(--color-muted);
+    border-radius: 8px;
+}
 
 .list-of-links {
     list-style: none;
@@ -424,12 +435,12 @@ main {
 	display: flex;
 	margin-bottom: 16px;
 
-	> .section {
+	> .select-dropdown {
 	    flex: 1;
 	    margin-right: .5rem;
 	}
-	> .title {
-	    flex: 3;
+	> .text-input {
+	    flex: 4;
 	    margin-right: .5rem;
 	}
 	> .buttons {
@@ -453,6 +464,14 @@ main {
 
     > .textarea {
 	flex: 0 0 100%;
+	border: none;
+	outline: none;
+	overflow: hidden;
+	resize: none;
+	background: transparent;
+	height: auto;
+	box-sizing: border-box;
+	font-size: larger;
     }
 }
 
