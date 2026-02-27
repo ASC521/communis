@@ -211,13 +211,23 @@ main {
 
 .svg-button {
     cursor: pointer;
-    max-width: 1.75rem;
-    max-height: 1.75rem;
+    max-width: 2.25rem;
+    max-height: 2.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 3px;
-
+    padding: 3px;
+    background: transparent;
+    border: 3px solid transparent;
+    color: var(--color-text);
+    
+    &:hover {
+	border: solid;
+	border-color: var(--color-muted);
+	border-radius: 8px;
+    }
+    
     > svg {
 	max-width: 100%;
 	max-height: 100%;
