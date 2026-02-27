@@ -34,12 +34,19 @@ type searchForm struct {
 	Query string
 }
 
-func renderNote(n models.Note) (models.RenderedNote, error) {
+func renderNote(n models.Note, theme string) (models.RenderedNote, error) {
+
+	var style highlighting.Option
+	if theme == "dark" {
+		style = highlighting.WithStyle("dracula")
+	} else {
+		style = highlighting.WithStyle("tango")
+	}
 
 	md := goldmark.New(
 		goldmark.WithExtensions(
 			highlighting.NewHighlighting(
-				highlighting.WithStyle("dracula"),
+				style,
 				highlighting.WithFormatOptions(
 					chromahtml.WithLineNumbers(true),
 				),
@@ -480,7 +487,13 @@ func NotePreviewPost(
 			n.Section.Name = sec.Name
 		}
 
-		rn, err := renderNote(n)
+		userTheme := getUserThemeFromRequest(r)
+		if userTheme == "" {
+			tc.RenderError(logger, w, r, errors.New("user theme not set in request"))
+			return
+		}
+
+		rn, err := renderNote(n, userTheme)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -535,7 +548,12 @@ func NoteViewGet(
 			return
 		}
 
-		rn, err := renderNote(n)
+		userTheme := getUserThemeFromRequest(r)
+		if userTheme == "" {
+			tc.RenderError(logger, w, r, errors.New("user theme not set in request"))
+			return
+		}
+		rn, err := renderNote(n, userTheme)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return

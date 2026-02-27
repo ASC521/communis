@@ -14,11 +14,15 @@ import (
 
 type BaseData struct {
 	IsAuthenticated bool
+	UserId          int64
+	Theme           string
 }
 
 func newBase(r *http.Request) BaseData {
 	return BaseData{
 		IsAuthenticated: isAuthenticated(r),
+		UserId:          getUserIdFromRequest(r),
+		Theme:           getUserThemeFromRequest(r),
 	}
 }
 

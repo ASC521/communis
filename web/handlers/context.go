@@ -6,4 +6,5 @@ const (
 	isAuthenticatedContextKey = contextKey("isAuthenticated")
 	userIdContextKey          = contextKey("userId")
 	isAdminContextKey         = contextKey("isAdmin")
+	userThemeContextKey       = contextKey("userTheme")
 )

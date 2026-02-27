@@ -120,6 +120,7 @@ type User struct {
 	IsAdmin      bool
 	CreatedAtUTC time.Time
 	LastLoginUTC time.Time
+	Theme        string
 }
 
 type UserDatabase struct {
@@ -142,4 +143,5 @@ type IndexRepository interface {
 	UpdateUser(ctx context.Context, id int64, name string, isAdmin bool) error
 	UpdateUserLastLoginToNow(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
+	UpdateUserTheme(ctx context.Context, id int64, theme string) error
 }

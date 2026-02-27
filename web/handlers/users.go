@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -271,5 +272,57 @@ func GetUserEdit(
 		}
 
 		tc.RenderPartial(logger, w, r, http.StatusOK, "user-edit", data)
+	}
+}
+
+func PutUserTheme(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, err := parseIdFromPath(r)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		ctxUserId := getUserIdFromRequest(r)
+		if ctxUserId == 0 {
+			tc.RenderError(logger, w, r, errors.New("user id missing from request context"))
+			return
+		}
+
+		if userId != ctxUserId {
+			tc.RenderError(logger, w, r, errors.New("authenticated user id does not match path user id"))
+			return
+		}
+
+		userTheme := getUserThemeFromRequest(r)
+		if userTheme == "" {
+			tc.RenderError(logger, w, r, errors.New("user theme not set in request"))
+			return
+		}
+
+		if userTheme == "dark" {
+			userTheme = "light"
+		} else {
+			userTheme = "dark"
+		}
+		err = indexRepo.UpdateUserTheme(r.Context(), ctxUserId, userTheme)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		currentUrl := r.Header.Get("HX-Current-URL")
+		if currentUrl == "" {
+			tc.RenderError(logger, w, r, errors.New("HX-Current-URL request header not set"))
+			return
+		}
+
+		w.Header().Set("HX-Redirect", currentUrl)
+		w.WriteHeader(http.StatusOK)
 	}
 }

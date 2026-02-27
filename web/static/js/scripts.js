@@ -19,7 +19,7 @@ document.addEventListener("click", (e) => {
     if (e.target.id === "theme-toggle-btn") {
 	e.preventDefault();
 	toggleTheme();
-	const nd = document.querySelector("#navbar-dropdown");
+	const nd = document.querySelector(".dropdown details");
 	nd.removeAttribute("open");
     }
 })
