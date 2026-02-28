@@ -164,6 +164,11 @@ func PostUserLogin(
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
+	type td struct {
+		BaseData
+		Form userForm
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		userForm, err := parseUserFormFromRequest(r)
@@ -174,6 +179,16 @@ func PostUserLogin(
 
 		user, err := indexRepo.AuthenticateUser(r.Context(), userForm.Name, userForm.PlainTextPassword)
 		if err != nil {
+			if errors.Is(err, models.ErrInvalidCredentials) {
+				userForm.FieldErrors["error"] = "username or password is incorrect"
+				data := td{
+					BaseData: newBase(r),
+					Form:     userForm,
+				}
+				tc.RenderPage(logger, w, r, http.StatusForbidden, "login.tmpl", data)
+				return
+			}
+
 			tc.RenderError(logger, w, r, err)
 			return
 		}

@@ -5,9 +5,21 @@
 
 <main class="login-page">
   <form action="/login" method="POST">
-    <input name="username" id="username" placeholder="username" type="text" value="{{ .Form.Name }}"></input>
-    <input name="password" id="password" placeholder="password" type="password"></input>
-    <button type="submit" class="text-button">Login</button>
+    <output>
+      {{ with .Form.FieldErrors.error }}
+      <div class="msg-box -warn">
+	<p>{{ . }}</p>
+	</div>
+      {{ end }}
+    </output>
+    
+    <label for="username">Username</label>
+    <input class="text-input" name="username" id="username" type="text" value="{{ .Form.Name }}"></input>
+
+    <label for="password">Password</label>
+    <input class="text-input" name="password" id="password" type="password"></input>
+
+    <button type="submit" class="text-button -alt">Login</button>
   </form>
 </main>
 
