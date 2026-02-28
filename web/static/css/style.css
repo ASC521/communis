@@ -132,6 +132,17 @@ main {
 
 /* COMPONENETS */
 
+.msg-box {
+    border: solid;
+    background-color: var(--color-accent);
+    border-radius: 8px;
+    padding-left: .5rem;
+
+    &.-warn {
+	background-color: var(--color-warn);
+    }
+}
+
 .nav-bar {
     display: flex;
     align-items: center;
@@ -252,7 +263,7 @@ main {
 }
 
 .text-input {
-    border-radius: 8px;
+    border-radius: 4px;
 
     &.-bold {
 	font-weight: bold;
@@ -362,9 +373,24 @@ main {
 .login-page {
     display: flex;
     align-items: center;
-    align-content: center;
     justify-content: center;
     height: 50vh;
+
+    > form {
+	display: flex;
+	flex-direction: column;
+	gap: .5rem;
+	width: 25%;
+
+	> .text-input {
+	    height: 2rem;
+	}
+
+	> .text-button {
+	    width: 100%;
+	    height: 2rem;
+	}
+    }
 }
 
 .section-list-page {
