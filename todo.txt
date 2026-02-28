@@ -1,9 +1,10 @@
-(B) App throws error on receiving invalid credentials when logging in
+(A) Feature: toast message - App throws error on receiving invalid credentials when logging in
 (B) PutUser end point needs to be implemented
 (C) PostUser should be happening within a transaction
 (D) Change password needs to be implemented
 (D) CSRF +v1
-(E) Link between different notes - a new button the markdown toolbar that pops up an activate search dialog to build the url
+(D) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
+(E) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (G) Fix note preview page -  buttons don't line up
 Add advanced query support to search screen +v1
