@@ -135,13 +135,15 @@ type IndexRepository interface {
 	UpdateDBVersion(ctx context.Context, id int64, version int) error
 	GetUserDB(ctx context.Context, userId int64) (UserDatabase, error)
 	CreateAdminUser(ctx context.Context, username, password string) (int64, error)
-	CreateUserAndDB(ctx context.Context, userName, password string, isAdmin bool, dbPath string) (int64, error)
+	CreateUserAndDB(ctx context.Context, userName, password string, dbPath string) (int64, error)
 	AuthenticateUser(ctx context.Context, username, password string) (User, error)
 	IsAdminUser(ctx context.Context, userId int64) (bool, error)
 	GetUser(ctx context.Context, userId int64) (User, error)
 	ListUsers(ctx context.Context) ([]User, error)
-	UpdateUser(ctx context.Context, id int64, name string, isAdmin bool) error
+	UpdateUser(ctx context.Context, id int64, name string) (User, error)
 	UpdateUserLastLoginToNow(ctx context.Context, id int64) error
+	UpdateUserPassword(ctx context.Context, id int64, password string) error
 	DeleteUser(ctx context.Context, id int64) error
 	UpdateUserTheme(ctx context.Context, id int64, theme string) error
+	NameExists(ctx context.Context, name string) (bool, error)
 }

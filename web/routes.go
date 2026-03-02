@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
@@ -15,7 +14,6 @@ func routes(
 	tc *handlers.TemplateCache,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-	conf *config.Config,
 ) http.Handler {
 
 	indexRepo := dss.GetUserStore()
@@ -58,14 +56,17 @@ func routes(
 
 	mux.Handle("GET /login", dynamic.Then(handlers.GetUserLogin(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("POST /login", dynamic.Then(handlers.PostUserLogin(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("POST /logout", authReq.Then(handlers.PostUserLogout(tc, logger, sessionManager)))
+	mux.Handle("DELETE /session", authReq.Then(handlers.PostUserLogout(tc, logger, sessionManager)))
 
 	mux.Handle("GET /admin", adminReq.Then(handlers.GetAdmin(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("GET /user/new", adminReq.Then(handlers.GetUserCreate(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("POST /user", adminReq.Then(handlers.PostUser(tc, logger, indexRepo, dss)))
 	mux.Handle("GET /user/{id}", adminReq.Then(handlers.GetUser(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("GET /user/{id}/edit", adminReq.Then(handlers.GetUserEdit(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("DELETE /user/{id}", adminReq.Then(handlers.DeleteUser(tc, logger, indexRepo, dss, conf.SQLite.DBDirectory)))
+	mux.Handle("DELETE /user/{id}", adminReq.Then(handlers.DeleteUser(tc, logger, indexRepo, dss)))
+	mux.Handle("PUT /user/{id}", adminReq.Then(handlers.PutUser(tc, logger, indexRepo)))
+	mux.Handle("PUT /user/{id}/password", adminReq.Then(handlers.PutUserPassword(tc, logger, indexRepo)))
+
 	mux.Handle("PUT /user/{id}/theme", authReq.Then(handlers.PutUserTheme(tc, logger, indexRepo)))
 
 	return baseChain.Then(mux)

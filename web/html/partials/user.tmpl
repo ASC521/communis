@@ -2,42 +2,110 @@
 <time class="local-time" datetime="{{ .Format "2006-01-02T15:04:05Z07:00" }}">{{ .Format "Jan 2, 2006 3:04 PM" }} UTC</time>
 {{ end }}
 
-
-{{ define "user-edit" }}
-<tr>
-  <td>{{ .User.Id }}</td>
-  <td><input name="name" value="{{ .User.Name }}" class="text-input"></td>
-  <td><a>Change Password</a></td>
-  <td><input type="checkbox" {{ if .User.IsAdmin }} checked {{ end }} ></td>
-  <td>{{ template "local-datetime" .User.CreatedAtUTC }}</td>
-  <td>{{ template "local-datetime" .User.LastLoginUTC }}</td>
-  <td>
-    <button hx-get="/user/{{ .User.Id }}" hx-target="closest tr" hx-swap="outerHTML" class="text-button">Cancel</button>
-    <button hx-put="/user/{{ .User.Id }}" hx-include="closest tr" class="text-button -positive">Save</button>
-  </td>
-</tr>
+{{ define "user-updated" }}
+	{{ template "user-row" . }}
+	{{ template "user-delete-dialog" . }}
 {{ end }}
 
 
-{{ define "user-row" }}
+{{ define "user-edit" }}
+<tr>
+  <td><input name="id" value="{{ .EditUserForm.Id}}" class="text-input -readonly" readonly></td>
+  <td>
+    
+    <input name="username" value="{{ .EditUserForm.UserName }}" class="text-input">
+    {{ with .EditUserForm.FieldErrors.username }}
+    <small>{{.}}<small>
+	{{ end }}
+  </td>
 
+  <td><button class="text-button -width75" command="show-modal" commandFor="change-password-{{ .EditUserForm.Id }}">Change Password</button></td>
+  <td>{{ .User.IsAdmin }}</td>
+  <td>{{ template "local-datetime" .User.CreatedAtUTC }}</td>
+    <td>{{ if not .User.LastLoginUTC.IsZero }} {{ template "local-datetime" .User.LastLoginUTC }} {{ end }}</td>
+  <td>
+    <button hx-get="/user/{{ .EditUserForm.Id }}" hx-target="closest tr" hx-swap="outerHTML" class="text-button" data-password-dialog="change-password-{{ .ChangePasswordForm.Id }}">Cancel</button>
+    <button hx-put="/user/{{ .EditUserForm.Id }}" hx-target="closest tr" hx-swap="outerHTML" hx-include="closest tr" class="text-button -positive">Save</button>
+  </td>
+</tr>
+
+{{ template "change-password-dialog" .ChangePasswordForm }}
+{{ end }}
+
+
+{{ define "change-password-dialog" }}
+<template hx-swap-oob="after:main">
+<dialog id="change-password-{{ .Id }}">
+  <article class="dialog-modal">
+    <header class="header">
+      <h4>Change Password</h4>
+      <button rel="prev" class="svg-button" type="button" command="close" commandFor="change-password-{{ .Id }}" aria-label="Close">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#x"/>
+	</svg>
+      </button>
+    </header>
+    <div class="content">
+      {{ template "change-password-form" . }}
+    </div>
+    <footer class="footer">
+      <button class="text-button" command="close" commandFor="change-password-{{ .Id }}">Cancel</button>
+      <button class="text-button -positive" hx-put="/user/{{ .Id }}/password" hx-include="#change-password-form-{{ .Id }}" hx-target="#change-password-form-{{ .Id }}" hx-swap="outerHTML">Update</button>
+    </footer>
+  </article>
+</dialog>
+</template>
+{{ end }}
+
+{{ define "change-password-form" }}
+<form id="change-password-form-{{ .Id }}" class="table-form">
+  {{ with .FieldErrors.error }}
+  <output class="msg-box -warn">
+    <p>{{ . }}</p>
+  </output>
+  {{ else }}
+  <output class="msg-box -hidden">
+  </output>
+  {{ end }}
+
+  <label for="id">Id</label>
+  <input name="id" class="text-input -readonly" readonly value="{{ .Id }}">
+
+  <label for="name">Name</label>
+  <input name="name" class="text-input -readonly" readonly value="{{ .Name }}">
+  
+  <label for="new-password">New Password</label>
+  <input type="password" class="text-input" name="password">
+
+  <label for="new-password-confirm">Confirm Password</label>
+  <input type="password" class="text-input" name="confirmed-password">
+</form>
+{{ end }}
+
+{{ define "replace-edit-form" }}
+
+{{ template "user-row" . }}
+<div id="change-password-{{ .Id }}" hx-swap-oob="delete"></div>
+
+{{ end }}
+
+{{ define "user-row" }}
 <tr>
   <td>{{ .Id }}</td>
   <td>{{ .Name }}</td>
   <td>******</td>
   <td>{{ .IsAdmin }}</td>
   <td>{{ template "local-datetime" .CreatedAtUTC }}</td>
-  <td>{{ template "local-datetime" .LastLoginUTC }}</td>
+  <td>{{ if not .LastLoginUTC.IsZero }} {{ template "local-datetime" .LastLoginUTC }} {{ end }}</td>
   <td>
     <button class="text-button" hx-get="/user/{{ .Id }}/edit" hx-target="closest tr" hx-swap="outerHTML">Edit</button>
     <button class="text-button -warn" command="show-modal" commandFor="delete-user-{{ .Id }}">Delete</button>
   </td>
 </tr>
-
 {{ end }}
 
 {{ define "user-delete-dialog" }}
-<dialog id="delete-user-{{ .Id }}">
+<dialog id="delete-user-{{ .Id }}" hx-swap-oob="true">
   <article class="dialog-modal">
     <header class="header">
       <h4>Confirm Deletion</h4>
@@ -56,26 +124,25 @@
     </footer>
   </article>
 </dialog>
-
 {{ end }}
 
-{{ define "user-new" }}
 
+{{ define "user-new" }}
 <tr>
   <td></td>
   <td>    
-    <input name="username" class="text-input">
+    <input name="username" class="text-input" placeholder="username">
     {{ with .FieldErrors.name }}
     <label>{{ . }}</label>
     {{end }}
   </td>
   <td>
-    <input name="password" class="text-input">
+    <input name="password" class="text-input" placeholder="password" type="password">
     {{ with .FieldErrors.password }}
     <label>{{ . }}<label>
     {{ end }}
   </td>
-  <td><input type="checkbox" {{ if .IsAdmin }} checked {{ end }}></td>
+  <td><input name="is-admin" type="checkbox" {{ if .IsAdmin }} checked {{ end }}></td>
   <td></td>
   <td></td>
   <td>
@@ -83,5 +150,4 @@
     <button class="text-button -positive" hx-post="/user" hx-include="closest tr" hx-target="closest tr" hx-swap="outerHTML">Save</button>
   </td>
 </tr>
-
 {{ end }}

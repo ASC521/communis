@@ -249,12 +249,6 @@ func (s *SQLiteDataStoreService) run() {
 					continue
 				}
 
-				err = userStore.DeleteUser(msg.ctx, msg.key)
-				if err != nil {
-					msg.result <- err
-					continue
-				}
-
 				err = os.Remove(filepath.Join(s.conf.DBDirectory, userDB.Path))
 				if err != nil {
 					msg.result <- fmt.Errorf("failed to delete user datbase: %s", err.Error())

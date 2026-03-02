@@ -41,6 +41,9 @@ func NewTemplateCache(files fs.FS, debug bool) (*TemplateCache, error) {
 	}
 
 	partialsTemplate, err := template.New("partials").Funcs(funcMap).ParseFS(files, "html/partials/*.tmpl")
+	if err != nil {
+		return nil, err
+	}
 
 	pageFiles, err := fs.Glob(files, "html/pages/*.tmpl")
 	if err != nil {
