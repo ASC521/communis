@@ -2,11 +2,9 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/ASC521/communis/models"
 	"github.com/ASC521/communis/services"
@@ -162,8 +160,7 @@ func PostUser(
 				return
 			}
 		} else {
-			dbPath := fmt.Sprintf("notes/%s.db", strings.ToLower(nuf.Name))
-			userId, err = indexRepo.CreateUserAndDB(r.Context(), nuf.Name, nuf.Password, dbPath)
+			userId, err = indexRepo.CreateUserAndDB(r.Context(), nuf.Name, nuf.Password)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
