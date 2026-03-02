@@ -95,7 +95,7 @@ func (r *indexDBRepository) CreateAdminUser(ctx context.Context, username, passw
 	return res.LastInsertId()
 }
 
-func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, password string, isAdmin bool, dbPath string) (int64, error) {
+func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, password string, dbPath string) (int64, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
@@ -108,7 +108,7 @@ func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, passw
 	defer cancel()
 
 	return sqlitex.WithTransaction(r.db.Write, ctxWTO, func(ctx context.Context, tx *sql.Tx) (int64, error) {
-		result, err := tx.ExecContext(ctx, userStmt, userName, hashedPassword, isAdmin)
+		result, err := tx.ExecContext(ctx, userStmt, userName, hashedPassword, false)
 		if err != nil {
 			return -1, err
 		}
@@ -188,9 +188,9 @@ func (r *indexDBRepository) GetUser(ctx context.Context, id int64) (models.User,
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
+	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
 	user := models.User{}
 	var createdStr, lastLoginStr sql.NullString
-	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
 	err := row.Scan(&user.Id, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -219,13 +219,54 @@ func (r *indexDBRepository) GetUser(ctx context.Context, id int64) (models.User,
 
 }
 
-func (r *indexDBRepository) UpdateUser(ctx context.Context, id int64, name string, isAdmin bool) error {
-	stmt := `UPDATE users SET name = ?, is_admin = ? WHERE id = ?;`
+func (r *indexDBRepository) UpdateUser(ctx context.Context, id int64, name string) (models.User, error) {
+	stmt := `UPDATE users SET name = ? WHERE id = ?
+		RETURNING id, name, is_admin, created_at_utc, last_login_utc, theme;`
 
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	_, err := r.db.Write.ExecContext(ctxWTO, stmt, name, isAdmin, id)
+	row := r.db.Write.QueryRowContext(ctxWTO, stmt, name, id)
+	user := models.User{}
+	var createdStr, lastLoginStr sql.NullString
+	err := row.Scan(&user.Id, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.User{}, models.ErrInvalidCredentials
+		} else {
+			return models.User{}, err
+		}
+	}
+
+	if createdStr.Valid {
+		createdAt, err := time.ParseInLocation(sqliteTimeFmt, createdStr.String, time.UTC)
+		if err != nil {
+			return models.User{}, err
+		}
+		user.CreatedAtUTC = createdAt
+	}
+	if lastLoginStr.Valid {
+		lastLogin, err := time.ParseInLocation(sqliteTimeFmt, lastLoginStr.String, time.UTC)
+		if err != nil {
+			return models.User{}, err
+		}
+		user.LastLoginUTC = lastLogin
+	}
+
+	return user, nil
+}
+
+func (r *indexDBRepository) UpdateUserPassword(ctx context.Context, id int64, password string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return err
+	}
+
+	stmt := `UPDATE users SET hashed_password = ? WHERE id = ?;`
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	_, err = r.db.Write.ExecContext(ctxWTO, stmt, hashedPassword, id)
 	return err
 }
 
@@ -300,4 +341,19 @@ func (r *indexDBRepository) UpdateUserTheme(ctx context.Context, id int64, theme
 
 	_, err := r.db.Write.ExecContext(ctxWTO, s, theme, id)
 	return err
+}
+
+func (r *indexDBRepository) NameExists(ctx context.Context, name string) (bool, error) {
+	q := `SELECT EXISTS(SELECT 1 FROM users WHERE name = ?);`
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	var exists bool
+	row := r.db.Read.QueryRowContext(ctxWTO, q, name)
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+
 }

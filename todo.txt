@@ -1,8 +1,9 @@
-(A) Feature: toast message - App throws error on receiving invalid credentials when logging in
-(B) PutUser end point needs to be implemented
+(A) Change password needs to be implemented
+(B) Refactor user database creation to be named by user id intead of username
+(C) Move create user form to dialog from table row
 (C) PostUser should be happening within a transaction
-(D) Change password needs to be implemented
 (D) CSRF +v1
+(D) Common response headers middleware
 (D) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
 (E) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) Add form validation feedback to note create +v1 +create-note-rework
@@ -34,6 +35,7 @@ x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Bug Fix: Note Edit page does not submit
 x (A) Build tag index +v1
 x (A) Debug mode which prints server error on screen
+x (A) Feature: toast message - App throws error on receiving invalid credentials when logging in
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Fix note preview page - section and tag names have to be pulled from DB
 x (A) Make textarea on edit notes screen automatically grow as more text is added +v1
@@ -49,6 +51,7 @@ x (A) Markdown Unordered List Button +v1 +create-note-rework
 x (A) Move to icons from text buttons +v1 +create-note-rework
 x (A) Move to pico css +v1
 x (A) Persistent theme preference +v1
+x (A) PutUser end point needs to be implemented
 x (A) Redo Home Screen +v1
 x (A) Redo nav bar +v1
 x (A) Refactor TemplateData struct by having handlers handle struct sent to templates - remove struct

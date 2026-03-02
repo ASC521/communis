@@ -1,12 +1,184 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/ASC521/communis/models"
+	"github.com/ASC521/communis/services"
+	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
+
+type userEditForm struct {
+	Id          int64
+	UserName    string
+	FieldErrors map[string]string
+}
+
+func parseUserEditFormFromRequest(r *http.Request) (userEditForm, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return userEditForm{}, err
+	}
+
+	var id int64
+	idStr := r.PostForm.Get("id")
+	if idStr == "" {
+		return userEditForm{}, errors.New("missing user id from form")
+	}
+	id, err = strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return userEditForm{}, err
+	}
+
+	name := r.PostForm.Get("username")
+	form := userEditForm{
+		Id:          id,
+		UserName:    name,
+		FieldErrors: map[string]string{},
+	}
+
+	return form, nil
+}
+
+func DeleteUser(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	dss services.DataStoreService,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, err := parseIdFromPath(r)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		user, err := indexRepo.GetUser(r.Context(), userId)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		if user.IsAdmin {
+			err = dss.Remove(r.Context(), user.Id)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+		} else {
+			err = dss.DeleteDB(r.Context(), userId)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+		}
+
+		err = indexRepo.DeleteUser(r.Context(), userId)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		w.Header().Set("HX-Redirect", "/admin")
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// GetUserCreate writes an html partial template containing a form to create a new user form.
+func GetUserCreate(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	sessionManager *scs.SessionManager,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tc.RenderPartial(logger, w, r, http.StatusOK, "user-new", nil)
+	}
+}
+
+// PostUser creates a new user in the index database and bootstraps a new user database.
+func PostUser(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	dss services.DataStoreService,
+) http.HandlerFunc {
+
+	type newUserForm struct {
+		Name        string
+		Password    string
+		IsAdmin     bool
+		FieldErrors map[string]string
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		nuf := newUserForm{FieldErrors: map[string]string{}}
+		nuf.Name = r.PostForm.Get("username")
+		if nuf.Name == "" {
+			nuf.FieldErrors["name"] = "username cannot be blank"
+		}
+		nuf.Password = r.PostForm.Get("password")
+		if nuf.Password == "" {
+			nuf.FieldErrors["password"] = "password cannot be blank"
+		} else if !validator.MinChars(nuf.Password, 8) {
+			nuf.FieldErrors["password"] = "password must be atleast 8 characters"
+		} // TODO: Add function with basic complexity text for passwords
+
+		nuf.IsAdmin = r.PostForm.Get("is-admin") == "on"
+
+		if len(nuf.FieldErrors) > 0 {
+			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "user-new", nuf)
+			return
+		}
+
+		exists, err := indexRepo.NameExists(r.Context(), nuf.Name)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+		if exists {
+			nuf.FieldErrors["name"] = "username already exists"
+			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "user-new", nuf)
+			return
+		}
+
+		var userId int64
+		if nuf.IsAdmin {
+			userId, err = indexRepo.CreateAdminUser(r.Context(), nuf.Name, nuf.Password)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+		} else {
+			dbPath := fmt.Sprintf("notes/%s.db", strings.ToLower(nuf.Name))
+			userId, err = indexRepo.CreateUserAndDB(r.Context(), nuf.Name, nuf.Password, dbPath)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+
+			err = dss.CreateDB(r.Context(), userId)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+		}
+		w.Header().Add("HX-Redirect", "/admin")
+		w.WriteHeader(http.StatusSeeOther)
+	}
+}
 
 func GetAdmin(
 	tc *TemplateCache,
@@ -34,5 +206,211 @@ func GetAdmin(
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "admin.tmpl", data)
+	}
+}
+
+func PutUser(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+) http.HandlerFunc {
+
+	type td struct {
+		BaseData
+		Form userEditForm
+		User models.User
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pathUserId, err := parseIdFromPath(r)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		userEditForm, err := parseUserEditFormFromRequest(r)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		if userEditForm.Id != pathUserId {
+			tc.RenderError(logger, w, r, errors.New("form id does not match path id"))
+			return
+		}
+
+		if userEditForm.UserName == "" {
+			userEditForm.FieldErrors["username"] = "username cannot be empty"
+		} else {
+			exists, err := indexRepo.NameExists(r.Context(), userEditForm.UserName)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+			if exists {
+				userEditForm.FieldErrors["username"] = "name already exists"
+
+			}
+		}
+
+		if len(userEditForm.FieldErrors) > 0 {
+			user, err := indexRepo.GetUser(r.Context(), userEditForm.Id)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+			data := td{
+				BaseData: newBase(r),
+				Form:     userEditForm,
+				User:     user,
+			}
+
+			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "user-edit", data)
+			return
+		}
+
+		user, err := indexRepo.UpdateUser(r.Context(), userEditForm.Id, userEditForm.UserName)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "user-updated", user)
+	}
+}
+
+type changePasswordForm struct {
+	Id                int64
+	Name              string
+	Password          string
+	ConfirmedPassword string
+	FieldErrors       map[string]string
+}
+
+func PutUserPassword(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		err := r.ParseForm()
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		passChgForm := changePasswordForm{
+			Password:          r.PostForm.Get("password"),
+			ConfirmedPassword: r.PostForm.Get("confirmed-password"),
+			Name:              r.PostForm.Get("name"),
+			FieldErrors:       map[string]string{},
+		}
+
+		idStr := r.PostForm.Get("id")
+		if idStr == "" {
+			passChgForm.Id = 0
+			tc.RenderError(logger, w, r, errors.New("id missing from form"))
+			return
+		} else {
+			passChgForm.Id, err = strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				tc.RenderError(logger, w, r, err)
+				return
+			}
+		}
+
+		if passChgForm.Password == "" {
+			passChgForm.FieldErrors["error"] = "password cannot be empty"
+		} else if passChgForm.ConfirmedPassword == "" {
+			passChgForm.FieldErrors["error"] = "confirmed password cannot be empty"
+		} else if !validator.MinChars(passChgForm.Password, 8) {
+			passChgForm.FieldErrors["error"] = "password must be at lesat 8 characters"
+		} else if passChgForm.Password != passChgForm.ConfirmedPassword {
+			passChgForm.FieldErrors["error"] = "passwords do not match"
+		}
+
+		if len(passChgForm.FieldErrors) > 0 {
+			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "change-password-form", passChgForm)
+			return
+		}
+
+		err = indexRepo.UpdateUserPassword(r.Context(), passChgForm.Id, passChgForm.Password)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		w.Header().Add("HX-Redirect", "/admin")
+		w.WriteHeader(http.StatusSeeOther)
+	}
+}
+
+func GetUserEdit(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	sessionManager *scs.SessionManager,
+) http.HandlerFunc {
+
+	type td struct {
+		BaseData
+		User               models.User
+		EditUserForm       userEditForm
+		ChangePasswordForm changePasswordForm
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, err := parseIdFromPath(r)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		user, err := indexRepo.GetUser(r.Context(), userId)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+		data := td{
+			BaseData: newBase(r),
+			EditUserForm: userEditForm{
+				Id:          userId,
+				UserName:    user.Name,
+				FieldErrors: map[string]string{},
+			},
+			User: user,
+			ChangePasswordForm: changePasswordForm{
+				Id:          user.Id,
+				Name:        user.Name,
+				FieldErrors: map[string]string{},
+			},
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "user-edit", data)
+	}
+}
+func GetUser(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	indexRepo models.IndexRepository,
+	sessionManager *scs.SessionManager,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId, err := parseIdFromPath(r)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		user, err := indexRepo.GetUser(r.Context(), userId)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "replace-edit-form", user)
+
 	}
 }

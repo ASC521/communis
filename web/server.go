@@ -78,7 +78,7 @@ func RunServer(conf *config.Config) error {
 	sessionManager := scs.New()
 	sessionManager.Store = sqlitex.NewSessionStore(dataStoreSvc.GetIndexDatabase())
 
-	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf)
+	handler := routes(logger, tc, dataStoreSvc, sessionManager)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),

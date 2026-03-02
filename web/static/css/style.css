@@ -137,9 +137,16 @@ main {
     background-color: var(--color-accent);
     border-radius: 8px;
     padding-left: .5rem;
+    display: inline-block;
+    min-height: 1.5rem;
 
     &.-warn {
 	background-color: var(--color-warn);
+    }
+
+    &.-hidden {
+	border: none;
+	background-color: transparent;
     }
 }
 
@@ -260,6 +267,9 @@ main {
     &.-positive {
 	background-color: var(--color-positive);
     }
+    &.-width75 {
+	width: 75%;
+    }
 }
 
 .text-input {
@@ -267,6 +277,9 @@ main {
 
     &.-bold {
 	font-weight: bold;
+    }
+    &.-readonly {
+	background-color: var(--color-muted);
     }
 }
 
@@ -430,6 +443,10 @@ main {
 
     > .content {
 	padding: 10px;
+
+	> output {
+	    min-height: 3rem;
+	}
     }
 
     > .footer {
@@ -518,6 +535,10 @@ main {
     border-top: solid;
     border-bottom: solid;
 
+    > thead > tr > .id {
+	width: 5%;
+    }
+    
     > thead > tr > .date {
 	width: 20%;
     }
@@ -530,6 +551,24 @@ main {
     > thead > tr > .buttons {
 	width: 15%;
     }
+}
+
+.table-form {
+    display: flex;
+    flex-direction: column;
+
+    > label {
+	flex: .25;
+    }
+
+    > input {
+	flex: .75;
+	height: 2rem;
+	width: 25rem;
+	margin: .25rem;
+	padding: .25rem;
+    }
+    
 }
 
 /* LAYOUTS */
