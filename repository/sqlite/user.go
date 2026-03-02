@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
@@ -95,7 +96,7 @@ func (r *indexDBRepository) CreateAdminUser(ctx context.Context, username, passw
 	return res.LastInsertId()
 }
 
-func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, password string, dbPath string) (int64, error) {
+func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, password string) (int64, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
@@ -116,6 +117,7 @@ func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, passw
 		if err != nil {
 			return 0, err
 		}
+		dbPath := fmt.Sprintf("notes/%v.db", userId)
 		_, err = tx.ExecContext(ctx, dbStmt, userId, dbPath, 0)
 		if err != nil {
 			return 0, err

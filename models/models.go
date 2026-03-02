@@ -135,7 +135,7 @@ type IndexRepository interface {
 	UpdateDBVersion(ctx context.Context, id int64, version int) error
 	GetUserDB(ctx context.Context, userId int64) (UserDatabase, error)
 	CreateAdminUser(ctx context.Context, username, password string) (int64, error)
-	CreateUserAndDB(ctx context.Context, userName, password string, dbPath string) (int64, error)
+	CreateUserAndDB(ctx context.Context, userName, password string) (int64, error)
 	AuthenticateUser(ctx context.Context, username, password string) (User, error)
 	IsAdminUser(ctx context.Context, userId int64) (bool, error)
 	GetUser(ctx context.Context, userId int64) (User, error)
