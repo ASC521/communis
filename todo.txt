@@ -1,6 +1,7 @@
 (A) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
 (B) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (C) HTTP Cache Headers
+(C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
 (E) Bug Fix: As admin navigating outside to auth page should redict not through an error
 (F) Add form validation feedback to note create +v1 +create-note-rework
