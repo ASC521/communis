@@ -20,7 +20,7 @@ func routes(
 
 	mux := http.NewServeMux()
 
-	baseChain := handlers.Chain{handlers.RecoverPanic(logger), handlers.RequestLogger([]string{}, logger)}
+	baseChain := handlers.Chain{handlers.RecoverPanic(logger), handlers.RequestLogger([]string{}, logger), handlers.CommonHeaders, handlers.CrossOriginProtection}
 	dynamic := handlers.Chain{sessionManager.LoadAndSave, handlers.Authenticate(sessionManager, indexRepo)}
 	authReq := append(dynamic, handlers.RequireAuth)
 	adminReq := append(dynamic, handlers.RequireAdmin)
