@@ -1,3 +1,4 @@
+//go:generate go run . generate-css -dark-theme dracula -light-theme tango
 package main
 
 import (
@@ -31,9 +32,10 @@ func main() {
 		fmt.Fprint(os.Stdout, "Global Options:\n")
 		globalFlags.PrintDefaults()
 		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
-		fmt.Fprint(os.Stdout, "database    create and manage database\n")
-		fmt.Fprint(os.Stdout, "web         run web server\n")
-		fmt.Fprint(os.Stdout, "user        manage application users\n\n")
+		fmt.Fprint(os.Stdout, "database        create and manage database\n")
+		fmt.Fprint(os.Stdout, "generate-css    generate css files to support rendered markdown syntax highlighting\n")
+		fmt.Fprint(os.Stdout, "web             run web server\n")
+		fmt.Fprint(os.Stdout, "user            manage application users\n\n")
 	}
 
 	globalFlags.Parse(os.Args[1:])
@@ -56,8 +58,8 @@ func main() {
 	conf := config.DefaultConfig()
 	_, err = os.Stat(resCFP)
 	if errors.Is(err, os.ErrNotExist) {
-		slog.Info(fmt.Sprintf("config file does not exist at %s, skipping loading", resCFP), "config-location", resCFP)
-		fmt.Fprintf(os.Stdout, "config file does not exist at %s, skipping loading", resCFP)
+		slog.Info(fmt.Sprintf("config file does not exist at %s, skipping loading\n", resCFP), "config-location", resCFP)
+		fmt.Fprintf(os.Stdout, "config file does not exist at %s, skipping loading\n", resCFP)
 	} else if err != nil {
 		fmt.Fprintf(os.Stderr, "error occured finding config file: %v\n", err)
 	} else {
@@ -105,6 +107,8 @@ func main() {
 		err = WebCMD(conf, subArgs)
 	case "user":
 		err = UserCMD(conf, subArgs)
+	case "generate-css":
+		err = GenerateCssCMD(conf, subArgs)
 	default:
 		fmt.Fprintln(os.Stderr, fmt.Errorf("%s is not a valid command", cmd))
 		os.Exit(1)

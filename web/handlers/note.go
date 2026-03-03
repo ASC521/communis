@@ -49,6 +49,8 @@ func renderNote(n models.Note, theme string) (models.RenderedNote, error) {
 				style,
 				highlighting.WithFormatOptions(
 					chromahtml.WithLineNumbers(true),
+					chromahtml.WithClasses(true),
+					chromahtml.ClassPrefix("renderedmd-"),
 				),
 			),
 		),
