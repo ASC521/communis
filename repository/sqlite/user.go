@@ -21,7 +21,7 @@ func NewIndexDBRepository(db *sqlitex.SQLiteDB) *indexDBRepository {
 }
 
 func (r *indexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) ([]models.UserDatabase, error) {
-	sql := `SELECT user_databases.id, user_databases.db_path, user_databases.db_version
+	sql := `SELECT user_databases.id, user_databases.user_id, user_databases.db_path, user_databases.db_version
 		FROM user_databases
 		INNER JOIN users ON user_databases.user_id = users.id
 		WHERE db_version < ? AND users.is_admin = 0;`
@@ -36,7 +36,7 @@ func (r *indexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) 
 	userDBs := []models.UserDatabase{}
 	for rows.Next() {
 		userDB := models.UserDatabase{}
-		err = rows.Scan(&userDB.UserId, &userDB.Path, &userDB.Version)
+		err = rows.Scan(&userDB.Id, &userDB.UserId, &userDB.Path, &userDB.Version)
 		if err != nil {
 			return nil, err
 		}

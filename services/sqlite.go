@@ -325,8 +325,7 @@ func (s *SQLiteDataStoreService) run() {
 					err = userStore.UpdateDBVersion(msg.ctx, userDB.UserId, ver)
 					if err != nil {
 						msg.result <- err
-					} else {
-						msg.result <- error(nil)
+						break
 					}
 				}
 				msg.result <- error(nil)

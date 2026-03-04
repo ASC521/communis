@@ -1,4 +1,5 @@
 (A) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
+(B) Tech Debt: Remove actor pattern from data store service sqlite implementation - revert back to mutex cache
 (B) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (C) HTTP Cache Headers
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
