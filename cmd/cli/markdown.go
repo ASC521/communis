@@ -64,7 +64,7 @@ func GenerateCssCMD(conf *config.Config, args []string) error {
 	writeCss := func(s *chroma.Style, darkLight string) error {
 		var buf bytes.Buffer
 		formatter := chromahtml.New(chromahtml.WithClasses(true), chromahtml.ClassPrefix("renderedmd-"))
-		if err := formatter.WriteCSS(&buf, darkStyle); err != nil {
+		if err := formatter.WriteCSS(&buf, s); err != nil {
 			return fmt.Errorf("failed to generate css theme %s: %v\n", s.Name, err)
 		}
 
