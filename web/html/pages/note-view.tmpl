@@ -1,9 +1,9 @@
-{{define "title"}} {{ .RenderedNote.Title }} {{ end }}
+{{define "title"}} {{ .RenderedNote.Note.Title }} {{ end }}
 
 
 {{ define "main" }}
 
-<main>
+<main class="note-view-page">
   {{ template "rendered-note" .RenderedNote }}
 </div>
 {{ end }}

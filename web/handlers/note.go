@@ -19,22 +19,25 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
+	"github.com/yuin/goldmark/extension"
 )
 
 type noteForm struct {
-	Id        int64
-	Title     string
-	Content   string
-	TagIds    []int64
-	SectionId int64
-	Errors    map[string]string
+	Id                  int64
+	Title               string
+	Content             string
+	TagIds              []int64
+	SectionId           int64
+	ReferenceNoteIds    []int64
+	ReferencedByNoteIds []int64
+	Errors              map[string]string
 }
 
 type searchForm struct {
 	Query string
 }
 
-func renderNote(n models.Note, theme string) (models.RenderedNote, error) {
+func renderNote(markdownContent, theme string) (template.HTML, error) {
 
 	var style highlighting.Option
 	if theme == "dark" {
@@ -53,25 +56,16 @@ func renderNote(n models.Note, theme string) (models.RenderedNote, error) {
 					chromahtml.ClassPrefix("renderedmd-"),
 				),
 			),
+			extension.NewTable(),
 		),
 	)
 	b := new(bytes.Buffer)
 
-	err := md.Convert([]byte(n.Content), b)
+	err := md.Convert([]byte(markdownContent), b)
 	if err != nil {
-		return models.RenderedNote{}, err
+		return "", err
 	}
-
-	rn := models.RenderedNote{
-		Id:            n.Id,
-		Title:         n.Title,
-		Section:       n.Section,
-		HTMLContent:   template.HTML(b.String()),
-		Tags:          n.Tags,
-		CreatedAt:     n.CreatedAt,
-		LastUpdatedAt: n.LastUpdatedAt,
-	}
-	return rn, nil
+	return template.HTML(b.String()), nil
 }
 
 func parseNoteForm(r *http.Request) (noteForm, error) {
@@ -115,6 +109,28 @@ func parseNoteForm(r *http.Request) (noteForm, error) {
 		}
 		nf.SectionId = sid
 	}
+
+	refNotesF := r.PostForm["reference-notes"]
+	refNoteIds := make([]int64, len(refNotesF))
+	for i, rni := range refNotesF {
+		rid, err := strconv.ParseInt(rni, 10, 64)
+		if err != nil {
+			return noteForm{}, err
+		}
+		refNoteIds[i] = rid
+	}
+	nf.ReferenceNoteIds = refNoteIds
+
+	refByNotesF := r.PostForm["referenced-by-notes"]
+	refByNoteIds := make([]int64, len(refByNotesF))
+	for i, rbi := range refByNotesF {
+		rbid, err := strconv.ParseInt(rbi, 10, 64)
+		if err != nil {
+			return noteForm{}, err
+		}
+		refByNoteIds[i] = rbid
+	}
+	nf.ReferencedByNoteIds = refByNoteIds
 
 	return nf, nil
 }
@@ -206,10 +222,12 @@ func parseNoteFromNoteForm(nf noteForm) models.Note {
 
 type noteCreateData struct {
 	BaseData
-	Form         noteForm
-	Tags         []models.Tag
-	Sections     []models.Section
-	RenderedNote models.RenderedNote
+	Form                   noteForm
+	Tags                   []models.Tag
+	Sections               []models.Section
+	RenderedNote           renderedNotePageData
+	SelectedReferenceNotes []models.NoteDetail
+	ReferencedByNotes      []models.NoteDetail
 }
 
 func NoteNewGet(
@@ -240,11 +258,12 @@ func NoteNewGet(
 		}
 
 		data := noteCreateData{
-			BaseData:     newBase(r),
-			Form:         noteForm{SectionId: 1},
-			Tags:         tags,
-			Sections:     sec,
-			RenderedNote: models.RenderedNote{IsPreview: true},
+			BaseData:               newBase(r),
+			Form:                   noteForm{SectionId: 1},
+			Tags:                   tags,
+			Sections:               sec,
+			RenderedNote:           renderedNotePageData{IsPreview: true},
+			SelectedReferenceNotes: []models.NoteDetail{},
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
 	}
@@ -302,8 +321,14 @@ func NotePost(
 			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", data)
 			return
 		}
-		n := parseNoteFromNoteForm(nf)
-		id, err := notesRepo.CreateNote(r.Context(), n)
+		id, err := notesRepo.CreateNote(
+			r.Context(),
+			nf.Title,
+			nf.Content,
+			nf.SectionId,
+			nf.TagIds,
+			nf.ReferenceNoteIds,
+		)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -372,11 +397,13 @@ func NoteEditGet(
 		}
 
 		data := noteCreateData{
-			BaseData:     newBase(r),
-			RenderedNote: models.RenderedNote{IsPreview: true},
-			Sections:     sec,
-			Tags:         tags,
-			Form:         nf,
+			BaseData:               newBase(r),
+			RenderedNote:           renderedNotePageData{IsPreview: true},
+			Sections:               sec,
+			Tags:                   tags,
+			Form:                   nf,
+			SelectedReferenceNotes: n.ReferenceNotes,
+			ReferencedByNotes:      n.ReferenceByNotes,
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
 	}
@@ -440,8 +467,15 @@ func NotePut(
 
 		}
 
-		n := parseNoteFromNoteForm(nf)
-		err = notesRepo.UpdateNote(r.Context(), n)
+		err = notesRepo.UpdateNote(
+			r.Context(),
+			nf.Id,
+			nf.Title,
+			nf.Content,
+			nf.SectionId,
+			nf.TagIds,
+			nf.ReferenceNoteIds,
+		)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -451,6 +485,12 @@ func NotePut(
 		w.Header().Set("HX-Redirect", ru)
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+type renderedNotePageData struct {
+	Note         models.Note
+	RenderedHTML template.HTML
+	IsPreview    bool
 }
 
 func NotePreviewPost(
@@ -465,21 +505,42 @@ func NotePreviewPost(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		n := parseNoteFromNoteForm(nf)
-
 		notesRepo, err := GetNotesRepo(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-
-		for i, tag := range n.Tags {
-			et, err := notesRepo.FindTagById(r.Context(), tag.Id)
+		ts := make([]models.Tag, len(nf.TagIds))
+		for i, tid := range nf.TagIds {
+			et, err := notesRepo.FindTagById(r.Context(), tid)
 			if err != nil {
-				slog.Error(fmt.Sprintf("failed to enrich tag %v from database", tag.Id), "errMsg", err.Error())
+				slog.Error(fmt.Sprintf("failed to enrich tag %v from database", tid), "errMsg", err.Error())
 				continue
 			}
-			n.Tags[i].Name = et.Name
+
+			ts[i] = et
+		}
+
+		refNotes, err := notesRepo.GetNoteDetailByIds(r.Context(), nf.ReferenceNoteIds)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		refByNotes, err := notesRepo.GetNoteDetailByIds(r.Context(), nf.ReferencedByNoteIds)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		n := models.Note{
+			Id:               nf.Id,
+			Title:            nf.Title,
+			Content:          nf.Content,
+			Section:          models.Section{Id: nf.SectionId},
+			ReferenceNotes:   refNotes,
+			ReferenceByNotes: refByNotes,
+			Tags:             ts,
 		}
 
 		sec, err := notesRepo.FindSectionById(r.Context(), n.Section.Id)
@@ -495,14 +556,13 @@ func NotePreviewPost(
 			return
 		}
 
-		rn, err := renderNote(n, userTheme)
+		rHTML, err := renderNote(n.Content, userTheme)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		rn.IsPreview = true
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note", rn)
+		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note", renderedNotePageData{Note: n, RenderedHTML: rHTML, IsPreview: true})
 	}
 
 }
@@ -516,7 +576,7 @@ func NoteViewGet(
 
 	type td struct {
 		BaseData
-		RenderedNote models.RenderedNote
+		RenderedNote renderedNotePageData
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -555,16 +615,19 @@ func NoteViewGet(
 			tc.RenderError(logger, w, r, errors.New("user theme not set in request"))
 			return
 		}
-		rn, err := renderNote(n, userTheme)
+		rHTML, err := renderNote(n.Content, userTheme)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		rn.IsPreview = false
 
 		data := td{
-			BaseData:     newBase(r),
-			RenderedNote: rn,
+			BaseData: newBase(r),
+			RenderedNote: renderedNotePageData{
+				Note:         n,
+				RenderedHTML: rHTML,
+				IsPreview:    false,
+			},
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", data)
@@ -610,12 +673,14 @@ func NoteSearchGet(
 			data.Form = searchForm{Query: ""}
 		}
 
-		name := r.Header.Get("Hx-Source")
-		if name == "input#search" {
+		switch r.Header.Get("Hx-Source") {
+		case "input#search":
 			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table", data.SearchResults)
-			return
+		case "input#ref-notes-search":
+			tc.RenderPartial(logger, w, r, http.StatusOK, "ref-notes-search-results", data.SearchResults)
+		default:
+			tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", data)
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", data)
 
 	}
 }
@@ -645,5 +710,41 @@ func NoteDelete(
 		}
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+}
+
+func ReferenceNoteSelectPost(
+	tc *TemplateCache,
+	logger *slog.Logger,
+) http.HandlerFunc {
+	type td struct {
+		Title string
+		Id    int64
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := parseIdFromPath(r)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		err = r.ParseForm()
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+		title := r.PostForm.Get("title")
+		if title == "" {
+			tc.RenderError(logger, w, r, errors.New("hx-vals title is an empty string"))
+			return
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "selected-ref-note", td{Id: id, Title: title})
+	}
+}
+
+func ReferenceNoteSelectDelete() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
 	}
 }

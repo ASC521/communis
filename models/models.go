@@ -3,7 +3,6 @@ package models
 import (
 	"context"
 	"errors"
-	"html/template"
 	"time"
 )
 
@@ -39,31 +38,20 @@ type PaginatedSections struct {
 }
 
 type Note struct {
-	Id            int64
-	Title         string
-	Content       string
-	Section       Section
-	Tags          []Tag
-	CreatedAt     time.Time
-	LastUpdatedAt time.Time
-}
-
-type RenderedNote struct {
-	Id            int64
-	Title         string
-	Section       Section
-	HTMLContent   template.HTML
-	Tags          []Tag
-	IsPreview     bool
-	CreatedAt     time.Time
-	LastUpdatedAt time.Time
+	Id               int64
+	Title            string
+	Content          string
+	Section          Section
+	Tags             []Tag
+	CreatedAt        time.Time
+	LastUpdatedAt    time.Time
+	ReferenceNotes   []NoteDetail
+	ReferenceByNotes []NoteDetail
 }
 
 type NoteDetail struct {
-	Id            int64
-	Title         string
-	CreatedAt     time.Time
-	LastUpdatedAt time.Time
+	Id    int64  `json:"id"`
+	Title string `json:"title"`
 }
 
 type PaginatedNotes struct {
@@ -102,16 +90,17 @@ type NotesRepository interface {
 	ListAllSections(ctx context.Context) ([]Section, error)
 
 	// Note Methods
-	CreateNote(ctx context.Context, n Note) (int64, error)
+	CreateNote(ctx context.Context, title, content string, sectionId int64, tagIds, referenceNoteIds []int64) (int64, error)
 	NoteExists(ctx context.Context, title string) (int64, error)
 	FindNoteById(ctx context.Context, id int64) (Note, error)
-	UpdateNote(ctx context.Context, n Note) error
+	UpdateNote(ctx context.Context, id int64, title, content string, sectionId int64, tagIds, referenceNoteIds []int64) error
 	DeleteNote(ctx context.Context, id int64) error
 	ListNotes(ctx context.Context, limit, offset int) (PaginatedNotes, error)
 	SearchNotes(ctx context.Context, query string) ([]NoteSearchResult, error)
 	RecentlyUpdatedNotes(ctx context.Context, limit int) ([]NoteDetail, error)
 	NotesInSection(ctx context.Context, sectionId int64) ([]NoteDetail, error)
 	NotesWithTag(ctx context.Context, tagId int64) ([]NoteDetail, error)
+	GetNoteDetailByIds(ctx context.Context, ids []int64) ([]NoteDetail, error)
 }
 
 type User struct {

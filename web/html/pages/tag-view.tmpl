@@ -21,7 +21,7 @@
       </button>
     </div>
   </div>
-  <hr>
+  <hr class="hr-column">
     <ul class="list-of-links">
     {{ range .NoteDetails }}
     <li><a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a></li>

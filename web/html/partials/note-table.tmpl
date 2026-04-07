@@ -4,7 +4,7 @@
 <article class="search-result">
   <header>
     <h2>
-      <a href="/note/{{.Id}}/{{ slugify .Title }}" hx-boost="true">{{ safeHTML .TitleHighlight }}</a>
+      <a href="/note/{{.Id}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
     </h2>
   </header>
   {{ safeHTML .ContentSnippet }}
@@ -14,4 +14,38 @@
 </article>
 
 {{ end }}
+{{ end }}
+
+
+{{ define "ref-notes-search-results" }}
+{{ if not . }}
+<ul id="search-results" class="search-dropdown" role="listbox"></ul>
+{{ else }}
+<ul id="search-results" class="search-dropdown" role="listbox">
+  {{ range . }}
+  <li
+    class="result"
+    type="button"
+    id="ref-note-btn"
+    role="option"
+    hx-post="/ref-notes/select/{{ .Id }}"
+    hx-vals='{"title": "{{ .Title }}"}'
+    hx-target="#selected-notes"
+    hx-swap="append">
+    <span>{{ .Title }}</span>
+  </li>
+  {{ end }}
+</ul>
+{{ end }}
+{{ end }}
+
+
+{{ define "selected-ref-note" }}
+<li for="ref-note-{{ .Id }}" class="item">
+  <input type="text" value="{{ .Title }}" class="text-input -readonly text" readonly>
+  <input type="hidden" name="reference-notes" value="{{ .Id }}">
+  <button hx-delete="/ref-notes/select/{{ .Id }}" hx-target="closest li" hx-swap="outerHTML" arial-label="Remove {{ .Title }}">X</button>
+</li>
+
+<ul id="search-results" class="search-dropdown" role="listbox" hx-swap-oob="true"></ul>
 {{ end }}

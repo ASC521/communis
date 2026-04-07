@@ -136,7 +136,7 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 			return fmt.Errorf("notes-db-name is required.")
 		}
 
-		dbPath = filepath.Join(conf.SQLite.DBDirectory, *notesDBName)
+		dbPath = filepath.Join(conf.SQLite.DBDirectory, "notes", *notesDBName)
 		migrationsDir = conf.SQLite.NotesDBMigrations
 	default:
 		return fmt.Errorf("database type %s is not valid.  Valid options index or notes", *dbType)

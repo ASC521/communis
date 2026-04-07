@@ -7,12 +7,17 @@
 (E) Bug Fix: As admin navigating outside to auth page should redict not through an error
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (F) PostUser should be happening within a transaction
+DB Connection Cache should renew expiry time each auth check
+Replace structured logging with human readable logging
 Add advanced query support to search screen +v1
+Bug Fix: Security is blocking external images being loaded in markdown
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
+Feature: MarkDown table support
 Edit note screen - delete button should use native dialog +v1
 Error Screens +v1
 Fix note preview page -  buttons don't line up
+Remove navbar dropdown and replace with light/dark icon and logout link
 Have admin specfic navbar
 New note screen delete button should be disabled +v1
 Refactor organization of html templates to better fit htmx

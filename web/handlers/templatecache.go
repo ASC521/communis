@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -35,9 +36,10 @@ type TemplateCache struct {
 func NewTemplateCache(files fs.FS, debug bool) (*TemplateCache, error) {
 
 	funcMap := template.FuncMap{
-		"slugify":     slugify,
-		"safeHTML":    safeHTML,
-		"containsInt": slices.Contains[[]int64],
+		"slugify":      slugify,
+		"safeHTML":     safeHTML,
+		"containsInt":  slices.Contains[[]int64],
+		"jsonMarshall": json.Marshal,
 	}
 
 	partialsTemplate, err := template.New("partials").Funcs(funcMap).ParseFS(files, "html/partials/*.tmpl")

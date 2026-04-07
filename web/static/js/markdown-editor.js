@@ -67,18 +67,6 @@ function mdeAddHistoryEntry(mde) {
     }
 }
 
-function mdeAdjustTextareaHeight() {
-    const start = mdEditor.textarea.selectionStart;
-    const end = mdEditor.textarea.selectionEnd;
-    const scrollY = window.scrollY || window.pageYOffset;
-
-    mdEditor.textarea.style.height = 'auto';
-    mdEditor.textarea.style.height = mdEditor.textarea.scrollHeight + 'px';
-
-    mdEditor.textarea.setSelectionRange(start, end);
-    window.scrollTo(0, scrollY);
-}
-
 function mdeAddUndoRedoEntry(event) {
     if (mdEditor.isUndoRedo) {
 	return
@@ -91,10 +79,7 @@ function mdeAddUndoRedoEntry(event) {
 }
 
 function mdeHandleOnInput(event) {
-
     mdeAddUndoRedoEntry(event);
-    mdeAdjustTextareaHeight();
-
 }
 
 function mdeHandleKeyDown(event) {
@@ -413,7 +398,7 @@ document.addEventListener("DOMContentLoaded", (e) => {
 
     if (mdEditor === null) {
 	mdEditor = new MDEditor(ta, container);
-	mdeAdjustTextareaHeight();
+	// mdeAdjustTextareaHeight();
 	mdEditor.textarea.addEventListener("input", mdeHandleOnInput);
 	mdEditor.textarea.addEventListener("keydown", mdeHandleKeyDown);
 	mdEditor.container.addEventListener("click", mdeHandleClick);

@@ -2,11 +2,11 @@
 
 <div class="rendered-note">
   <div class="title-row">
-    <h1> {{ .Title }}</h1>
+    <h1> {{ .Note.Title }}</h1>
 
     <div class="buttons">
       {{ if .IsPreview }}
-      <button type="button" hx-target="body" hx-delete="/note/{{ .Id }}/{{ slugify .Title }}"  hx-confirm="Delete {{ .Title }}?" class="svg-button">
+      <button type="button" hx-target="body" hx-delete="/note/{{ .Note.Id }}/{{ slugify .Note.Title }}"  hx-confirm="Delete {{ .Note.Title }}?" class="svg-button">
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	</svg>
@@ -22,7 +22,7 @@
 	</svg>
       </button>
       {{ else }}
-      <a class="svg-button" href="/edit/{{ .Id }}/{{ slugify .Title }}">
+      <a class="svg-button" href="/edit/{{ .Note.Id }}/{{ slugify .Note.Title }}">
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line"/>
 	</svg>
@@ -35,24 +35,38 @@
     <summary>Details</summary>
     <dl class="details -compact">
       <dt><strong>Section:</strong></dt>
-      <dd><a href="/section/{{ .Section.Id }}/{{ .Section.Name }}">{{ .Section.Name }}</a></dd>
+      <dd><a href="/section/{{ .Note.Section.Id }}/{{ .Note.Section.Name }}">{{ .Note.Section.Name }}</a></dd>
 
       <dt><strong>Tags:</strong></dt>
       <dd>
-	{{ range .Tags }}
+	{{ range .Note.Tags }}
 	<a href="/tag/{{ .Id }}/{{ .Name }}">{{ .Name }}</a>
 	{{ end }}
       </dd>
 
+      <dt><strong>References:</strong></dt>
+      <dd>
+	{{ range .Note.ReferenceNotes }}
+	<a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
+	{{ end }}
+      </dd>
+
+      <dt><strong>Referenced By:</strong></dt>
+      <dd>
+	{{ range .Note.ReferenceByNotes }}
+	<a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
+	{{ end }}
+      </dd>
+
       <dt><strong>Last Updated:</strong></dt>
-      <dd><time class="local-time" datetime="{{ .LastUpdatedAt }}"></time></dd>
+      <dd><time class="local-time" datetime="{{ .Note.LastUpdatedAt }}"></time></dd>
 
       <dt><strong>Created:</strong></dt>
-      <dd><time class="local-time" datetime="{{ .CreatedAt }}"></time></dd>
+      <dd><time class="local-time" datetime="{{ .Note.CreatedAt }}"></time></dd>
     </dl>
   </details>
   <section class="rendered-markdown">
-  {{ .HTMLContent }}
+  {{ .RenderedHTML }}
   </section>
 </div>
 

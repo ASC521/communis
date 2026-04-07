@@ -125,3 +125,44 @@ document.addEventListener("click", (e) => {
 });
 
 // DELETE CONTAINING TABLE ROW
+
+// SELECT REFERENCE NOTES
+
+document.addEventListener("click", (e) => {
+    if (e.target.id === "ref-note-btn") {
+	selectedNotes = document.querySelector('#selected-notes');
+	if (selectedNotes === null) {
+	    console.log("failed to find selected notes field set");
+	    return
+	}
+
+	input = document.createElement("input");
+	input.type = "checkbox";
+	input.name = "ref-notes";
+	input.id = "ref-note-" + e.target.dataset.noteId;
+	input.checked = true;
+
+	label = document.createElement("label");
+	label.innerHTML = e.target.dataset.noteTitle;
+	
+	selectedNotes.append(input, label);
+    }
+
+    if (e.currentTarget.activeElement.id == "sidebar-toggle") {
+	sidebar = document.querySelector('#' + e.currentTarget.activeElement.dataset.sidebarId);
+	if (sidebar === null) {
+	    console.log("sidebar not found");
+	    return
+	}
+
+	if (sidebar.classList.contains('-closed')) {
+	    sidebar.classList.remove('-closed');
+	    e.currentTarget.activeElement.classList.add('-active');	    
+	} else {
+	    sidebar.classList.add('-closed');
+	    e.currentTarget.activeElement.classList.remove('-active');	    
+	}	
+    }
+});
+
+// SELECT REFERENCE NOTES

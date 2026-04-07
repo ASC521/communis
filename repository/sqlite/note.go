@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
@@ -26,21 +27,10 @@ func parseNoteDetailsFromRows(rows *sql.Rows) ([]models.NoteDetail, error) {
 	nds := []models.NoteDetail{}
 	for rows.Next() {
 		nd := models.NoteDetail{}
-		var createdStr, updatedStr string
-		err := rows.Scan(&nd.Id, &nd.Title, &createdStr, &updatedStr)
+		err := rows.Scan(&nd.Id, &nd.Title)
 		if err != nil {
 			return nil, err
 		}
-		created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
-		if err != nil {
-			return nil, err
-		}
-		nd.CreatedAt = created
-		updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
-		if err != nil {
-			return nil, err
-		}
-		nd.LastUpdatedAt = updated
 		nds = append(nds, nd)
 	}
 
@@ -50,9 +40,16 @@ func parseNoteDetailsFromRows(rows *sql.Rows) ([]models.NoteDetail, error) {
 	return nds, nil
 }
 
-func (r *NotesRepository) CreateNote(ctx context.Context, n models.Note) (int64, error) {
+func (r *NotesRepository) CreateNote(
+	ctx context.Context,
+	title string,
+	content string,
+	sectionId int64,
+	tagIds []int64,
+	referenceNoteIds []int64,
+) (int64, error) {
 	return sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int64, error) {
-		res, err := tx.Exec("INSERT INTO notes (title, content, section) VALUES (?, ?, ?);", n.Title, n.Content, n.Section.Id)
+		res, err := tx.Exec("INSERT INTO notes (title, content, section) VALUES (?, ?, ?);", title, content, sectionId)
 		if err != nil {
 			return 0, fmt.Errorf("failed to insert new note: %w", err)
 		}
@@ -65,10 +62,40 @@ func (r *NotesRepository) CreateNote(ctx context.Context, n models.Note) (int64,
 			return 0, fmt.Errorf("id of created note not returned")
 		}
 
-		for _, t := range n.Tags {
-			_, err = tx.Exec("INSERT INTO notes_tags (note_id, tag_id) VALUES (?, ?);", nid, t.Id)
+		tagLen := len(tagIds)
+		if tagLen > 0 {
+			tgstmt := "INSERT INTO notes_tags (note_id, tag_id) VALUES"
+			tgArgs := []any{}
+			for i, t := range tagIds {
+				if i != len(tagIds)-1 {
+					tgstmt += " (?, ?),"
+				} else {
+					tgstmt += " (?, ?);"
+				}
+				tgArgs = append(tgArgs, nid, t)
+			}
+			_, err = tx.Exec(tgstmt, tgArgs...)
 			if err != nil {
-				return 0, fmt.Errorf("failed to insert note tag mapping for note %v tag %v: %w", nid, t.Id, err)
+				return 0, fmt.Errorf("failed to insert tags associated with note %v: %v", nid, err)
+			}
+		}
+
+		refNoteLen := len(referenceNoteIds)
+		if refNoteLen > 0 {
+			rnstmt := "INSERT INTO reference_notes (note_id, ref_note_id) VALUES "
+			rnargs := []any{}
+			for i, rnid := range referenceNoteIds {
+				if i != len(referenceNoteIds)-1 {
+					rnstmt += " (?, ?),"
+				} else {
+					rnstmt += " (?, ?);"
+				}
+				rnargs = append(rnargs, nid, rnid)
+			}
+
+			_, err = tx.Exec(rnstmt, rnargs...)
+			if err != nil {
+				return 0, fmt.Errorf("failed to insert reference notes for note_id %v: %v", nid, err)
 			}
 		}
 
@@ -98,15 +125,16 @@ func (r *NotesRepository) NoteExists(ctx context.Context, title string) (int64, 
 
 func (r *NotesRepository) FindNoteById(ctx context.Context, id int64) (models.Note, error) {
 	q := `
-     SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags_json
+     SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags_json, reference_notes_json, reference_by_notes_json
      FROM notes_details
      WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	var n models.Note
-	var tagJSON, createdStr, updatedStr string
-	err := r.db.Read.QueryRowContext(ctxWTO, q, id).Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON)
+	var tagJSON, createdStr, updatedStr, refNotesJSON, refByNotesJSON string
+	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
+	err := row.Scan(&n.Id, &n.Section.Id, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON, &refNotesJSON, &refByNotesJSON)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.Note{}, err
@@ -131,37 +159,124 @@ func (r *NotesRepository) FindNoteById(ctx context.Context, id int64) (models.No
 	}
 	n.LastUpdatedAt = updated
 
+	err = json.Unmarshal([]byte(refNotesJSON), &n.ReferenceNotes)
+	if err != nil {
+		return models.Note{}, fmt.Errorf("failed to parse reference notes: %w", err)
+	}
+	err = json.Unmarshal([]byte(refByNotesJSON), &n.ReferenceByNotes)
+	if err != nil {
+		return models.Note{}, fmt.Errorf("failed to parse reference by notes: %w", err)
+	}
+
 	return n, nil
 }
 
-func (r *NotesRepository) UpdateNote(ctx context.Context, n models.Note) error {
+func (r *NotesRepository) GetNoteDetailByIds(ctx context.Context, ids []int64) ([]models.NoteDetail, error) {
+
+	args := make([]any, len(ids))
+	placeholders := make([]string, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	placeholderStr := strings.Join(placeholders, ", ")
+
+	q := fmt.Sprintf(`SELECT id, title FROM notes WHERE id IN (%s);`, placeholderStr)
+	rows, err := r.db.Read.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	noteDetails := []models.NoteDetail{}
+	for rows.Next() {
+		nd := models.NoteDetail{}
+		err := rows.Scan(&nd.Id, &nd.Title)
+		if err != nil {
+			return nil, err
+		}
+		noteDetails = append(noteDetails, nd)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return noteDetails, nil
+
+}
+
+func (r *NotesRepository) UpdateNote(
+	ctx context.Context,
+	id int64,
+	title string,
+	content string,
+	sectionId int64,
+	tagIds []int64,
+	referenceNoteIds []int64,
+) error {
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
-		_, err := tx.Exec(delNoteFTSSql, n.Id)
+		_, err := tx.Exec(delNoteFTSSql, id)
 		if err != nil {
 			return -1, err
 		}
 
 		s := `UPDATE notes SET title = ?, content = ?, section = ?, last_updated_at_utc = datetime('now') WHERE id = ?`
-		_, err = tx.Exec(s, n.Title, n.Content, n.Section.Id, n.Id)
+		_, err = tx.Exec(s, title, content, sectionId, id)
 		if err != nil {
-			return -1, fmt.Errorf("failed to update note %v: %w", n.Id, err)
+			return -1, fmt.Errorf("failed to update note %v: %w", id, err)
 		}
 
 		ds := `DELETE FROM notes_tags WHERE note_id = ?;`
-		_, err = tx.Exec(ds, n.Id)
+		_, err = tx.Exec(ds, id)
 		if err != nil {
 			return -1, fmt.Errorf("failed to remove tags associated with note: %w", err)
 		}
-		ts := `INSERT INTO notes_tags (note_id, tag_id) VALUES (?, ?);`
-		for _, tag := range n.Tags {
-			_, err := tx.Exec(ts, n.Id, tag.Id)
+
+		tagsLen := len(tagIds)
+		if tagsLen > 0 {
+			tgstmt := "INSERT INTO notes_tags (note_id, tag_id) VALUES"
+			tgArgs := []any{}
+			for i, t := range tagIds {
+				if i != tagsLen-1 {
+					tgstmt += " (?, ?),"
+				} else {
+					tgstmt += " (?, ?);"
+				}
+				tgArgs = append(tgArgs, id, t)
+			}
+			_, err = tx.Exec(tgstmt, tgArgs...)
 			if err != nil {
-				return -1, fmt.Errorf("failed to insert note %v tag %v: %w", n.Id, tag.Id, err)
+				return 0, fmt.Errorf("failed to insert tags associated with note %v: %v", id, err)
 			}
 		}
 
-		_, err = tx.Exec(insNoteFTSSql, n.Id)
+		drn := `DELETE FROM reference_notes WHERE note_id =?;`
+		_, err = tx.Exec(drn, id)
+		if err != nil {
+			return -1, fmt.Errorf("failed to remove reference notes associated with note %v: %v", id, err)
+		}
+
+		refNoteLen := len(referenceNoteIds)
+		if refNoteLen > 0 {
+			rnstmt := "INSERT INTO reference_notes (note_id, ref_note_id) VALUES "
+			rnargs := []any{}
+			for i, rnid := range referenceNoteIds {
+				if i != refNoteLen-1 {
+					rnstmt += " (?, ?),"
+				} else {
+					rnstmt += " (?, ?);"
+				}
+				rnargs = append(rnargs, id, rnid)
+			}
+
+			_, err = tx.Exec(rnstmt, rnargs...)
+			if err != nil {
+				return 0, fmt.Errorf("failed to insert reference notes for note_id %v: %v", id, err)
+			}
+		}
+
+		_, err = tx.Exec(insNoteFTSSql, id)
 		if err != nil {
 			return -1, err
 		}
@@ -205,7 +320,7 @@ func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (mod
 	}
 
 	query := `
-	SELECT n.id,  n.title, n.created_at_utc, n.last_updated_at_utc
+	SELECT n.id,  n.title
 	FROM notes AS n
 	ORDER BY n.id ASC LIMIT ? OFFSET ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
@@ -225,18 +340,6 @@ func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (mod
 		if err != nil {
 			return models.PaginatedNotes{}, fmt.Errorf("failed to scan rows for note: %w", err)
 		}
-
-		created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
-		if err != nil {
-			return models.PaginatedNotes{}, fmt.Errorf("failed to parse created at time: %w", err)
-		}
-		n.CreatedAt = created
-
-		updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
-		if err != nil {
-			return models.PaginatedNotes{}, fmt.Errorf("failed to parse updated at time: %w", err)
-		}
-		n.LastUpdatedAt = updated
 
 		ns = append(ns, n)
 	}
@@ -265,7 +368,7 @@ func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (mod
 
 func (r *NotesRepository) SearchNotes(ctx context.Context, q string) ([]models.NoteSearchResult, error) {
 
-	sql := `SELECT
+	sql := `SELECT DISTINCT
 		  nd.id,
 		  nd.title,
 		  highlight(notes_details_fts, 0, '<mark>', '</mark>') as title_highlight,
@@ -305,7 +408,7 @@ func (r *NotesRepository) SearchNotes(ctx context.Context, q string) ([]models.N
 
 func (r *NotesRepository) RecentlyUpdatedNotes(ctx context.Context, limit int) ([]models.NoteDetail, error) {
 
-	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
+	sql := `SELECT n.id, n.title
 		FROM notes as n
 		ORDER BY last_updated_at_utc DESC
 		LIMIT ?;`
@@ -322,7 +425,7 @@ func (r *NotesRepository) RecentlyUpdatedNotes(ctx context.Context, limit int) (
 }
 
 func (r *NotesRepository) NotesInSection(ctx context.Context, secId int64) ([]models.NoteDetail, error) {
-	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
+	sql := `SELECT n.id, n.title
 		FROM notes as n
 		WHERE n.section = ?
 		ORDER BY title ASC`
@@ -340,7 +443,7 @@ func (r *NotesRepository) NotesInSection(ctx context.Context, secId int64) ([]mo
 }
 
 func (r *NotesRepository) NotesWithTag(ctx context.Context, tagId int64) ([]models.NoteDetail, error) {
-	sql := `SELECT n.id, n.title, n.created_at_utc, n.last_updated_at_utc
+	sql := `SELECT n.id, n.title
 		FROM notes as n
 		INNER JOIN notes_tags as nt
 		ON n.id = nt.note_id
