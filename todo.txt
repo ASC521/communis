@@ -1,6 +1,5 @@
-(A) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
-(B) Tech Debt: Remove actor pattern from data store service sqlite implementation - revert back to mutex cache
 (B) Feature: MarkDown editor add toolbar button to create a link to another note with app
+(B) Tech Debt: Remove actor pattern from data store service sqlite implementation - revert back to mutex cache
 (C) HTTP Cache Headers
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
@@ -10,12 +9,17 @@
 Add advanced query support to search screen +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
+Bug Fix: Security is blocking external images being loaded in markdown
+DB Connection Cache should renew expiry time each auth check
 Edit note screen - delete button should use native dialog +v1
 Error Screens +v1
+Feature: MarkDown table support
 Fix note preview page -  buttons don't line up
 Have admin specfic navbar
 New note screen delete button should be disabled +v1
 Refactor organization of html templates to better fit htmx
+Remove navbar dropdown and replace with light/dark icon and logout link
+Replace structured logging with human readable logging
 Search results should contain rendered html from markdown not raw markdown
 Unit tests on note form parsing and validation +v1
 Unsaved changes will be lost warning on navigating away from page +v1
@@ -33,6 +37,7 @@ x (A) Build tag index +v1
 x (A) Change password needs to be implemented
 x (A) Common response headers middleware
 x (A) Debug mode which prints server error on screen
+x (A) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
 x (A) Feature: toast message - App throws error on receiving invalid credentials when logging in
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Fix note preview page - section and tag names have to be pulled from DB

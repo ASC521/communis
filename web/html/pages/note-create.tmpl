@@ -3,143 +3,186 @@
 {{define "main"}}
 
 <main id="mde-container">
-{{ if eq .Form.Id 0 }}
-<form id="note-editor" class="note-editor" action="/note" method="POST" autocomplete="off">
-  {{ else }}
-  <form id="note-editor" class="note-editor" hx-put="/note/{{ .Form.Id }}/{{ slugify .Form.Title}}" autocomplete="off">
-    {{ end }}
-    <div class="titlebar">
-      <select list="section-list" id="section" name="section" class="select-dropdown">
-	<option value="-1">Section</option>
-	{{ range .Sections }}
-	{{ if eq .Id $.Form.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
-	{{ else }}<option value="{{ .Id }}">{{ .Name }}</option>
-	{{ end }}
-	{{ end }}
-      </select>
-      <input type="text" class="text-input -bold" id="title" name="title" value="{{ .Form.Title }}" placeholder="Title" required/>
+  {{ if eq .Form.Id 0 }}
+  <form id="note-editor" class="note-editor" action="/note" method="POST" autocomplete="off">
+    {{ else }}
+    <form id="note-editor" class="note-editor" hx-put="/note/{{ .Form.Id }}/{{ slugify .Form.Title}}" autocomplete="off">
+      {{ end }}
 
+      
+	<div class="titlebar">
 
-      <div class="buttons">
-	<!-- TODO hide delete button if it is a new note since there is nothing to delete -->
-	<button type="button" hx-target="body" hx-delete="/note/{{ .Form.Id }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="svg-button">
-	  <svg>
-	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
-	  </svg>
-	</button>
-	<button id="mde-preview-btn" type="button" name="terms" hx-post="/note/preview" hx-target="#mde-preview" class="svg-button">
-	  <svg>
-	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#eye"/>
-	  </svg>
-	</button>
-	<button type="submit" class="svg-button">
-	  <svg>
-	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#save"/>
-	  </svg>
-	</button>
-      </div>
-    </div>
+	  <input type="text" class="text-input -bold" id="title" name="title" value="{{ .Form.Title }}" placeholder="Title" required/>
 
+	  <div class="buttons">
+	    <!-- TODO hide delete button if it is a new note since there is nothing to delete -->
+	    <button type="button" class="svg-button -active" id="sidebar-toggle" data-sidebar-id="metadata-sidebar">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#tags"/>
+	      </svg>
+	    </button>
+	    <button type="button" hx-target="body" hx-delete="/note/{{ .Form.Id }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="svg-button">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
+	      </svg>
+	    </button>
+	    <button id="mde-preview-btn" type="button" name="terms" hx-post="/note/preview" hx-target="#mde-preview" class="svg-button">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#eye"/>
+	      </svg>
+	    </button>
+	    <button type="submit" class="svg-button">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#save"/>
+	      </svg>
+	    </button>
+	  </div>
+	</div>
+	<div class="editor-row">
+	<section class="editor">	
+	  <div id="mde-toolbar" class="toolbar">
+	    <button class="svg-button"  Type="button" id="mde-bold-btn" aria-label="bold">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#bold"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  Type="button" id="mde-italic-btn" aria-label="italic">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#italic"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-link-btn" aria-label="hyperlink">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#link"/>
+	      </svg>
+	    </button>
+	    <button id="btn-select-ref-notes" type="button" class="svg-button">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#file-symlink"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-inline-code-btn" aria-label="inline code">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#code"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-code-block-btn" aria-label="code block">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#square-code"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-h1-btn" aria-label="Header 1">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-1"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-h2-btn" aria-label="Header 2">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-2"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-h3-btn" aria-label="Header 3">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-3"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-unordered-list-button" aria-label="Unordered List">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#list"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-ordered-list-button" aria-label="Ordered List">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#list-ordered"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-quote-btn" aria-label="Quote">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#quote"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-undo-btn" aria-label="Undo">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#undo"/>
+	      </svg>
+	    </button>
+	    <button class="svg-button"  type="button" id="mde-redo-btn" aria-label="Redo">
+	      <svg>
+		<use href="/static/vendor/svg/lucide-icons-sprite.svg#redo"/>
+	      </svg>
+	    </button>
+	  </div>
 
-    <details class="tag-selector">
-      <summary>Select Tags</summary>
-      <fieldset role="search" class="search">
-	<input class="text-input" type="search" name="tag-name" id="tag-name" placeholder="Search Tags..." autofocus>
-	<button id="note-edit-create-tag-btn" type="button" hx-post="/tag" hx-include="[name='tag-name']" hx-target="#new-tag-output" class="text-button -positive">Create</button>
-      </fieldset>
+	  <textarea id="mde-textarea" class="textarea" name="note-content">{{ .Form.Content  }}</textarea>
+	</section>
 
-      <fieldset id="tag-selector" tabindex="0" class="list">
-	{{ range .Tags }}
-	{{ if containsInt $.Form.TagIds .Id }}
-	<input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }} checked>
-	{{ else }}
-	<input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }}>
-	{{ end }}
-	<label for="tag-{{ .Id }}">{{ .Name }}</label>
-	{{ end }}
-      </fieldset>
+	<aside class="sidebar" id="metadata-sidebar">
+	  <h3 class="title">MetaData</h3>
+	  <section class="section-selector">
+	    <label for="section">Section</label>
+	    <select list="section-list" id="section" name="section" class="select-dropdown">
+	      <option value="-1">Section</option>
+	      {{ range .Sections }}
+	      {{ if eq .Id $.Form.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
+	      {{ else }}<option value="{{ .Id }}">{{ .Name }}</option>
+	      {{ end }}
+	      {{ end }}
+	    </select>
+	  </section>
+	  <section class="tag-selector">
+	    <output id="new-tag-output"></output>
+	    <label>Tags</label>
+	    <div role="search" class="search">
+	      <input class="text-input" type="search" name="tag-name" id="tag-name" placeholder="Search Tags...">
+	      <button id="note-edit-create-tag-btn" type="button" hx-post="/tag" hx-include="[name='tag-name']" hx-target="#new-tag-output" class="text-button -positive">Create</button>
+	    </div>
 
-    </details>
-    
+	    <fieldset id="tag-selector" tabindex="0" class="list">
+	      {{ range .Tags }}
+	      {{ if containsInt $.Form.TagIds .Id }}
+	      <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }} checked>
+	      {{ else }}
+	      <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }}>
+	      {{ end }}
+	      <label for="tag-{{ .Id }}">{{ .Name }}</label>
+	      {{ end }}
+	    </fieldset>
+	  </section>
+	  <section class="references">
+	    <label>References</label>
+	    <ul id="selected-notes" class="delete-list selected-notes list">
+	      {{ range .SelectedReferenceNotes }}
+	      {{ template "selected-ref-note" . }}
+	      {{ end }}
+	    </ul>
+	    <input type="search" class="text-input" id="ref-notes-search" name="q"
+		   hx-get="/search"
+		   hx-trigger="input changed delay:500ms, keyup[key=='Enter']"
+		   hx-target="#search-results"
+		   hx-swap="outerHTML"
+		   autocomplete="off"
+		   list="note-search-results">
+	    <ul id="search-results" class="search-dropdown" role="listbox"></ul>
 
-    <div id="mde-toolbar" class="toolbar">
-      <button class="svg-button"  Type="button" id="mde-bold-btn" aria-label="bold">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#bold"/>
-	</svg>
-      </button>
-      <button class="svg-button"  Type="button" id="mde-italic-btn" aria-label="italic">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#italic"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-link-btn" aria-label="hyperlink">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#link"/>
-	</svg>
-      </button>
-      <button id="btn-select-ref-notes" type="button" class="svg-button">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-symlink"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-inline-code-btn" aria-label="inline code">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#code"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-code-block-btn" aria-label="code block">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#square-code"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-h1-btn" aria-label="Header 1">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-1"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-h2-btn" aria-label="Header 2">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-2"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-h3-btn" aria-label="Header 3">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#heading-3"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-unordered-list-button" aria-label="Unordered List">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#list"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-ordered-list-button" aria-label="Ordered List">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#list-ordered"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-quote-btn" aria-label="Quote">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#quote"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-undo-btn" aria-label="Undo">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#undo"/>
-	</svg>
-      </button>
-      <button class="svg-button"  type="button" id="mde-redo-btn" aria-label="Redo">
-	<svg>
-	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#redo"/>
-	</svg>
-      </button>
-    </div>
-    <textarea id="mde-textarea" class="textarea" name="note-content" autofocus="true">{{ .Form.Content  }}</textarea>
-  </form>
+	  </section>
+	  <section>
+	    <label>Referenced By</label>
+	    <ul id="referenced-by" class="list-of-links">
+	      {{ range .ReferencedByNotes }}
+	      <input type="hidden" name="referenced-by-notes" value='{{ .Id }}'>
+	      <li>{{ .Title }}</li>
+	      {{ end }}
+	    </ul>
+	  </section>
+	</aside>
+	</div>
+    </form>
+
 
     <div id="mde-preview" hidden>
       {{ template "rendered-note" .RenderedNote }}
     </div>
+
 
 </main>
 

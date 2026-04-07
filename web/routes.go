@@ -14,13 +14,14 @@ func routes(
 	tc *handlers.TemplateCache,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
+	ignoredLoggingPaths []string,
 ) http.Handler {
 
 	indexRepo := dss.GetUserStore()
 
 	mux := http.NewServeMux()
 
-	baseChain := handlers.Chain{handlers.RecoverPanic(logger), handlers.RequestLogger([]string{}, logger), handlers.CommonHeaders, handlers.CrossOriginProtection}
+	baseChain := handlers.Chain{handlers.RecoverPanic(logger), handlers.RequestLogger(ignoredLoggingPaths, logger), handlers.CommonHeaders, handlers.CrossOriginProtection}
 	dynamic := handlers.Chain{sessionManager.LoadAndSave, handlers.Authenticate(sessionManager, indexRepo)}
 	authReq := append(dynamic, handlers.RequireAuth)
 	adminReq := append(dynamic, handlers.RequireAdmin)
@@ -34,6 +35,9 @@ func routes(
 	mux.Handle("PUT /note/{id}/{slug}", authReq.Then(handlers.NotePut(tc, logger, dss, sessionManager)))
 	mux.Handle("DELETE /note/{id}/{slug}", authReq.Then(handlers.NoteDelete(tc, logger, dss)))
 	mux.Handle("GET /edit/{id}/{slug}", authReq.Then(handlers.NoteEditGet(tc, logger, dss, sessionManager)))
+
+	mux.Handle("POST /ref-notes/select/{id}", authReq.Then(handlers.ReferenceNoteSelectPost(tc, logger)))
+	mux.Handle("DELETE /ref-notes/select/{id}", authReq.Then(handlers.ReferenceNoteSelectDelete()))
 
 	mux.Handle("GET /section", authReq.Then(handlers.SectionGet(tc, logger, dss, sessionManager)))
 	mux.Handle("POST /section", authReq.Then(handlers.SectionPost(tc, logger, dss)))

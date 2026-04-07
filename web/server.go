@@ -49,7 +49,7 @@ func RunServer(conf *config.Config) error {
 
 	fmt.Fprint(os.Stdout, `
 ------------------------------------------
- ____ ____ ____ ____ ____ ____ ____ ____ 
+ ____ ____ ____ ____ ____ ____ ____ ____
 ||c |||o |||m |||m |||u |||n |||i |||s ||
 ||__|||__|||__|||__|||__|||__|||__|||__||
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
@@ -79,7 +79,7 @@ func RunServer(conf *config.Config) error {
 	sessionManager := scs.New()
 	sessionManager.Store = sqlitex.NewSessionStore(dataStoreSvc.GetIndexDatabase())
 
-	handler := routes(logger, tc, dataStoreSvc, sessionManager)
+	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.Web.LoggingIgnoredPaths)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),
