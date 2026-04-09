@@ -67,7 +67,7 @@ func RunServer(conf *config.Config) error {
 	if err != nil {
 		return err
 	}
-	dataStoreSvc, err := services.NewSQLiteDataStoreService(wg, time.Hour*12, dataStoreConfig, logger)
+	dataStoreSvc, err := services.NewSQLiteDataStoreActor(wg, time.Hour*12, dataStoreConfig, logger)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func RunServer(conf *config.Config) error {
 	sessionManager := scs.New()
 	sessionManager.Store = sqlitex.NewSessionStore(dataStoreSvc.GetIndexDatabase())
 
-	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.Web.LoggingIgnoredPaths)
+	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.Web.LoggingIgnoredPaths, conf.Web.Debug)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),

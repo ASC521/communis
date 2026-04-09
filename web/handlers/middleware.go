@@ -161,6 +161,17 @@ func RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		isAdmin, ok := r.Context().Value(isAdminContextKey).(bool)
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		if isAdmin {
+			http.Redirect(w, r, "/admin", http.StatusSeeOther)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

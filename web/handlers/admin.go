@@ -64,7 +64,7 @@ func DeleteUser(
 		}
 
 		if user.IsAdmin {
-			err = dss.Remove(r.Context(), user.Id)
+			err = dss.Remove(user.Id)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return

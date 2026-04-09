@@ -15,6 +15,7 @@ func routes(
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
 	ignoredLoggingPaths []string,
+	debugEnabled bool,
 ) http.Handler {
 
 	indexRepo := dss.GetUserStore()
@@ -31,7 +32,7 @@ func routes(
 	mux.Handle("GET /note/{id}/{slug}", authReq.Then(handlers.NoteViewGet(tc, logger, dss, sessionManager)))
 	mux.Handle("GET /note/new", authReq.Then(handlers.NoteNewGet(tc, logger, dss, sessionManager)))
 	mux.Handle("POST /note/preview", authReq.Then(handlers.NotePreviewPost(tc, logger, dss)))
-	mux.Handle("POST /note", authReq.Then(handlers.NotePost(tc, logger, dss, sessionManager)))
+	mux.Handle("POST /note", authReq.Then(handlers.NotePost(tc, logger, dss)))
 	mux.Handle("PUT /note/{id}/{slug}", authReq.Then(handlers.NotePut(tc, logger, dss, sessionManager)))
 	mux.Handle("DELETE /note/{id}/{slug}", authReq.Then(handlers.NoteDelete(tc, logger, dss)))
 	mux.Handle("GET /edit/{id}/{slug}", authReq.Then(handlers.NoteEditGet(tc, logger, dss, sessionManager)))
@@ -72,6 +73,10 @@ func routes(
 	mux.Handle("PUT /user/{id}/password", adminReq.Then(handlers.PutUserPassword(tc, logger, indexRepo)))
 
 	mux.Handle("PUT /user/{id}/theme", authReq.Then(handlers.PutUserTheme(tc, logger, indexRepo)))
+
+	if debugEnabled {
+		mux.Handle("GET /debug/conn-cache-state", adminReq.Then(handlers.ConnCacheStateGet(tc, logger, dss)))
+	}
 
 	return baseChain.Then(mux)
 }
