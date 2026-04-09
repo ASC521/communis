@@ -9,67 +9,36 @@ import (
 	"github.com/ASC521/communis/web"
 )
 
-func WebCMD(conf *config.Config, args []string) error {
+func ServeCMD(conf *config.Config, args []string) error {
 
-	runCMD := func(conf *config.Config, args []string) error {
+	serveFlags := flag.NewFlagSet("serve", flag.ExitOnError)
 
-		runFlags := flag.NewFlagSet("web-run", flag.ExitOnError)
-		hostF := runFlags.String("host", "localhost", "web host to run server")
-		portF := runFlags.Uint("port", 6789, "web port for server to listen on")
-		debugF := runFlags.Bool("debug", false, "run server in debug mode")
-
-		runFlags.Usage = func() {
-			fmt.Fprint(os.Stdout, "Usage: communis [global options] web run [subcommand options]\n\n")
-			fmt.Fprint(os.Stdout, "Options:\n")
-			runFlags.PrintDefaults()
-			fmt.Fprint(os.Stdout, "\n\n")
-		}
-
-		err := runFlags.Parse(args)
-		if err != nil {
-			return err
-		}
-
-		runFlags.Visit(func(f *flag.Flag) {
-			switch f.Name {
-			case "host":
-				conf.Web.Host = *hostF
-			case "port":
-				conf.Web.Port = *portF
-			case "debug":
-				conf.Web.Debug = *debugF
-			}
-		})
-
-		return web.RunServer(conf)
+	hostF := serveFlags.String("host", "localhost", "web host to run server")
+	portF := serveFlags.Uint("port", 6789, "web port for server to listen on")
+	debugF := serveFlags.Bool("debug", false, "run server in debug mode")
+	serveFlags.Usage = func() {
+		fmt.Fprint(os.Stdout, "Usage: communis [global options] web [subcommand options]\n\n")
+		fmt.Fprint(os.Stdout, "\nOptions:\n")
+		serveFlags.PrintDefaults()
+		fmt.Fprint(os.Stdout, "\n\n")
 	}
 
-	webFlags := flag.NewFlagSet("web", flag.ExitOnError)
-	webFlags.Usage = func() {
-		fmt.Fprint(os.Stdout, "Usage: communis [global options] web <subcommand>\n\n")
-		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
-		fmt.Fprint(os.Stdout, "run     starts web server\n\n")
-	}
-
-	err := webFlags.Parse(args)
+	err := serveFlags.Parse(args)
 	if err != nil {
 		return err
 	}
 
-	if len(args) == 0 {
-		webFlags.Usage()
-		return nil
-	}
+	serveFlags.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "host":
+			conf.Web.Host = *hostF
+		case "port":
+			conf.Web.Port = *portF
+		case "debug":
+			conf.Web.Debug = *debugF
+		}
+	})
 
-	cmd, subArgs := args[0], args[1:]
-	switch cmd {
-	case "run":
-		return runCMD(conf, subArgs)
-	default:
-		fmt.Fprintf(os.Stderr, "command %s is not supported\n", cmd)
-		os.Exit(1)
-	}
-
-	return nil
+	return web.RunServer(conf)
 
 }

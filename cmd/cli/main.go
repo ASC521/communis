@@ -32,10 +32,10 @@ func main() {
 		fmt.Fprint(os.Stdout, "Global Options:\n")
 		globalFlags.PrintDefaults()
 		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
-		fmt.Fprint(os.Stdout, "database        create and manage database\n")
-		fmt.Fprint(os.Stdout, "generate-css    generate css files to support rendered markdown syntax highlighting\n")
-		fmt.Fprint(os.Stdout, "web             run web server\n")
-		fmt.Fprint(os.Stdout, "user            manage application users\n\n")
+		fmt.Fprint(os.Stdout, "database          create and manage database\n")
+		fmt.Fprint(os.Stdout, "generate-css      generate css files to support rendered markdown syntax highlighting\n")
+		fmt.Fprint(os.Stdout, "serve             run web server\n")
+		fmt.Fprint(os.Stdout, "user              manage application users\n\n")
 	}
 
 	globalFlags.Parse(os.Args[1:])
@@ -103,8 +103,8 @@ func main() {
 	switch cmd {
 	case "database":
 		err = DatabaseCMD(conf, subArgs)
-	case "web":
-		err = WebCMD(conf, subArgs)
+	case "serve":
+		err = ServeCMD(conf, subArgs)
 	case "user":
 		err = UserCMD(conf, subArgs)
 	case "generate-css":

@@ -1,8 +1,6 @@
-(A) Tech Debt: Remove actor pattern from data store service sqlite implementation - revert back to mutex cache
-(B) DB Connection Cache should renew expiry time each auth check
+(A) Remove navbar dropdown and replace with light/dark icon and logout link
 (B) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (C) HTTP Cache Headers
-(C) Remove navbar dropdown and replace with light/dark icon and logout link
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
 (E) Bug Fix: As admin navigating outside to auth page should redict not through an error
@@ -61,7 +59,9 @@ x (A) Refactor TemplateData struct by having handlers handle struct sent to temp
 x (A) Refactor db connection cache
 x (A) Refactor migrations to support multiple databases +v1 +user-auth
 x (A) Refactor user database creation to be named by user id intead of username
+x (A) Tech Debt: Remove actor pattern from data store service sqlite implementation - revert back to mutex cache
 x (A) Tidy up note section, add tags dialog to view note screen +v1
+x (B) DB Connection Cache should renew expiry time each auth check
 x (B) Refactor database repositories to support database connection in each handler +v1 +user-auth
 x (D) CSRF +v1
 x (F) Add way to go to edit screen from view note screen +v1
