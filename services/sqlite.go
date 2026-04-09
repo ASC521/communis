@@ -204,7 +204,7 @@ func (s *SQLiteDataStoreActor) run() {
 				msg.result <- s.deleteDatabase(msg.ctx, msg.key)
 
 			case cmdCheckMigrations:
-				msg.result <- s.checkMigrations(msg.ctx)
+				msg.result <- s.runMigrations(msg.ctx)
 
 			case cmdGetState:
 				msg.result <- s.getState()
@@ -343,7 +343,7 @@ func (s *SQLiteDataStoreActor) RunMigrations(ctx context.Context) error {
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, sqliteConnCmd{tag: cmdCheckMigrations, ctx: ctx})
 }
 
-func (s *SQLiteDataStoreActor) checkMigrations(ctx context.Context) error {
+func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 	indexDriver := sqlitex.NewMigrationDriver(s.indexDB)
 
 	isEmpty, err := indexDriver.IsEmpty(ctx)
