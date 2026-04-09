@@ -27,7 +27,15 @@ const (
 	cmdCreateDB
 	cmdDeleteDB
 	cmdCheckMigrations
+	cmdGetState
 )
+
+type CacheState struct {
+	Connections     map[int64]time.Time
+	TimeToLive      time.Duration
+	DBDirectory     string
+	IndexDBFileName string
+}
 
 type SQLiteDataStoreConfig struct {
 	DBDirectory       string
@@ -128,9 +136,9 @@ func (c sqliteConnCmd) WithResult(ch chan any) sqliteConnCmd {
 	return c
 }
 
-// SQLiteDataStoreService manages the creation of connections to individual notes sqlite databases.
-type SQLiteDataStoreService struct {
-	connections map[int64]cachedConn
+// SQLiteDataStoreActor manages the creation of connections to individual notes sqlite databases.
+type SQLiteDataStoreActor struct {
+	connections map[int64]*cachedConn
 	ttl         time.Duration
 	wg          *sync.WaitGroup
 	indexDB     *sqlitex.SQLiteDB
@@ -139,15 +147,15 @@ type SQLiteDataStoreService struct {
 	logger      *slog.Logger
 }
 
-func NewSQLiteDataStoreService(wg *sync.WaitGroup, ttl time.Duration, conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreService, error) {
+func NewSQLiteDataStoreActor(wg *sync.WaitGroup, ttl time.Duration, conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreActor, error) {
 
 	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
 	if err != nil {
 		return nil, err
 	}
 
-	svc := &SQLiteDataStoreService{
-		connections: map[int64]cachedConn{},
+	svc := &SQLiteDataStoreActor{
+		connections: map[int64]*cachedConn{},
 		ttl:         ttl,
 		wg:          wg,
 		commands:    make(chan sqliteConnCmd),
@@ -161,7 +169,7 @@ func NewSQLiteDataStoreService(wg *sync.WaitGroup, ttl time.Duration, conf SQLit
 	return svc, nil
 }
 
-func (s *SQLiteDataStoreService) run() {
+func (s *SQLiteDataStoreActor) run() {
 
 	s.wg.Add(1)
 	defer s.wg.Done()
@@ -179,156 +187,27 @@ func (s *SQLiteDataStoreService) run() {
 
 			switch msg.tag {
 			case cmdGetConn:
-				if msg.ctx == nil {
-					msg.result <- errors.New("a context is required to retrieve a database connection")
-					continue
+				nr, err := s.getNotesStore(msg.ctx, msg.key)
+				if err != nil {
+					msg.result <- err
+				} else {
+					msg.result <- nr
 				}
-
-				cc, ok := s.connections[msg.key]
-				if !ok {
-					conn, err := s.newConn(msg.ctx, msg.key)
-					if err != nil {
-						msg.result <- err
-						continue
-					}
-					cc = cachedConn{conn: conn, expiry: time.Now().Add(s.ttl)}
-					s.connections[msg.key] = cc
-				}
-				msg.result <- cc.conn
 
 			case cmdRemoveConn:
-				cc, ok := s.connections[msg.key]
-				if !ok {
-					msg.result <- error(nil)
-					continue
-				}
-				err := cc.conn.Close()
-				if err != nil {
-					msg.result <- err
-					continue
-				}
-				delete(s.connections, msg.key)
-				msg.result <- error(nil)
+				msg.result <- s.removeConnection(msg.key)
 
 			case cmdCreateDB:
+				msg.result <- s.createDatabase(msg.ctx, msg.key)
 
-				if msg.ctx == nil {
-					msg.result <- errors.New("a context is required to create a database")
-					continue
-				}
-
-				dbConn, err := s.newConn(msg.ctx, msg.key)
-				if err != nil {
-					msg.result <- err
-					continue
-				}
-
-				migDriver := sqlitex.NewMigrationDriver(dbConn)
-				ver, err := migrations.Bootstrap(msg.ctx, s.conf.NotesDBMigrations, migDriver)
-				if err != nil {
-					msg.result <- err
-				}
-				us := sqlite.NewIndexDBRepository(s.indexDB)
-				err = us.UpdateDBVersion(msg.ctx, msg.key, ver)
-				if err != nil {
-					msg.result <- err
-				} else {
-					msg.result <- error(nil)
-				}
 			case cmdDeleteDB:
-
-				if msg.ctx == nil {
-					msg.result <- errors.New("a context is required to create a database")
-					continue
-				}
-
-				userStore := sqlite.NewIndexDBRepository(s.indexDB)
-				userDB, err := userStore.GetUserDB(msg.ctx, msg.key)
-				if err != nil {
-					msg.result <- err
-					continue
-				}
-
-				err = os.Remove(filepath.Join(s.conf.DBDirectory, userDB.Path))
-				if err != nil {
-					msg.result <- fmt.Errorf("failed to delete user datbase: %s", err.Error())
-				} else {
-					msg.result <- error(nil)
-				}
+				msg.result <- s.deleteDatabase(msg.ctx, msg.key)
 
 			case cmdCheckMigrations:
-				if msg.ctx == nil {
-					msg.result <- errors.New("a context is required to check database migrations")
-					continue
-				}
+				msg.result <- s.runMigrations(msg.ctx)
 
-				indexDriver := sqlitex.NewMigrationDriver(s.indexDB)
-
-				isEmpty, err := indexDriver.IsEmpty(msg.ctx)
-				if err != nil {
-					msg.result <- err
-					continue
-				}
-
-				if isEmpty {
-					s.logger.Info("Index database is empty - bootstrapping to latest version")
-					_, err = migrations.Bootstrap(msg.ctx, s.conf.IndexDBMigrations, indexDriver)
-					if err != nil {
-						msg.result <- err
-						continue
-					}
-				} else {
-					isLatest, err := migrations.IsLatest(msg.ctx, s.conf.IndexDBMigrations, indexDriver)
-					if err != nil {
-						msg.result <- err
-						continue
-					}
-
-					if !isLatest {
-						s.logger.Info("Index database pending migration found - running up migration")
-						_, err = migrations.Up(msg.ctx, s.conf.IndexDBMigrations, indexDriver)
-						if err != nil {
-							msg.result <- err
-							continue
-						}
-					}
-				}
-
-				latestNotesVer, err := migrations.Latest(s.conf.NotesDBMigrations)
-				if err != nil {
-					msg.result <- err
-					continue
-				}
-
-				us := sqlite.NewIndexDBRepository(s.indexDB)
-				dbsToUpgrade, err := us.DBVersionBefore(msg.ctx, int(latestNotesVer.Version))
-				if err != nil {
-					msg.result <- err
-					continue
-				}
-
-				userStore := sqlite.NewIndexDBRepository(s.indexDB)
-				for _, userDB := range dbsToUpgrade {
-					s.logger.Info(fmt.Sprintf("Notes database migration found for user %v - running up migration", userDB.UserId))
-					conn, err := sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
-					if err != nil {
-						msg.result <- err
-						break
-					}
-					driver := sqlitex.NewMigrationDriver(conn)
-					ver, err := migrations.Up(msg.ctx, s.conf.NotesDBMigrations, driver)
-					if err != nil {
-						msg.result <- err
-						break
-					}
-
-					err = userStore.UpdateDBVersion(msg.ctx, userDB.UserId, ver)
-					if err != nil {
-						msg.result <- err
-						break
-					}
-				}
-				msg.result <- error(nil)
+			case cmdGetState:
+				msg.result <- s.getState()
 
 			}
 			close(msg.result)
@@ -339,7 +218,7 @@ func (s *SQLiteDataStoreService) run() {
 
 }
 
-func (s *SQLiteDataStoreService) newConn(ctx context.Context, key int64) (*sqlitex.SQLiteDB, error) {
+func (s *SQLiteDataStoreActor) createNewConnection(ctx context.Context, key int64) (*sqlitex.SQLiteDB, error) {
 
 	us := sqlite.NewIndexDBRepository(s.indexDB)
 	userDB, err := us.GetUserDB(ctx, key)
@@ -351,32 +230,54 @@ func (s *SQLiteDataStoreService) newConn(ctx context.Context, key int64) (*sqlit
 
 }
 
-func (s *SQLiteDataStoreService) GetNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
+func (s *SQLiteDataStoreActor) GetNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
 	cmd := sqliteConnCmd{
 		tag: cmdGetConn,
 		ctx: ctx,
 		key: key,
 	}
 
-	db, err := chanutil.SendReceive[sqliteConnCmd, *sqlitex.SQLiteDB](s.commands, cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	return sqlite.NewNotesRepository(db), nil
+	return chanutil.SendReceive[sqliteConnCmd, models.NotesRepository](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreService) Remove(ctx context.Context, key int64) error {
+func (s *SQLiteDataStoreActor) getNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
+	cc, ok := s.connections[key]
+	if !ok {
+		conn, err := s.createNewConnection(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+
+		cc = &cachedConn{conn: conn}
+		s.connections[key] = cc
+	}
+	cc.expiry = time.Now().Add(s.ttl)
+	return sqlite.NewNotesRepository(cc.conn), nil
+}
+
+func (s *SQLiteDataStoreActor) Remove(key int64) error {
 	cmd := sqliteConnCmd{
 		tag: cmdRemoveConn,
-		ctx: ctx,
 		key: key,
 	}
 
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreService) CreateDB(ctx context.Context, key int64) error {
+func (s *SQLiteDataStoreActor) removeConnection(key int64) error {
+	cc, ok := s.connections[key]
+	if !ok {
+		return nil
+	}
+	err := cc.conn.Close()
+	if err != nil {
+		return err
+	}
+	delete(s.connections, key)
+	return nil
+}
+
+func (s *SQLiteDataStoreActor) CreateDB(ctx context.Context, key int64) error {
 
 	cmd := sqliteConnCmd{
 		tag: cmdCreateDB,
@@ -387,9 +288,25 @@ func (s *SQLiteDataStoreService) CreateDB(ctx context.Context, key int64) error 
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreService) DeleteDB(ctx context.Context, key int64) error {
+func (s *SQLiteDataStoreActor) createDatabase(ctx context.Context, key int64) error {
+	conn, err := s.createNewConnection(ctx, key)
+	if err != nil {
+		return err
+	}
 
-	err := s.Remove(ctx, key)
+	migrationDriver := sqlitex.NewMigrationDriver(conn)
+	ver, err := migrations.Bootstrap(ctx, s.conf.NotesDBMigrations, migrationDriver)
+	if err != nil {
+		return err
+	}
+
+	indexDB := sqlite.NewIndexDBRepository(s.indexDB)
+	return indexDB.UpdateDBVersion(ctx, key, ver)
+}
+
+func (s *SQLiteDataStoreActor) DeleteDB(ctx context.Context, key int64) error {
+
+	err := s.Remove(key)
 	if err != nil {
 		return err
 	}
@@ -403,32 +320,107 @@ func (s *SQLiteDataStoreService) DeleteDB(ctx context.Context, key int64) error 
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreService) GetUserStore() models.IndexRepository {
+func (s *SQLiteDataStoreActor) deleteDatabase(ctx context.Context, key int64) error {
+	indexDB := sqlite.NewIndexDBRepository(s.indexDB)
+	userDB, err := indexDB.GetUserDB(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(filepath.Join(s.conf.DBDirectory, userDB.Path))
+
+}
+
+func (s *SQLiteDataStoreActor) GetUserStore() models.IndexRepository {
 	return sqlite.NewIndexDBRepository(s.indexDB)
 }
 
-func (s *SQLiteDataStoreService) GetIndexDatabase() *sqlitex.SQLiteDB {
+func (s *SQLiteDataStoreActor) GetIndexDatabase() *sqlitex.SQLiteDB {
 	return s.indexDB
 }
 
-func (s *SQLiteDataStoreService) RunMigrations(ctx context.Context) error {
+func (s *SQLiteDataStoreActor) RunMigrations(ctx context.Context) error {
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, sqliteConnCmd{tag: cmdCheckMigrations, ctx: ctx})
 }
 
-func (s *SQLiteDataStoreService) Stop() {
+func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
+	indexDriver := sqlitex.NewMigrationDriver(s.indexDB)
+
+	isEmpty, err := indexDriver.IsEmpty(ctx)
+	if err != nil {
+		return err
+	}
+
+	if isEmpty {
+		s.logger.Info("Index database is empty - bootstrapping to latest version")
+		_, err = migrations.Bootstrap(ctx, s.conf.IndexDBMigrations, indexDriver)
+		if err != nil {
+			return err
+		}
+	} else {
+		isLatest, err := migrations.IsLatest(ctx, s.conf.IndexDBMigrations, indexDriver)
+		if err != nil {
+			return err
+		}
+
+		if !isLatest {
+			s.logger.Info("Index database pending migration found - running up migration")
+			_, err = migrations.Up(ctx, s.conf.IndexDBMigrations, indexDriver)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	latestNotesVer, err := migrations.Latest(s.conf.NotesDBMigrations)
+	if err != nil {
+		return err
+	}
+
+	us := sqlite.NewIndexDBRepository(s.indexDB)
+	dbsToUpgrade, err := us.DBVersionBefore(ctx, int(latestNotesVer.Version))
+	if err != nil {
+		return err
+	}
+
+	userStore := sqlite.NewIndexDBRepository(s.indexDB)
+	for _, userDB := range dbsToUpgrade {
+		s.logger.Info(fmt.Sprintf("Notes database migration found for user %v - running up migration", userDB.UserId))
+		conn, err := sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
+		if err != nil {
+			return err
+		}
+		driver := sqlitex.NewMigrationDriver(conn)
+		ver, err := migrations.Up(ctx, s.conf.NotesDBMigrations, driver)
+		if err != nil {
+			return err
+		}
+
+		err = userStore.UpdateDBVersion(ctx, userDB.UserId, ver)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SQLiteDataStoreActor) Stop() error {
 	err := s.indexDB.Close()
 	if err != nil {
-		s.logger.Warn(fmt.Sprintf("failed to close database connection to %s", s.indexDB.DBPath), "errMsg", err.Error())
+		return err
 	}
 
 	for _, cc := range s.connections {
 		err = cc.conn.Close()
-		s.logger.Warn(fmt.Sprintf("failed to close database connection to %s", cc.conn.DBPath), "errMsg", err.Error())
+		if err != nil {
+			return err
+		}
 	}
 	close(s.commands)
+	return nil
 }
 
-func (s *SQLiteDataStoreService) removeExpired() {
+func (s *SQLiteDataStoreActor) removeExpired() {
 	for key, cc := range s.connections {
 		if !time.Now().After(cc.expiry) {
 			continue
@@ -436,5 +428,28 @@ func (s *SQLiteDataStoreService) removeExpired() {
 		err := cc.conn.Close()
 		s.logger.Warn(fmt.Sprintf("failed to close database connection to %s", cc.conn.DBPath), "errMsg", err.Error())
 		delete(s.connections, key)
+	}
+}
+
+func (s *SQLiteDataStoreActor) GetState() CacheState {
+	cmd := sqliteConnCmd{
+		tag: cmdGetState,
+	}
+	state, _ := chanutil.SendReceive[sqliteConnCmd, CacheState](s.commands, cmd)
+	return state
+}
+
+func (s *SQLiteDataStoreActor) getState() CacheState {
+
+	pubConns := make(map[int64]time.Time, len(s.connections))
+	for key, cc := range s.connections {
+		pubConns[key] = cc.expiry
+	}
+
+	return CacheState{
+		Connections:     pubConns,
+		TimeToLive:      s.ttl,
+		IndexDBFileName: s.conf.IndexDBFileName,
+		DBDirectory:     s.conf.DBDirectory,
 	}
 }

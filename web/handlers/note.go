@@ -273,7 +273,6 @@ func NotePost(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	dss services.DataStoreService,
-	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
