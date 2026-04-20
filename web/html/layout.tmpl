@@ -13,7 +13,24 @@
   </head>
   <body>
 
-    {{ template "navbar" . }}
+    {{ if .IsAuthenticated }}
+
+	{{ if .IsAdmin }}
+    
+    		{{ template "navbar-admin" . }}
+
+	{{ else }}
+    
+	    {{ template "navbar-authenticated" . }}
+    
+	{{ end }}
+    
+    {{ else }}
+    
+    	{{ template "navbar-unauthenticated" . }}
+    
+    {{ end }}
+
 
     {{ template "main" . }}
 

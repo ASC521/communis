@@ -122,7 +122,7 @@ func Authenticate(sessionManager *scs.SessionManager, userStore models.IndexRepo
 			if authUserId == 0 {
 				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, false)
 				ctx = context.WithValue(ctx, isAdminContextKey, false)
-				ctx = context.WithValue(ctx, userThemeContextKey, "light")
+				ctx = context.WithValue(ctx, userThemeContextKey, "dark")
 				r = r.WithContext(ctx)
 			} else {
 				user, err := userStore.GetUser(r.Context(), authUserId)
@@ -161,6 +161,12 @@ func RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+func RedirectAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isAdmin, ok := r.Context().Value(isAdminContextKey).(bool)
 		if !ok {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -173,6 +179,7 @@ func RequireAuth(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
+
 	})
 }
 
