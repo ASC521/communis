@@ -15,6 +15,7 @@ import (
 
 type BaseData struct {
 	IsAuthenticated bool
+	IsAdmin         bool
 	UserId          int64
 	Theme           string
 }
@@ -22,6 +23,7 @@ type BaseData struct {
 func newBase(r *http.Request) BaseData {
 	return BaseData{
 		IsAuthenticated: isAuthenticated(r),
+		IsAdmin:         isAdmin(r),
 		UserId:          getUserIdFromRequest(r),
 		Theme:           getUserThemeFromRequest(r),
 	}

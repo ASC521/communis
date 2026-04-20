@@ -1,18 +1,15 @@
+(C) Add support for HTTPS server
 (C) HTTP Cache Headers
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
 (D) Replace structured logging with human readable logging
-(E) Add support for HTTPS server
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (F) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) PostUser should be happening within a transaction
 Add advanced query support to search screen +v1
-Add navbar for admin page
-Add navbar for login page
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Security is blocking external images being loaded in markdown
-Bug Fix: Theme toggle should work on login page
 Edit note screen - delete button should use native dialog +v1
 Error Screens +v1
 Fix note preview page -  buttons don't line up
@@ -62,8 +59,10 @@ x (A) Refactor user database creation to be named by user id intead of username
 x (A) Remove navbar dropdown and replace with light/dark icon and logout link
 x (A) Tech Debt: Remove actor pattern from data store service sqlite implementation - revert back to mutex cache
 x (A) Tidy up note section, add tags dialog to view note screen +v1
+x (B) Add navbar for login page
 x (B) DB Connection Cache should renew expiry time each auth check
 x (B) Refactor database repositories to support database connection in each handler +v1 +user-auth
+x (C) Add navbar for admin page
 x (D) CSRF +v1
 x (E) Bug Fix: As admin navigating outside to auth page should redict not throw an error
 x (F) Add way to go to edit screen from view note screen +v1

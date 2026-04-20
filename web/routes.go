@@ -24,7 +24,7 @@ func routes(
 
 	baseChain := handlers.Chain{handlers.RecoverPanic(logger), handlers.RequestLogger(ignoredLoggingPaths, logger), handlers.CommonHeaders, handlers.CrossOriginProtection}
 	dynamic := handlers.Chain{sessionManager.LoadAndSave, handlers.Authenticate(sessionManager, indexRepo)}
-	authReq := append(dynamic, handlers.RequireAuth)
+	authReq := append(dynamic, handlers.RequireAuth, handlers.RedirectAdmin)
 	adminReq := append(dynamic, handlers.RequireAdmin)
 
 	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
@@ -61,7 +61,7 @@ func routes(
 
 	mux.Handle("GET /login", dynamic.Then(handlers.GetUserLogin(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("POST /login", dynamic.Then(handlers.PostUserLogin(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("DELETE /session", authReq.Then(handlers.PostUserLogout(tc, logger, sessionManager)))
+	mux.Handle("DELETE /session", dynamic.Then(handlers.RequireAuth((handlers.PostUserLogout(tc, logger, sessionManager)))))
 
 	mux.Handle("GET /admin", adminReq.Then(handlers.GetAdmin(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("GET /user/new", adminReq.Then(handlers.GetUserCreate(tc, logger, indexRepo, sessionManager)))
@@ -72,7 +72,7 @@ func routes(
 	mux.Handle("PUT /user/{id}", adminReq.Then(handlers.PutUser(tc, logger, indexRepo)))
 	mux.Handle("PUT /user/{id}/password", adminReq.Then(handlers.PutUserPassword(tc, logger, indexRepo)))
 
-	mux.Handle("PUT /user/{id}/theme", authReq.Then(handlers.PutUserTheme(tc, logger, indexRepo)))
+	mux.Handle("PUT /user/{id}/theme", dynamic.Then(handlers.RequireAuth(handlers.PutUserTheme(tc, logger, indexRepo))))
 
 	if debugEnabled {
 		mux.Handle("GET /debug/conn-cache-state", adminReq.Then(handlers.ConnCacheStateGet(tc, logger, dss)))

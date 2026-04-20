@@ -85,6 +85,14 @@ func isAuthenticated(r *http.Request) bool {
 	return isAuth
 }
 
+func isAdmin(r *http.Request) bool {
+	isAdmin, ok := r.Context().Value(isAdminContextKey).(bool)
+	if !ok {
+		return false
+	}
+	return isAdmin
+}
+
 func getUserIdFromRequest(r *http.Request) int64 {
 	userId, ok := r.Context().Value(userIdContextKey).(int64)
 	if !ok {

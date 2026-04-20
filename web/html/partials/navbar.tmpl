@@ -1,4 +1,4 @@
-{{ define "navbar" }}
+{{ define "navbar-authenticated" }}
 <header>
   <nav class="nav-bar">
     <ul class="links">
@@ -8,7 +8,6 @@
       <li><strong><a href="/index">Index</a></strong></li>
     </ul>
     <ul class="links right">
-      {{ if .IsAuthenticated }}
       <li>
 	<button type="button" class="svg-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">
 	  <svg>
@@ -17,17 +16,35 @@
 	</button>
       </li>
       <li><strong><a class="link" hx-delete="/session">Logout</a></strong></li>
-      {{ else }}
+    </ul>
+  </nav>
+</header>
+{{ end }}
+
+
+{{ define "navbar-admin" }}
+<header>
+  <nav class="nav-bar">
+    <ul class="links right">
       <li>
-	<button type="button" class="svg-button" id="theme-toggle-btn" href="#">
+	<button type="button" class="svg-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">
 	  <svg>
 	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#sun-moon"/>
 	  </svg>
 	</button>
       </li>
-      <li><strong><a class="link" href="/login">Login</a></strong></li>
-      {{ end }}
+      <li><strong><a class="link" hx-delete="/session">Logout</a></strong></li>
     </ul>
+  </nav>
+</header>
+
+
+{{ end }}
+
+
+{{ define "navbar-unauthenticated" }}
+<header>
+  <nav class="nav-bar">
   </nav>
 </header>
 {{ end }}
