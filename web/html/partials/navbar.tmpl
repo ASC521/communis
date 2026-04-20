@@ -1,28 +1,33 @@
 {{ define "navbar" }}
 <header>
-<nav class="nav-bar">
-  <ul class="links">
-    <li><strong><a href="/">Home</a></strong></li>
-    <li><strong><a href="/note/new">New Note</a></strong></li>
-    <li><strong><a href="/section">Sections</a></strong></li>
-    <li><strong><a href="/index">Index</a></strong></li>
-    <li class="dropdown">
-      <details>
-	<summary>
-	  Settings
-	</summary>
-	<ul>
-	  {{ if .IsAuthenticated }}
-	  <li><button class="text-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">Toggle Theme</button></li>
-	  <li><button class="text-button" hx-delete="/session">Logout</button></li>
-	  {{ else }}
-	  <li><button class="text-button" id="theme-toggle-btn" href="#">Toggle Theme</button></li>
-	  <li><button class="text-button" href="/login">Login</button></li>
-	  {{ end }}
-	</ul>
-      </details>
-    </li>
-  </ul>
-</nav>
+  <nav class="nav-bar">
+    <ul class="links">
+      <li><strong><a href="/">Home</a></strong></li>
+      <li><strong><a href="/note/new">New Note</a></strong></li>
+      <li><strong><a href="/section">Sections</a></strong></li>
+      <li><strong><a href="/index">Index</a></strong></li>
+    </ul>
+    <ul class="links right">
+      {{ if .IsAuthenticated }}
+      <li>
+	<button type="button" class="svg-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">
+	  <svg>
+	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#sun-moon"/>
+	  </svg>
+	</button>
+      </li>
+      <li><strong><a class="link" hx-delete="/session">Logout</a></strong></li>
+      {{ else }}
+      <li>
+	<button type="button" class="svg-button" id="theme-toggle-btn" href="#">
+	  <svg>
+	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#sun-moon"/>
+	  </svg>
+	</button>
+      </li>
+      <li><strong><a class="link" href="/login">Login</a></strong></li>
+      {{ end }}
+    </ul>
+  </nav>
 </header>
 {{ end }}
