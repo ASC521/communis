@@ -12,7 +12,7 @@ var (
 )
 
 type Tag struct {
-	Id   int64  `json:"id"`
+	ID   int64  `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -25,7 +25,7 @@ type PaginatedTags struct {
 }
 
 type Section struct {
-	Id   int64
+	ID   int64
 	Name string
 }
 
@@ -38,7 +38,7 @@ type PaginatedSections struct {
 }
 
 type Note struct {
-	Id               int64
+	ID               int64
 	Title            string
 	Content          string
 	Section          Section
@@ -50,7 +50,7 @@ type Note struct {
 }
 
 type NoteDetail struct {
-	Id    int64  `json:"id"`
+	ID    int64  `json:"id"`
 	Title string `json:"title"`
 }
 
@@ -63,7 +63,7 @@ type PaginatedNotes struct {
 }
 
 type NoteSearchResult struct {
-	Id             int64
+	ID             int64
 	Title          string
 	TitleHighlight string
 	ContentSnippet string
@@ -90,21 +90,21 @@ type NotesRepository interface {
 	ListAllSections(ctx context.Context) ([]Section, error)
 
 	// Note Methods
-	CreateNote(ctx context.Context, title, content string, sectionId int64, tagIds, referenceNoteIds []int64) (int64, error)
+	CreateNote(ctx context.Context, title, content string, sectionID int64, tagIds, referenceNoteIds []int64) (int64, error)
 	NoteExists(ctx context.Context, title string) (int64, error)
-	FindNoteById(ctx context.Context, id int64) (Note, error)
-	UpdateNote(ctx context.Context, id int64, title, content string, sectionId int64, tagIds, referenceNoteIds []int64) error
+	FindNoteByID(ctx context.Context, id int64) (Note, error)
+	UpdateNote(ctx context.Context, id int64, title, content string, sectionID int64, tagIds, referenceNoteIds []int64) error
 	DeleteNote(ctx context.Context, id int64) error
 	ListNotes(ctx context.Context, limit, offset int) (PaginatedNotes, error)
 	SearchNotes(ctx context.Context, query string) ([]NoteSearchResult, error)
 	RecentlyUpdatedNotes(ctx context.Context, limit int) ([]NoteDetail, error)
-	NotesInSection(ctx context.Context, sectionId int64) ([]NoteDetail, error)
-	NotesWithTag(ctx context.Context, tagId int64) ([]NoteDetail, error)
+	NotesInSection(ctx context.Context, sectionID int64) ([]NoteDetail, error)
+	NotesWithTag(ctx context.Context, tagID int64) ([]NoteDetail, error)
 	GetNoteDetailByIds(ctx context.Context, ids []int64) ([]NoteDetail, error)
 }
 
 type User struct {
-	Id           int64
+	ID           int64
 	Name         string
 	IsAdmin      bool
 	CreatedAtUTC time.Time
@@ -113,8 +113,8 @@ type User struct {
 }
 
 type UserDatabase struct {
-	Id      int64
-	UserId  int64
+	ID      int64
+	UserID  int64
 	Path    string
 	Version int
 }
@@ -122,12 +122,12 @@ type UserDatabase struct {
 type IndexRepository interface {
 	DBVersionBefore(ctx context.Context, latestVer int) ([]UserDatabase, error)
 	UpdateDBVersion(ctx context.Context, id int64, version int) error
-	GetUserDB(ctx context.Context, userId int64) (UserDatabase, error)
+	GetUserDB(ctx context.Context, userID int64) (UserDatabase, error)
 	CreateAdminUser(ctx context.Context, username, password string) (int64, error)
 	CreateUserAndDB(ctx context.Context, userName, password string) (int64, error)
 	AuthenticateUser(ctx context.Context, username, password string) (User, error)
-	IsAdminUser(ctx context.Context, userId int64) (bool, error)
-	GetUser(ctx context.Context, userId int64) (User, error)
+	IsAdminUser(ctx context.Context, userID int64) (bool, error)
+	GetUser(ctx context.Context, userID int64) (User, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	UpdateUser(ctx context.Context, id int64, name string) (User, error)
 	UpdateUserLastLoginToNow(ctx context.Context, id int64) error

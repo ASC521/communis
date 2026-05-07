@@ -40,7 +40,7 @@ func (r *NotesRepository) FindTagById(ctx context.Context, id int64) (models.Tag
 	defer cancel()
 
 	t := models.Tag{}
-	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&t.Id, &t.Name)
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&t.ID, &t.Name)
 	if err != nil {
 		return models.Tag{}, err
 	}
@@ -53,7 +53,7 @@ func (r *NotesRepository) FindTagByName(ctx context.Context, name string) (model
 	defer cancel()
 
 	t := models.Tag{}
-	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&t.Id, &t.Name)
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&t.ID, &t.Name)
 	if err != nil {
 		return models.Tag{}, err
 	}
@@ -64,18 +64,18 @@ func (r *NotesRepository) UpdateTag(ctx context.Context, t models.Tag) error {
 
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
-		_, err := tx.Exec(delTagFTSSql, t.Id)
+		_, err := tx.Exec(delTagFTSSql, t.ID)
 		if err != nil {
 			return -1, err
 		}
 
 		sql := "UPDATE tags SET name = ? WHERE id = ?;"
-		_, err = tx.Exec(sql, t.Name, t.Id)
+		_, err = tx.Exec(sql, t.Name, t.ID)
 		if err != nil {
 			return -1, err
 		}
 
-		_, err = tx.Exec(insTagFTSSql, t.Id)
+		_, err = tx.Exec(insTagFTSSql, t.ID)
 		if err != nil {
 			return -1, err
 		}
@@ -121,7 +121,7 @@ func (r *NotesRepository) ListAllTags(ctx context.Context) ([]models.Tag, error)
 	ts := []models.Tag{}
 	for rows.Next() {
 		t := models.Tag{}
-		err = rows.Scan(&t.Id, &t.Name)
+		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (mode
 	ts := make([]models.Tag, 0, limit)
 	for rows.Next() {
 		t := models.Tag{}
-		err = rows.Scan(&t.Id, &t.Name)
+		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return models.PaginatedTags{}, err
 		}
@@ -213,7 +213,7 @@ func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]models.
 	tags := []models.Tag{}
 	for rows.Next() {
 		var t models.Tag
-		err = rows.Scan(&t.Id, &t.Name)
+		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return nil, err
 		}

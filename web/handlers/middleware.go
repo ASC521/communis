@@ -133,7 +133,7 @@ func Authenticate(sessionManager *scs.SessionManager, userStore models.IndexRepo
 				}
 				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, true)
 				ctx = context.WithValue(ctx, isAdminContextKey, user.IsAdmin)
-				ctx = context.WithValue(ctx, userIdContextKey, user.Id)
+				ctx = context.WithValue(ctx, userIDContextKey, user.ID)
 				ctx = context.WithValue(ctx, userThemeContextKey, user.Theme)
 				r = r.WithContext(ctx)
 			}

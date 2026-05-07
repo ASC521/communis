@@ -23,11 +23,11 @@ import (
 )
 
 type noteForm struct {
-	Id                  int64
+	ID                  int64
 	Title               string
 	Content             string
 	TagIds              []int64
-	SectionId           int64
+	SectionID           int64
 	ReferenceNoteIds    []int64
 	ReferencedByNoteIds []int64
 	Errors              map[string]string
@@ -74,14 +74,14 @@ func parseNoteForm(r *http.Request) (noteForm, error) {
 		return noteForm{}, err
 	}
 
-	nf := noteForm{Id: 0}
+	nf := noteForm{ID: 0}
 	pid := r.PathValue("id")
 	if pid != "" {
 		id, err := strconv.ParseInt(pid, 10, 64)
 		if err != nil {
 			return noteForm{}, err
 		}
-		nf.Id = id
+		nf.ID = id
 	}
 
 	title := r.PostForm.Get("title")
@@ -107,7 +107,7 @@ func parseNoteForm(r *http.Request) (noteForm, error) {
 		if err != nil {
 			return noteForm{}, err
 		}
-		nf.SectionId = sid
+		nf.SectionID = sid
 	}
 
 	refNotesF := r.PostForm["reference-notes"]
@@ -139,11 +139,11 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo models.NotesRe
 	fe := map[string]string{}
 
 	// Note Id Validation
-	if nf.Id > 0 {
-		_, err := notesRepo.FindNoteById(ctx, nf.Id)
+	if nf.ID > 0 {
+		_, err := notesRepo.FindNoteByID(ctx, nf.ID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				fe["id"] = fmt.Sprintf("id %d does not exist", nf.Id)
+				fe["id"] = fmt.Sprintf("id %d does not exist", nf.ID)
 			}
 			return nil, err
 		}
@@ -163,15 +163,15 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo models.NotesRe
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
-	if err == nil && nid != nf.Id {
+	if err == nil && nid != nf.ID {
 		fe["title"] = fmt.Sprintf("title %s exists", nf.Title)
 	}
 
 	// Section Validation
-	if nf.SectionId <= 0 {
+	if nf.SectionID <= 0 {
 		fe["section"] = "section does not exist"
 	} else {
-		_, err = notesRepo.FindSectionById(ctx, nf.SectionId)
+		_, err = notesRepo.FindSectionById(ctx, nf.SectionID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return nil, err
@@ -193,7 +193,7 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo models.NotesRe
 		if len(tags) != len(nf.TagIds) {
 			for _, tid := range nf.TagIds {
 				if !slices.ContainsFunc(tags, func(t models.Tag) bool {
-					return t.Id == tid
+					return t.ID == tid
 				}) {
 					fe["tags"] = fmt.Sprintf("tags %v does not exist", tid)
 				}
@@ -245,7 +245,7 @@ func NoteNewGet(
 
 		data := noteCreateData{
 			BaseData:               newBase(r),
-			Form:                   noteForm{SectionId: 1},
+			Form:                   noteForm{SectionID: 1},
 			Tags:                   tags,
 			Sections:               sec,
 			RenderedNote:           renderedNotePageData{IsPreview: true},
@@ -310,7 +310,7 @@ func NotePost(
 			r.Context(),
 			nf.Title,
 			nf.Content,
-			nf.SectionId,
+			nf.SectionID,
 			nf.TagIds,
 			nf.ReferenceNoteIds,
 		)
@@ -345,7 +345,7 @@ func NoteEditGet(
 			return
 		}
 
-		n, err := notesRepo.FindNoteById(r.Context(), id)
+		n, err := notesRepo.FindNoteByID(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.NotFound(w, r)
@@ -370,14 +370,14 @@ func NoteEditGet(
 
 		tids := make([]int64, len(n.Tags)+1)
 		for i, t := range n.Tags {
-			tids[i] = t.Id
+			tids[i] = t.ID
 		}
 		nf := noteForm{
-			Id:        id,
+			ID:        id,
 			Title:     n.Title,
 			Content:   n.Content,
 			TagIds:    tids,
-			SectionId: n.Section.Id,
+			SectionID: n.Section.ID,
 			Errors:    map[string]string{},
 		}
 
@@ -419,7 +419,7 @@ func NotePut(
 			return
 		}
 
-		if nf.Id <= 0 {
+		if nf.ID <= 0 {
 			logger.Warn("received a PUT request for a new note")
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -454,10 +454,10 @@ func NotePut(
 
 		err = notesRepo.UpdateNote(
 			r.Context(),
-			nf.Id,
+			nf.ID,
 			nf.Title,
 			nf.Content,
-			nf.SectionId,
+			nf.SectionID,
 			nf.TagIds,
 			nf.ReferenceNoteIds,
 		)
@@ -466,7 +466,7 @@ func NotePut(
 			return
 		}
 
-		ru := fmt.Sprintf("/note/%v/%s", nf.Id, slugify(nf.Title))
+		ru := fmt.Sprintf("/note/%v/%s", nf.ID, slugify(nf.Title))
 		w.Header().Set("HX-Redirect", ru)
 		w.WriteHeader(http.StatusOK)
 	}
@@ -519,18 +519,18 @@ func NotePreviewPost(
 		}
 
 		n := models.Note{
-			Id:               nf.Id,
+			ID:               nf.ID,
 			Title:            nf.Title,
 			Content:          nf.Content,
-			Section:          models.Section{Id: nf.SectionId},
+			Section:          models.Section{ID: nf.SectionID},
 			ReferenceNotes:   refNotes,
 			ReferenceByNotes: refByNotes,
 			Tags:             ts,
 		}
 
-		sec, err := notesRepo.FindSectionById(r.Context(), n.Section.Id)
+		sec, err := notesRepo.FindSectionById(r.Context(), n.Section.ID)
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to enrich section %v from database", n.Section.Id), "errMsg", err.Error())
+			slog.Error(fmt.Sprintf("failed to enrich section %v from database", n.Section.ID), "errMsg", err.Error())
 		} else {
 			n.Section.Name = sec.Name
 		}
@@ -577,7 +577,7 @@ func NoteViewGet(
 			return
 		}
 
-		n, err := notesRepo.FindNoteById(r.Context(), id)
+		n, err := notesRepo.FindNoteByID(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.NotFound(w, r)
@@ -704,10 +704,10 @@ func ReferenceNoteSelectPost(
 ) http.HandlerFunc {
 	type td struct {
 		Title string
-		Id    int64
+		ID    int64
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := parseIdFromPath(r)
+		id, err := parseIDFromPath(r)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -724,7 +724,7 @@ func ReferenceNoteSelectPost(
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "selected-ref-note", td{Id: id, Title: title})
+		tc.RenderPartial(logger, w, r, http.StatusOK, "selected-ref-note", td{ID: id, Title: title})
 	}
 }
 

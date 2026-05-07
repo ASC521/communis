@@ -94,7 +94,7 @@ func PostUserLogin(
 			return
 		}
 
-		err = indexRepo.UpdateUserLastLoginToNow(r.Context(), user.Id)
+		err = indexRepo.UpdateUserLastLoginToNow(r.Context(), user.ID)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -106,7 +106,7 @@ func PostUserLogin(
 			return
 		}
 
-		sessionManager.Put(r.Context(), "authenticatedUserId", user.Id)
+		sessionManager.Put(r.Context(), "authenticatedUserId", user.ID)
 		if user.IsAdmin {
 			http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		} else {
@@ -142,13 +142,13 @@ func PutUserTheme(
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIdFromPath(r)
+		userId, err := parseIDFromPath(r)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
 		}
 
-		ctxUserId := getUserIdFromRequest(r)
+		ctxUserId := getUserIDFromRequest(r)
 		if ctxUserId == 0 {
 			tc.RenderError(logger, w, r, errors.New("user id missing from request context"))
 			return

@@ -51,7 +51,7 @@ func DeleteUser(
 	dss services.DataStoreService,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIdFromPath(r)
+		userId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -64,7 +64,7 @@ func DeleteUser(
 		}
 
 		if user.IsAdmin {
-			err = dss.Remove(user.Id)
+			err = dss.Remove(user.ID)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
@@ -220,7 +220,7 @@ func PutUser(
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pathUserId, err := parseIdFromPath(r)
+		pathUserId, err := parseIDFromPath(r)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -360,7 +360,7 @@ func GetUserEdit(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIdFromPath(r)
+		userId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -380,7 +380,7 @@ func GetUserEdit(
 			},
 			User: user,
 			ChangePasswordForm: changePasswordForm{
-				Id:          user.Id,
+				Id:          user.ID,
 				Name:        user.Name,
 				FieldErrors: map[string]string{},
 			},
@@ -396,7 +396,7 @@ func GetUser(
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIdFromPath(r)
+		userId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

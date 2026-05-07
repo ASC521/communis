@@ -36,7 +36,7 @@ func (r *indexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) 
 	userDBs := []models.UserDatabase{}
 	for rows.Next() {
 		userDB := models.UserDatabase{}
-		err = rows.Scan(&userDB.Id, &userDB.UserId, &userDB.Path, &userDB.Version)
+		err = rows.Scan(&userDB.ID, &userDB.UserID, &userDB.Path, &userDB.Version)
 		if err != nil {
 			return nil, err
 		}
@@ -70,9 +70,9 @@ func (r *indexDBRepository) GetUserDB(ctx context.Context, userId int64) (models
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	userDB := models.UserDatabase{UserId: userId}
+	userDB := models.UserDatabase{UserID: userId}
 	row := r.db.Read.QueryRowContext(ctxWTO, q, userId)
-	err := row.Scan(&userDB.Id, &userDB.Path, &userDB.Version)
+	err := row.Scan(&userDB.ID, &userDB.Path, &userDB.Version)
 	if err != nil {
 		return models.UserDatabase{}, err
 	}
@@ -136,7 +136,7 @@ func (r *indexDBRepository) AuthenticateUser(ctx context.Context, username, pass
 	var hashedPassword []byte
 	var createdStr, lastLoginStr sql.NullString
 	row := r.db.Read.QueryRowContext(ctxWTO, q, username)
-	err := row.Scan(&user.Id, &user.Name, &hashedPassword, &user.IsAdmin, &createdStr, &lastLoginStr)
+	err := row.Scan(&user.ID, &user.Name, &hashedPassword, &user.IsAdmin, &createdStr, &lastLoginStr)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, models.ErrInvalidCredentials
@@ -193,7 +193,7 @@ func (r *indexDBRepository) GetUser(ctx context.Context, id int64) (models.User,
 	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
 	user := models.User{}
 	var createdStr, lastLoginStr sql.NullString
-	err := row.Scan(&user.Id, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
+	err := row.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, models.ErrInvalidCredentials
@@ -231,7 +231,7 @@ func (r *indexDBRepository) UpdateUser(ctx context.Context, id int64, name strin
 	row := r.db.Write.QueryRowContext(ctxWTO, stmt, name, id)
 	user := models.User{}
 	var createdStr, lastLoginStr sql.NullString
-	err := row.Scan(&user.Id, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
+	err := row.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, models.ErrInvalidCredentials
@@ -297,7 +297,7 @@ func (r *indexDBRepository) ListUsers(ctx context.Context) ([]models.User, error
 	for rows.Next() {
 		user := models.User{}
 		var createdStr, lastLoginStr sql.NullString
-		err := rows.Scan(&user.Id, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr)
+		err := rows.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr)
 		if err != nil {
 			return nil, err
 		}

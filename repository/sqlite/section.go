@@ -25,7 +25,7 @@ func (r *NotesRepository) FindSectionById(ctx context.Context, id int64) (models
 	defer cancel()
 
 	nb := models.Section{}
-	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&nb.Id, &nb.Name)
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&nb.ID, &nb.Name)
 	if err != nil {
 		return models.Section{}, err
 	}
@@ -38,7 +38,7 @@ func (r *NotesRepository) FindSectionByName(ctx context.Context, name string) (m
 	defer cancel()
 
 	nb := models.Section{}
-	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&nb.Id, &nb.Name)
+	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&nb.ID, &nb.Name)
 	if err != nil {
 		return models.Section{}, err
 	}
@@ -51,7 +51,7 @@ func (r *NotesRepository) UpdateSection(ctx context.Context, s models.Section) e
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	_, err := r.db.Write.ExecContext(ctxWTO, sql, s.Name, s.Id)
+	_, err := r.db.Write.ExecContext(ctxWTO, sql, s.Name, s.ID)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (r *NotesRepository) ListAllSections(ctx context.Context) ([]models.Section
 	var secs []models.Section
 	for rows.Next() {
 		sec := models.Section{}
-		err = rows.Scan(&sec.Id, &sec.Name)
+		err = rows.Scan(&sec.ID, &sec.Name)
 		if err != nil {
 			return nil, err
 		}

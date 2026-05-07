@@ -106,7 +106,7 @@ func DefaultConfig() (*Config, error) {
 			Host: "localhost",
 			Port: 6789,
 			LoggingIgnoredPaths: []RegexPattern{
-				RegexPattern{Pattern: `\/static\/.*`},
+				{Pattern: `\/static\/.*`},
 			},
 			Debug: false,
 		},
