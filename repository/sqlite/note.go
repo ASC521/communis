@@ -335,8 +335,7 @@ func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (mod
 	ns := make([]*models.NoteDetail, 0, limit)
 	for rows.Next() {
 		n := &models.NoteDetail{}
-		var createdStr, updatedStr string
-		err = rows.Scan(&n.Id, &n.Title, &createdStr, &updatedStr)
+		err = rows.Scan(&n.Id, &n.Title)
 		if err != nil {
 			return models.PaginatedNotes{}, fmt.Errorf("failed to scan rows for note: %w", err)
 		}

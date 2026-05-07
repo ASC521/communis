@@ -389,7 +389,18 @@ func TestSQLiteNoteMethods(t *testing.T) {
 			Name: "Create",
 			TFunc: func(nr models.NotesRepository) error {
 				for _, n := range ns {
-					id, err := nr.CreateNote(ctx, *n)
+					tids := make([]int64, len(n.Tags))
+					for i, t := range n.Tags {
+						tids[i] = t.Id
+					}
+					id, err := nr.CreateNote(
+						ctx,
+						n.Title,
+						n.Content,
+						n.Section.Id,
+						tids,
+						[]int64{},
+					)
 					if err != nil {
 						return fmt.Errorf("failed to create note: %w", err)
 					}
@@ -454,7 +465,11 @@ func TestSQLiteNoteMethods(t *testing.T) {
 
 				n.Title = "Updated Title"
 
-				err := nr.UpdateNote(ctx, *n)
+				tids := make([]int64, len(n.Tags))
+				for i, t := range n.Tags {
+					tids[i] = t.Id
+				}
+				err := nr.UpdateNote(ctx, n.Id, n.Title, n.Content, n.Section.Id, tids, []int64{})
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
@@ -544,7 +559,12 @@ func TestSQLiteNoteMethods(t *testing.T) {
 			TFunc: func(nr models.NotesRepository) error {
 				on := ns[12]
 				on.Content = on.Content + "FTS FIND ME"
-				err := nr.UpdateNote(ctx, *on)
+				tids := make([]int64, len(on.Tags))
+				for i, t := range on.Tags {
+					tids[i] = t.Id
+				}
+
+				err := nr.UpdateNote(ctx, on.Id, on.Title, on.Content, on.Section.Id, tids, []int64{})
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
