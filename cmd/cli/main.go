@@ -1,4 +1,4 @@
-//go:generate go run . generate-css -dark-theme dracula -light-theme tango
+//go:generate go run . generate css -dark-theme dracula -light-theme tango
 package main
 
 import (
@@ -16,12 +16,24 @@ import (
 
 func main() {
 
+	defaultConfLoc, err := config.DefaultFileLocation()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+
+	defaultDataDir, err := config.DefaultDataDirectory()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+
 	globalFlags := flag.NewFlagSet("global", flag.ExitOnError)
-	cfp := globalFlags.String("config-file", "./communis.toml", "location of configuration toml file")
+	cfp := globalFlags.String("config-file", defaultConfLoc, "location of configuration toml file")
 	verboseLogF := globalFlags.Bool("verbose-logging", false, "enable verbose logging")
+	dataDirF := globalFlags.String("data-directory", defaultDataDir, "location of persistent data storage")
 	sqliteBT := globalFlags.Int("sqlite-busy-timeout", 0, "busy_timeout pragma setting (default 5000)")
 	sqliteCS := globalFlags.Int("sqlite-cache-size", 0, "cache_size pragma setting (default 2000)")
-	sqliteDBDir := globalFlags.String("sqlite-directory", "", "location of directory containing sqlite database files")
 	sqliteFK := globalFlags.Bool("sqlite-foreign-keys", false, "foreign_keys pragma setting (default true)")
 	sqliteJM := globalFlags.String("sqlite-journal-mode", "", "journal_mode pragma setting - options: DELETE | TRUNCATE | PERSIST | MEMORY | WAL | OFF (default \"WAL\")")
 	sqliteSync := globalFlags.String("sqlite-synchronous", "", "synchronous pragma setting - options: OFF | NORMAL | FULL | EXTRA (default\"NORMAL\")")
@@ -33,7 +45,9 @@ func main() {
 		globalFlags.PrintDefaults()
 		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
 		fmt.Fprint(os.Stdout, "database          create and manage database\n")
-		fmt.Fprint(os.Stdout, "generate-css      generate css files to support rendered markdown syntax highlighting\n")
+		fmt.Fprint(os.Stdout, "generate          generate files to support running application\n")
+		fmt.Fprint(os.Stdout, "install           install application on linux\n")
+		fmt.Fprint(os.Stdout, "uninstall         uninstall application on linux\n")
 		fmt.Fprint(os.Stdout, "serve             run web server\n")
 		fmt.Fprint(os.Stdout, "user              manage application users\n\n")
 	}
@@ -55,7 +69,10 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to resolve relative path of the config file")
 	}
-	conf := config.DefaultConfig()
+	conf, err := config.DefaultConfig()
+	if err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+	}
 	_, err = os.Stat(resCFP)
 	if errors.Is(err, os.ErrNotExist) {
 		slog.Info(fmt.Sprintf("config file does not exist at %s, skipping loading\n", resCFP), "config-location", resCFP)
@@ -84,8 +101,8 @@ func main() {
 			conf.SQLite.BusyTimeout = *sqliteBT
 		case "sqlite-cache-size":
 			conf.SQLite.CacheSize = *sqliteCS
-		case "sqlite-file-path":
-			conf.SQLite.DBDirectory = *sqliteDBDir
+		case "data-directory":
+			conf.DataDirectory = *dataDirF
 		case "sqlite-foreign-keys":
 			conf.SQLite.ForeignKeys = *sqliteFK
 		case "sqlite-synchronous":
@@ -107,8 +124,12 @@ func main() {
 		err = ServeCMD(conf, subArgs)
 	case "user":
 		err = UserCMD(conf, subArgs)
-	case "generate-css":
-		err = GenerateCssCMD(conf, subArgs)
+	case "generate":
+		err = GenerateCMD(conf, subArgs)
+	case "install":
+		err = InstallCMD(conf, subArgs)
+	case "uninstall":
+		err = UninstallCMD(conf, subArgs)
 	default:
 		fmt.Fprintln(os.Stderr, fmt.Errorf("%s is not a valid command", cmd))
 		os.Exit(1)

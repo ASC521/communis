@@ -36,7 +36,7 @@ func initAdmin(conf *config.Config, args []string) error {
 		return fmt.Errorf("password cannot be empty")
 	}
 
-	indexDBFP := filepath.Join(conf.SQLite.DBDirectory, conf.SQLite.IndexDBFileName)
+	indexDBFP := filepath.Join(conf.DataDirectory, conf.SQLite.IndexDBFileName)
 	indexDB, err := sqlitex.NewSQLiteDB(indexDBFP,
 		sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
 		sqlitex.WithCacheSize(conf.SQLite.CacheSize),
