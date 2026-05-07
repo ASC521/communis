@@ -206,20 +206,6 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo models.NotesRe
 
 }
 
-func parseNoteFromNoteForm(nf noteForm) models.Note {
-	ts := make([]models.Tag, len(nf.TagIds))
-	for i, tid := range nf.TagIds {
-		ts[i] = models.Tag{Id: tid}
-	}
-	return models.Note{
-		Id:      nf.Id,
-		Title:   nf.Title,
-		Content: nf.Content,
-		Section: models.Section{Id: nf.SectionId},
-		Tags:    ts,
-	}
-}
-
 type noteCreateData struct {
 	BaseData
 	Form                   noteForm

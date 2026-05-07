@@ -47,11 +47,12 @@ type SQLiteDataStoreConfig struct {
 
 func ConfigToSQLiteDataStoreConfig(conf config.Config) (SQLiteDataStoreConfig, error) {
 
-	if conf.SQLite.DBDirectory == "" {
-		return SQLiteDataStoreConfig{}, errors.New("DBDirectory cannot be empty")
+	var dbd string
+	if conf.DataDirectory == "" {
+		return SQLiteDataStoreConfig{}, errors.New("data directory cannot be empty")
 	}
 
-	dbd, err := homedir.Expand(conf.SQLite.DBDirectory)
+	dbd, err := homedir.Expand(conf.DataDirectory)
 	if err != nil {
 		return SQLiteDataStoreConfig{}, err
 	}

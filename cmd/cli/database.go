@@ -128,15 +128,15 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 	migrationsDir := ""
 	switch strings.ToLower(*dbType) {
 	case "index":
-		dbPath = filepath.Join(conf.SQLite.DBDirectory, conf.SQLite.IndexDBFileName)
+		dbPath = filepath.Join(conf.DataDirectory, conf.SQLite.IndexDBFileName)
 		migrationsDir = conf.SQLite.IndexDBMigrations
 	case "notes":
 
 		if *notesDBName == "" {
-			return fmt.Errorf("notes-db-name is required.")
+			return fmt.Errorf("notes-db-name is required")
 		}
 
-		dbPath = filepath.Join(conf.SQLite.DBDirectory, "notes", *notesDBName)
+		dbPath = filepath.Join(conf.DataDirectory, "notes", *notesDBName)
 		migrationsDir = conf.SQLite.NotesDBMigrations
 	default:
 		return fmt.Errorf("database type %s is not valid.  Valid options index or notes", *dbType)

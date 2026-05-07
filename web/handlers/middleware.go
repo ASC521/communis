@@ -11,6 +11,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/models"
 	"github.com/alexedwards/scs/v2"
 )
@@ -49,11 +50,11 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.wroteHeader = true
 }
 
-func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
+func RequestLogger(ignoreRE []config.RegexPattern, logger *slog.Logger) func(next http.Handler) http.Handler {
 
 	var ignore []*regexp.Regexp
 	for _, re := range ignoreRE {
-		regex, err := regexp.Compile(re)
+		regex, err := regexp.Compile(re.Pattern)
 		if err != nil {
 			logger.Warn(fmt.Sprintf("Unable to exclude url path pattern %s - it is not a valid regex", re), "errMsg", err.Error())
 			continue
