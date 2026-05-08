@@ -16,10 +16,10 @@ import (
 	"github.com/ASC521/communis/repository/sqlite"
 )
 
-func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() error) {
+func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, func() error, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("failed to find current directory: %w", err), nil
+		return nil, nil, fmt.Errorf("failed to find current directory: %w", err)
 	}
 
 	p := filepath.Dir(cwd)
@@ -27,7 +27,7 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 	testPath := filepath.Join(r, fmt.Sprintf("test-%v", time.Now().Format(time.RFC3339)))
 	err = os.Mkdir(testPath, 0700)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make test directory: %w", err), nil
+		return nil, nil, fmt.Errorf("failed to make test directory: %w", err)
 	}
 
 	cleanUp := func() error {
@@ -37,22 +37,22 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, error, func() 
 	db, err := sqlitex.NewSQLiteDB(filepath.Join(testPath, "test.db"))
 	if err != nil {
 		cleanUp()
-		return nil, fmt.Errorf("failed to create sqlite database: %w", err), nil
+		return nil, nil, fmt.Errorf("failed to create sqlite database: %w", err)
 	}
 
 	migs, err := migrations.Load("sql/notes-db")
 	if err != nil {
 		cleanUp()
-		return nil, fmt.Errorf("failed to create sqlite migrator: %w", err), nil
+		return nil, nil, fmt.Errorf("failed to create sqlite migrator: %w", err)
 	}
 	driver := sqlitex.NewMigrationDriver(db)
 	_, err = migrations.Bootstrap(ctx, migs, driver)
 	if err != nil {
 		cleanUp()
-		return nil, fmt.Errorf("failed to bootstrap database: %w", err), nil
+		return nil, nil, fmt.Errorf("failed to bootstrap database: %w", err)
 	}
 
-	return db, nil, cleanUp
+	return db, cleanUp, nil
 
 }
 
@@ -64,7 +64,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err, cleanUp := bootstrapInMemoryDB(ctx)
+	db, cleanUp, err := bootstrapInMemoryDB(ctx)
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 					if id == 0 {
 						return fmt.Errorf("id not returned for %s", nb.Name)
 					}
-					nb.Id = id
+					nb.ID = id
 				}
 
 				return nil
@@ -98,7 +98,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 			Name: "FindById",
 			TFunc: func(nr models.NotesRepository) error {
 				nb := nbs[2]
-				nbQ, err := nr.FindSectionById(ctx, nb.Id)
+				nbQ, err := nr.FindSectionById(ctx, nb.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find section by id: %w", err)
 				}
@@ -113,13 +113,13 @@ func TestSQLiteSectionMethods(t *testing.T) {
 			Name: "Update",
 			TFunc: func(nr models.NotesRepository) error {
 				onb := nbs[10]
-				nnb := models.Section{Id: onb.Id, Name: onb.Name}
+				nnb := models.Section{ID: onb.ID, Name: onb.Name}
 				nnb.Name = "section-55"
 				err := nr.UpdateSection(ctx, nnb)
 				if err != nil {
 					return fmt.Errorf("failed to update section: %w", err)
 				}
-				qnb, err := nr.FindSectionById(ctx, onb.Id)
+				qnb, err := nr.FindSectionById(ctx, onb.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find updated section by id: %w", err)
 				}
@@ -133,12 +133,12 @@ func TestSQLiteSectionMethods(t *testing.T) {
 			Name: "Delete",
 			TFunc: func(nr models.NotesRepository) error {
 				nb := nbs[12]
-				err := nr.DeleteSection(ctx, nb.Id)
+				err := nr.DeleteSection(ctx, nb.ID)
 				if err != nil {
 					return fmt.Errorf("section delete failed: %w", err)
 				}
 
-				_, err = nr.FindSectionById(ctx, nb.Id)
+				_, err = nr.FindSectionById(ctx, nb.ID)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")
@@ -186,7 +186,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err, cleanUp := bootstrapInMemoryDB(ctx)
+	db, cleanUp, err := bootstrapInMemoryDB(ctx)
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 					if id == 0 {
 						return fmt.Errorf("id not returned for %s", t.Name)
 					}
-					t.Id = id
+					t.ID = id
 				}
 
 				return nil
@@ -220,7 +220,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 			Name: "FindById",
 			TFunc: func(tr models.NotesRepository) error {
 				t := ts[2]
-				tq, err := tr.FindTagById(ctx, t.Id)
+				tq, err := tr.FindTagById(ctx, t.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find tag by id: %w", err)
 				}
@@ -235,13 +235,13 @@ func TestSQLiteTagMethods(t *testing.T) {
 			Name: "Update",
 			TFunc: func(tr models.NotesRepository) error {
 				ot := ts[10]
-				nt := models.Tag{Id: ot.Id, Name: ot.Name}
+				nt := models.Tag{ID: ot.ID, Name: ot.Name}
 				nt.Name = "updatedtag"
 				err := tr.UpdateTag(ctx, nt)
 				if err != nil {
 					return fmt.Errorf("failed to update tag: %w", err)
 				}
-				qt, err := tr.FindTagById(ctx, ot.Id)
+				qt, err := tr.FindTagById(ctx, ot.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find updated tag by id: %w", err)
 				}
@@ -256,12 +256,12 @@ func TestSQLiteTagMethods(t *testing.T) {
 			Name: "Delete",
 			TFunc: func(tr models.NotesRepository) error {
 				t := ts[12]
-				err := tr.DeleteTag(ctx, t.Id)
+				err := tr.DeleteTag(ctx, t.ID)
 				if err != nil {
 					return fmt.Errorf("tag delete failed: %w", err)
 				}
 
-				_, err = tr.FindTagById(ctx, t.Id)
+				_, err = tr.FindTagById(ctx, t.ID)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")
@@ -306,7 +306,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 			TFunc: func(tr models.NotesRepository) error {
 				missing1 := int64(120)
 				missing2 := int64(340)
-				tags, err := tr.QueryTags(ctx, []int64{ts[3].Id, ts[14].Id, ts[17].Id, missing1, missing2})
+				tags, err := tr.QueryTags(ctx, []int64{ts[3].ID, ts[14].ID, ts[17].ID, missing1, missing2})
 				if err != nil {
 					return err
 				}
@@ -343,7 +343,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err, cleanUp := bootstrapInMemoryDB(ctx)
+	db, cleanUp, err := bootstrapInMemoryDB(ctx)
 	if err != nil {
 		t.Fatalf("failed to bootstrap sqlite database: %v", err)
 	}
@@ -358,7 +358,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 			t.Fatalf("failed prepping database with tags: %v", err.Error())
 		}
 
-		tag.Id = tid
+		tag.ID = tid
 	}
 
 	for _, nb := range secs {
@@ -366,7 +366,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed preppering database with notebooks: %v", err.Error())
 		}
-		nb.Id = nid
+		nb.ID = nid
 	}
 
 	ns := make([]*models.Note, 0, 20)
@@ -391,13 +391,13 @@ func TestSQLiteNoteMethods(t *testing.T) {
 				for _, n := range ns {
 					tids := make([]int64, len(n.Tags))
 					for i, t := range n.Tags {
-						tids[i] = t.Id
+						tids[i] = t.ID
 					}
 					id, err := nr.CreateNote(
 						ctx,
 						n.Title,
 						n.Content,
-						n.Section.Id,
+						n.Section.ID,
 						tids,
 						[]int64{},
 					)
@@ -409,7 +409,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 						return fmt.Errorf("id not returned after successfully creating note %s", n.Title)
 					}
 
-					n.Id = id
+					n.ID = id
 				}
 
 				srs, err := nr.SearchNotes(ctx, `"Title-17"`)
@@ -419,7 +419,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 
 				var found bool
 				for _, sr := range srs {
-					if sr.Id == 17 {
+					if sr.ID == 17 {
 						found = true
 						break
 					}
@@ -467,14 +467,14 @@ func TestSQLiteNoteMethods(t *testing.T) {
 
 				tids := make([]int64, len(n.Tags))
 				for i, t := range n.Tags {
-					tids[i] = t.Id
+					tids[i] = t.ID
 				}
-				err := nr.UpdateNote(ctx, n.Id, n.Title, n.Content, n.Section.Id, tids, []int64{})
+				err := nr.UpdateNote(ctx, n.ID, n.Title, n.Content, n.Section.ID, tids, []int64{})
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
 
-				un, err := nr.FindNoteById(ctx, n.Id)
+				un, err := nr.FindNoteByID(ctx, n.ID)
 				if err != nil {
 					return fmt.Errorf("failed to query updated note: %w", err)
 				}
@@ -490,7 +490,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 
 				var found bool
 				for _, sr := range srs {
-					if sr.Id == n.Id {
+					if sr.ID == n.ID {
 						found = true
 						break
 					}
@@ -506,12 +506,12 @@ func TestSQLiteNoteMethods(t *testing.T) {
 			Name: "Delete",
 			TFunc: func(nr models.NotesRepository) error {
 				n := ns[11]
-				err := nr.DeleteNote(ctx, n.Id)
+				err := nr.DeleteNote(ctx, n.ID)
 				if err != nil {
 					return fmt.Errorf("failed to delete note: %w", err)
 				}
 
-				_, err = nr.FindNoteById(ctx, n.Id)
+				_, err = nr.FindNoteByID(ctx, n.ID)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")
@@ -561,10 +561,10 @@ func TestSQLiteNoteMethods(t *testing.T) {
 				on.Content = on.Content + "FTS FIND ME"
 				tids := make([]int64, len(on.Tags))
 				for i, t := range on.Tags {
-					tids[i] = t.Id
+					tids[i] = t.ID
 				}
 
-				err := nr.UpdateNote(ctx, on.Id, on.Title, on.Content, on.Section.Id, tids, []int64{})
+				err := nr.UpdateNote(ctx, on.ID, on.Title, on.Content, on.Section.ID, tids, []int64{})
 				if err != nil {
 					return fmt.Errorf("failed to update note: %w", err)
 				}
@@ -575,7 +575,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 
 				var found bool
 				for _, sr := range srs {
-					if sr.Id == 13 {
+					if sr.ID == 13 {
 						found = true
 						break
 					}

@@ -36,7 +36,7 @@ func parseTagFormFromRequest(r *http.Request) (tagForm, error) {
 	}
 
 	if r.Method == "PUT" {
-		tagId, err := parseIdFromPath(r)
+		tagId, err := parseIDFromPath(r)
 		if err != nil {
 			return tagForm{}, err
 		}
@@ -112,7 +112,7 @@ func TagViewGet(
 		NoteDetails []models.NoteDetail
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagId, err := parseIdFromPath(r)
+		tagId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -158,7 +158,7 @@ func TagEditGet(
 		FieldErrors map[string]string
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagId, err := parseIdFromPath(r)
+		tagId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -176,7 +176,7 @@ func TagEditGet(
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag", td{Id: tag.Id, Name: tag.Name, FieldErrors: map[string]string{}})
+		tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag", td{Id: tag.ID, Name: tag.Name, FieldErrors: map[string]string{}})
 
 	}
 }
@@ -205,7 +205,7 @@ func TagPut(
 			return
 		}
 
-		err = notesRepo.UpdateTag(r.Context(), models.Tag{Id: form.Id, Name: form.Name})
+		err = notesRepo.UpdateTag(r.Context(), models.Tag{ID: form.Id, Name: form.Name})
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -223,7 +223,7 @@ func TagDelete(
 	dss services.DataStoreService,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagId, err := parseIdFromPath(r)
+		tagId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -300,7 +300,7 @@ func TagPost(
 			"new-tag",
 			td{
 				SuccessMsg: fmt.Sprintf("Tag %s created", form.Name),
-				Tag:        &models.Tag{Id: id, Name: form.Name},
+				Tag:        &models.Tag{ID: id, Name: form.Name},
 			},
 		)
 

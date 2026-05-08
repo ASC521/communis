@@ -13,7 +13,7 @@ import (
 	"github.com/ASC521/communis/services"
 )
 
-var ErrUserIdNotFound = errors.New("user id not found in request context")
+var ErrUserIDNotFound = errors.New("user id not found in request context")
 
 func slugify(s string) string {
 
@@ -47,15 +47,15 @@ func safeHTML(s string) template.HTML {
 	return template.HTML(s)
 }
 
-func parseIdFromPath(r *http.Request) (int64, error) {
-	pathId := r.PathValue("id")
-	if pathId == "" {
+func parseIDFromPath(r *http.Request) (int64, error) {
+	pathID := r.PathValue("id")
+	if pathID == "" {
 		return 0, errors.New("no id found in path")
 	}
 
-	id, err := strconv.ParseInt(pathId, 10, 64)
+	id, err := strconv.ParseInt(pathID, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("id %v is not a valid int", pathId)
+		return 0, fmt.Errorf("id %v is not a valid int", pathID)
 	}
 
 	return id, nil
@@ -65,11 +65,11 @@ var ErrNotesRepoNotFound = errors.New("notes repository not found in context")
 
 func GetNotesRepo(r *http.Request, dss services.DataStoreService) (models.NotesRepository, error) {
 
-	userId, ok := r.Context().Value(userIdContextKey).(int64)
+	userID, ok := r.Context().Value(userIDContextKey).(int64)
 	if !ok {
-		return nil, ErrUserIdNotFound
+		return nil, ErrUserIDNotFound
 	}
-	notesRepo, err := dss.GetNotesStore(r.Context(), userId)
+	notesRepo, err := dss.GetNotesStore(r.Context(), userID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +93,13 @@ func isAdmin(r *http.Request) bool {
 	return isAdmin
 }
 
-func getUserIdFromRequest(r *http.Request) int64 {
-	userId, ok := r.Context().Value(userIdContextKey).(int64)
+func getUserIDFromRequest(r *http.Request) int64 {
+	userID, ok := r.Context().Value(userIDContextKey).(int64)
 	if !ok {
 		return 0
 	}
 
-	return userId
+	return userID
 }
 
 func getUserThemeFromRequest(r *http.Request) string {

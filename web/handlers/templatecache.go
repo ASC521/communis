@@ -24,7 +24,7 @@ func newBase(r *http.Request) BaseData {
 	return BaseData{
 		IsAuthenticated: isAuthenticated(r),
 		IsAdmin:         isAdmin(r),
-		UserId:          getUserIdFromRequest(r),
+		UserId:          getUserIDFromRequest(r),
 		Theme:           getUserThemeFromRequest(r),
 	}
 }

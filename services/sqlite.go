@@ -386,7 +386,7 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 
 	userStore := sqlite.NewIndexDBRepository(s.indexDB)
 	for _, userDB := range dbsToUpgrade {
-		s.logger.Info(fmt.Sprintf("Notes database migration found for user %v - running up migration", userDB.UserId))
+		s.logger.Info(fmt.Sprintf("Notes database migration found for user %v - running up migration", userDB.UserID))
 		conn, err := sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
 		if err != nil {
 			return err
@@ -397,7 +397,7 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 			return err
 		}
 
-		err = userStore.UpdateDBVersion(ctx, userDB.UserId, ver)
+		err = userStore.UpdateDBVersion(ctx, userDB.UserID, ver)
 		if err != nil {
 			return err
 		}

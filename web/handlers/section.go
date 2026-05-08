@@ -37,7 +37,7 @@ func parseSectionFormFromRequest(r *http.Request) (sectionForm, error) {
 	}
 
 	if r.Method == "PUT" {
-		sectionId, err := parseIdFromPath(r)
+		sectionId, err := parseIDFromPath(r)
 		if err != nil {
 			return sectionForm{}, err
 		}
@@ -150,7 +150,7 @@ func SectionDelete(
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		sectionId, err := parseIdFromPath(r)
+		sectionId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -196,7 +196,7 @@ func SectionPut(
 			return
 		}
 
-		err = notesRepo.UpdateSection(r.Context(), models.Section{Id: form.Id, Name: form.Name})
+		err = notesRepo.UpdateSection(r.Context(), models.Section{ID: form.Id, Name: form.Name})
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -213,7 +213,7 @@ func SectionEditGet(
 	dss services.DataStoreService,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sectionId, err := parseIdFromPath(r)
+		sectionId, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -236,7 +236,7 @@ func SectionEditGet(
 			return
 		}
 
-		sectionForm := sectionForm{Id: section.Id, Name: section.Name, FieldErrors: map[string]string{}}
+		sectionForm := sectionForm{Id: section.ID, Name: section.Name, FieldErrors: map[string]string{}}
 		tc.RenderPartial(logger, w, r, http.StatusOK, "update-section", sectionForm)
 	}
 }
