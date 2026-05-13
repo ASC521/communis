@@ -10,7 +10,7 @@
   <ul class="list-of-links">
     {{ range .Tags }}
     <li>
-      <a href="/tag/{{ .Id }}/{{ slugify .Name}}">{{ .Name }}</a>
+      <a href="/tag/{{ .ID }}/{{ slugify .Name}}">{{ .Name }}</a>
     <li>
     {{ end }}
   </ul>

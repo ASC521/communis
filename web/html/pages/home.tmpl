@@ -15,7 +15,7 @@
     <ul class="list-of-links -center">
   {{ range .NoteDetails }}
   <li>
-    <a class="flex-1" href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a>
+    <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
   </li>
   {{ end }}
   </ul>

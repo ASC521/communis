@@ -4,7 +4,7 @@
 <article class="search-result">
   <header>
     <h2>
-      <a href="/note/{{.Id}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
+      <a href="/note/{{.ID}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
     </h2>
   </header>
   {{ safeHTML .ContentSnippet }}
@@ -28,7 +28,7 @@
     type="button"
     id="ref-note-btn"
     role="option"
-    hx-post="/ref-notes/select/{{ .Id }}"
+    hx-post="/ref-notes/select/{{ .ID }}"
     hx-vals='{"title": "{{ .Title }}"}'
     hx-target="#selected-notes"
     hx-swap="append">
@@ -41,10 +41,10 @@
 
 
 {{ define "selected-ref-note" }}
-<li for="ref-note-{{ .Id }}" class="item">
+<li for="ref-note-{{ .ID }}" class="item">
   <input type="text" value="{{ .Title }}" class="text-input -readonly text" readonly>
-  <input type="hidden" name="reference-notes" value="{{ .Id }}">
-  <button hx-delete="/ref-notes/select/{{ .Id }}" hx-target="closest li" hx-swap="outerHTML" arial-label="Remove {{ .Title }}">X</button>
+  <input type="hidden" name="reference-notes" value="{{ .ID }}">
+  <button hx-delete="/ref-notes/select/{{ .ID }}" hx-target="closest li" hx-swap="outerHTML" arial-label="Remove {{ .Title }}">X</button>
 </li>
 
 <ul id="search-results" class="search-dropdown" role="listbox" hx-swap-oob="true"></ul>

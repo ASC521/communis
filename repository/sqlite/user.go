@@ -65,13 +65,13 @@ func (r *indexDBRepository) UpdateDBVersion(ctx context.Context, userID int64, v
 	return err
 }
 
-func (r *indexDBRepository) GetUserDB(ctx context.Context, userId int64) (models.UserDatabase, error) {
+func (r *indexDBRepository) GetUserDB(ctx context.Context, userID int64) (models.UserDatabase, error) {
 	q := `SELECT id, db_path, db_version FROM user_databases WHERE user_id = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	userDB := models.UserDatabase{UserID: userId}
-	row := r.db.Read.QueryRowContext(ctxWTO, q, userId)
+	userDB := models.UserDatabase{UserID: userID}
+	row := r.db.Read.QueryRowContext(ctxWTO, q, userID)
 	err := row.Scan(&userDB.ID, &userDB.Path, &userDB.Version)
 	if err != nil {
 		return models.UserDatabase{}, err
@@ -113,17 +113,17 @@ func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, passw
 		if err != nil {
 			return -1, err
 		}
-		userId, err := result.LastInsertId()
+		userID, err := result.LastInsertId()
 		if err != nil {
 			return 0, err
 		}
-		dbPath := fmt.Sprintf("notes/%v.db", userId)
-		_, err = tx.ExecContext(ctx, dbStmt, userId, dbPath, 0)
+		dbPath := fmt.Sprintf("notes/%v.db", userID)
+		_, err = tx.ExecContext(ctx, dbStmt, userID, dbPath, 0)
 		if err != nil {
 			return 0, err
 		}
 
-		return userId, err
+		return userID, err
 	})
 }
 
@@ -172,13 +172,13 @@ func (r *indexDBRepository) AuthenticateUser(ctx context.Context, username, pass
 	return user, nil
 }
 
-func (r *indexDBRepository) IsAdminUser(ctx context.Context, userId int64) (bool, error) {
+func (r *indexDBRepository) IsAdminUser(ctx context.Context, userID int64) (bool, error) {
 	q := `SELECT is_admin FROM users WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	isAdmin := false
-	err := r.db.Read.QueryRowContext(ctxWTO, q, userId).Scan(&isAdmin)
+	err := r.db.Read.QueryRowContext(ctxWTO, q, userID).Scan(&isAdmin)
 	if err != nil {
 		return false, err
 	}
@@ -358,4 +358,18 @@ func (r *indexDBRepository) NameExists(ctx context.Context, name string) (bool, 
 	}
 	return exists, nil
 
+}
+
+func (r *indexDBRepository) InitialSetupNeeded(ctx context.Context) (bool, error) {
+	q := `SELECT EXISTS(SELECT 1 FROM users WHERE is_admin = true)`
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	var exists bool
+	row := r.db.Read.QueryRowContext(ctxWTO, q)
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return !exists, nil
 }

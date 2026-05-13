@@ -12,8 +12,19 @@ import (
 	"github.com/alexedwards/scs/v2"
 )
 
+func validatePassword(password, confirmedPassword string, errors map[string]string) {
+	switch {
+	case password == "":
+		errors["password"] = "password cannot be empty"
+	case !validator.MinChars(password, 8):
+		errors["password"] = "password must be at least 8 characters"
+	case password != confirmedPassword:
+		errors["password"] = "passwords must match"
+	}
+}
+
 type userEditForm struct {
-	Id          int64
+	ID          int64
 	UserName    string
 	FieldErrors map[string]string
 }
@@ -36,7 +47,7 @@ func parseUserEditFormFromRequest(r *http.Request) (userEditForm, error) {
 
 	name := r.PostForm.Get("username")
 	form := userEditForm{
-		Id:          id,
+		ID:          id,
 		UserName:    name,
 		FieldErrors: map[string]string{},
 	}
@@ -51,13 +62,13 @@ func DeleteUser(
 	dss services.DataStoreService,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIDFromPath(r)
+		userID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
-		user, err := indexRepo.GetUser(r.Context(), userId)
+		user, err := indexRepo.GetUser(r.Context(), userID)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -70,14 +81,14 @@ func DeleteUser(
 				return
 			}
 		} else {
-			err = dss.DeleteDB(r.Context(), userId)
+			err = dss.DeleteDB(r.Context(), userID)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
 			}
 		}
 
-		err = indexRepo.DeleteUser(r.Context(), userId)
+		err = indexRepo.DeleteUser(r.Context(), userID)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -152,21 +163,20 @@ func PostUser(
 			return
 		}
 
-		var userId int64
 		if nuf.IsAdmin {
-			userId, err = indexRepo.CreateAdminUser(r.Context(), nuf.Name, nuf.Password)
+			_, err = indexRepo.CreateAdminUser(r.Context(), nuf.Name, nuf.Password)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
 			}
 		} else {
-			userId, err = indexRepo.CreateUserAndDB(r.Context(), nuf.Name, nuf.Password)
+			userID, err := indexRepo.CreateUserAndDB(r.Context(), nuf.Name, nuf.Password)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
 			}
 
-			err = dss.CreateDB(r.Context(), userId)
+			err = dss.CreateDB(r.Context(), userID)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
@@ -220,7 +230,7 @@ func PutUser(
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pathUserId, err := parseIDFromPath(r)
+		pathUserID, err := parseIDFromPath(r)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -232,7 +242,7 @@ func PutUser(
 			return
 		}
 
-		if userEditForm.Id != pathUserId {
+		if userEditForm.ID != pathUserID {
 			tc.RenderError(logger, w, r, errors.New("form id does not match path id"))
 			return
 		}
@@ -252,7 +262,7 @@ func PutUser(
 		}
 
 		if len(userEditForm.FieldErrors) > 0 {
-			user, err := indexRepo.GetUser(r.Context(), userEditForm.Id)
+			user, err := indexRepo.GetUser(r.Context(), userEditForm.ID)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
@@ -267,7 +277,7 @@ func PutUser(
 			return
 		}
 
-		user, err := indexRepo.UpdateUser(r.Context(), userEditForm.Id, userEditForm.UserName)
+		user, err := indexRepo.UpdateUser(r.Context(), userEditForm.ID, userEditForm.UserName)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -278,7 +288,7 @@ func PutUser(
 }
 
 type changePasswordForm struct {
-	Id                int64
+	ID                int64
 	Name              string
 	Password          string
 	ConfirmedPassword string
@@ -308,11 +318,11 @@ func PutUserPassword(
 
 		idStr := r.PostForm.Get("id")
 		if idStr == "" {
-			passChgForm.Id = 0
+			passChgForm.ID = 0
 			tc.RenderError(logger, w, r, errors.New("id missing from form"))
 			return
 		} else {
-			passChgForm.Id, err = strconv.ParseInt(idStr, 10, 64)
+			passChgForm.ID, err = strconv.ParseInt(idStr, 10, 64)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
@@ -334,7 +344,7 @@ func PutUserPassword(
 			return
 		}
 
-		err = indexRepo.UpdateUserPassword(r.Context(), passChgForm.Id, passChgForm.Password)
+		err = indexRepo.UpdateUserPassword(r.Context(), passChgForm.ID, passChgForm.Password)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -360,13 +370,13 @@ func GetUserEdit(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIDFromPath(r)
+		userID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
-		user, err := indexRepo.GetUser(r.Context(), userId)
+		user, err := indexRepo.GetUser(r.Context(), userID)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -374,13 +384,13 @@ func GetUserEdit(
 		data := td{
 			BaseData: newBase(r),
 			EditUserForm: userEditForm{
-				Id:          userId,
+				ID:          userID,
 				UserName:    user.Name,
 				FieldErrors: map[string]string{},
 			},
 			User: user,
 			ChangePasswordForm: changePasswordForm{
-				Id:          user.ID,
+				ID:          user.ID,
 				Name:        user.Name,
 				FieldErrors: map[string]string{},
 			},
@@ -396,12 +406,12 @@ func GetUser(
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIDFromPath(r)
+		userID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
-		user, err := indexRepo.GetUser(r.Context(), userId)
+		user, err := indexRepo.GetUser(r.Context(), userID)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -409,5 +419,105 @@ func GetUser(
 
 		tc.RenderPartial(logger, w, r, http.StatusOK, "replace-edit-form", user)
 
+	}
+}
+
+type setupUserForm struct {
+	Username        string
+	Password        string
+	ConfirmPassword string
+	FieldErrors     map[string]string
+}
+
+type setupData struct {
+	BaseData
+	SetupUserForm setupUserForm
+}
+
+func GetSetup(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	setupRequired *bool,
+) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !*setupRequired {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
+		data := setupData{
+			BaseData:      newBase(r),
+			SetupUserForm: setupUserForm{FieldErrors: map[string]string{}},
+		}
+
+		tc.RenderPage(logger, w, r, http.StatusOK, "setup.tmpl", data)
+	}
+}
+
+func PostSetup(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	setupRequired *bool,
+	indexRepo models.IndexRepository,
+	sessionManager *scs.SessionManager,
+) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if !*setupRequired {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
+		err := r.ParseForm()
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		suf := setupUserForm{
+			Username:        r.PostForm.Get("username"),
+			Password:        r.PostForm.Get("password"),
+			ConfirmPassword: r.PostForm.Get("confirm-password"),
+			FieldErrors:     map[string]string{},
+		}
+
+		if suf.Username == "" {
+			suf.FieldErrors["username"] = "username cannot be empty"
+		}
+
+		validatePassword(suf.Password, suf.ConfirmPassword, suf.FieldErrors)
+
+		if len(suf.FieldErrors) > 0 {
+			data := setupData{
+				BaseData:      newBase(r),
+				SetupUserForm: suf,
+			}
+			tc.RenderPage(logger, w, r, http.StatusOK, "setup.tmpl", data)
+			return
+		}
+
+		userID, err := indexRepo.CreateAdminUser(r.Context(), suf.Username, suf.Password)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		err = indexRepo.UpdateUserLastLoginToNow(r.Context(), userID)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		err = sessionManager.RenewToken(r.Context())
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		*setupRequired = false
+		sessionManager.Put(r.Context(), "authenticatedUserId", userID)
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 	}
 }

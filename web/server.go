@@ -79,7 +79,14 @@ func RunServer(conf *config.Config) error {
 	sessionManager := scs.New()
 	sessionManager.Store = sqlitex.NewSessionStore(dataStoreSvc.GetIndexDatabase())
 
-	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.Web.LoggingIgnoredPaths, conf.Web.Debug)
+	// Check if initial setup needs to be run
+	initialSetupNeeded, err := dataStoreSvc.GetUserStore().InitialSetupNeeded(ctx)
+	if err != nil {
+		return err
+	}
+	logger.Info(fmt.Sprintf("initial setup = %v", initialSetupNeeded))
+
+	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.Web.LoggingIgnoredPaths, conf.Web.Debug, &initialSetupNeeded)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),

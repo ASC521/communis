@@ -16,7 +16,7 @@
   <ul class="list-of-links" id="section-list">
     {{ range .Sections }}
 
-    <li><a href="/section/{{ .Id }}/{{ slugify .Name }}"> {{ .Name }}</a></li>
+    <li><a href="/section/{{ .ID }}/{{ slugify .Name }}"> {{ .Name }}</a></li>
     {{ end }}
   </ul>
 </main>

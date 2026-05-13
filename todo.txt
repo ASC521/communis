@@ -1,8 +1,8 @@
-(A) First setup of admin user
-(B) Containerization support
+(A) Containerization support
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
+(D) Refactor organization of handlers, parsing of forms
 (D) Replace structured logging with human readable logging
 (E) Add support for HTTPS server
 (E) HTTP Cache Headers
@@ -37,6 +37,7 @@ x (A) Common response headers middleware
 x (A) Debug mode which prints server error on screen
 x (A) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
 x (A) Feature: toast message - App throws error on receiving invalid credentials when logging in
+x (A) First setup of admin user
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Fix note preview page - section and tag names have to be pulled from DB
 x (A) Make textarea on edit notes screen automatically grow as more text is added +v1

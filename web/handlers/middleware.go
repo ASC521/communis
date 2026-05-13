@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/ASC521/communis/config"
@@ -119,14 +120,14 @@ func RecoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 func Authenticate(sessionManager *scs.SessionManager, userStore models.IndexRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			authUserId := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
-			if authUserId == 0 {
+			authUserID := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
+			if authUserID == 0 {
 				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, false)
 				ctx = context.WithValue(ctx, isAdminContextKey, false)
-				ctx = context.WithValue(ctx, userThemeContextKey, "dark")
+				ctx = context.WithValue(ctx, userThemeContextKey, "light")
 				r = r.WithContext(ctx)
 			} else {
-				user, err := userStore.GetUser(r.Context(), authUserId)
+				user, err := userStore.GetUser(r.Context(), authUserID)
 				if err != nil {
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					return
@@ -211,6 +212,20 @@ func RequireAdmin(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func InitialSetup(setupRequired *bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.EscapedPath()
+			if *setupRequired && path != "/setup" && !strings.Contains(path, "/static/") {
+				http.Redirect(w, r, "/setup", http.StatusSeeOther)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+
 }
 
 func CommonHeaders(next http.Handler) http.Handler {

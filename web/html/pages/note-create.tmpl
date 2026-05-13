@@ -3,10 +3,10 @@
 {{define "main"}}
 
 <main id="mde-container">
-  {{ if eq .Form.Id 0 }}
+  {{ if eq .Form.ID 0 }}
   <form id="note-editor" class="note-editor" action="/note" method="POST" autocomplete="off">
     {{ else }}
-    <form id="note-editor" class="note-editor" hx-put="/note/{{ .Form.Id }}/{{ slugify .Form.Title}}" autocomplete="off">
+    <form id="note-editor" class="note-editor" hx-put="/note/{{ .Form.ID }}/{{ slugify .Form.Title}}" autocomplete="off">
       {{ end }}
 
       
@@ -21,7 +21,7 @@
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#tags"/>
 	      </svg>
 	    </button>
-	    <button type="button" hx-target="body" hx-delete="/note/{{ .Form.Id }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="svg-button">
+	    <button type="button" hx-target="body" hx-delete="/note/{{ .Form.ID }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="svg-button">
 	      <svg>
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	      </svg>
@@ -123,8 +123,8 @@
 	    <select list="section-list" id="section" name="section" class="select-dropdown">
 	      <option value="-1">Section</option>
 	      {{ range .Sections }}
-	      {{ if eq .Id $.Form.SectionId }}<option value="{{ .Id }}" selected>{{ .Name }}</option>
-	      {{ else }}<option value="{{ .Id }}">{{ .Name }}</option>
+	      {{ if eq .ID $.Form.SectionID }}<option value="{{ .ID }}" selected>{{ .Name }}</option>
+	      {{ else }}<option value="{{ .ID }}">{{ .Name }}</option>
 	      {{ end }}
 	      {{ end }}
 	    </select>
@@ -139,12 +139,12 @@
 
 	    <fieldset id="tag-selector" tabindex="0" class="list">
 	      {{ range .Tags }}
-	      {{ if containsInt $.Form.TagIds .Id }}
-	      <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }} checked>
+	      {{ if containsInt $.Form.TagIds .ID }}
+	      <input type="checkbox" name="tags" id="tag-{{ .ID }}" value={{ .ID }} checked>
 	      {{ else }}
-	      <input type="checkbox" name="tags" id="tag-{{ .Id }}" value={{ .Id }}>
+	      <input type="checkbox" name="tags" id="tag-{{ .ID }}" value={{ .ID }}>
 	      {{ end }}
-	      <label for="tag-{{ .Id }}">{{ .Name }}</label>
+	      <label for="tag-{{ .ID }}">{{ .Name }}</label>
 	      {{ end }}
 	    </fieldset>
 	  </section>
@@ -169,7 +169,7 @@
 	    <label>Referenced By</label>
 	    <ul id="referenced-by" class="list-of-links">
 	      {{ range .ReferencedByNotes }}
-	      <input type="hidden" name="referenced-by-notes" value='{{ .Id }}'>
+	      <input type="hidden" name="referenced-by-notes" value='{{ .ID }}'>
 	      <li>{{ .Title }}</li>
 	      {{ end }}
 	    </ul>
