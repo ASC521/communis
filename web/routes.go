@@ -17,16 +17,23 @@ func routes(
 	sessionManager *scs.SessionManager,
 	ignoredLoggingPaths []config.RegexPattern,
 	debugEnabled bool,
+	setupRequired *bool,
 ) http.Handler {
 
 	indexRepo := dss.GetUserStore()
 
 	mux := http.NewServeMux()
 
-	baseChain := handlers.Chain{handlers.RecoverPanic(logger), handlers.RequestLogger(ignoredLoggingPaths, logger), handlers.CommonHeaders, handlers.CrossOriginProtection}
-	dynamic := handlers.Chain{sessionManager.LoadAndSave, handlers.Authenticate(sessionManager, indexRepo)}
-	authReq := append(dynamic, handlers.RequireAuth, handlers.RedirectAdmin)
-	adminReq := append(dynamic, handlers.RequireAdmin)
+	baseChain := handlers.Chain{
+		handlers.RecoverPanic(logger),
+		handlers.RequestLogger(ignoredLoggingPaths, logger),
+		handlers.CommonHeaders, handlers.CrossOriginProtection,
+		sessionManager.LoadAndSave,
+		handlers.Authenticate(sessionManager, indexRepo),
+		handlers.InitialSetup(setupRequired),
+	}
+	authReq := handlers.Chain{handlers.RequireAuth, handlers.RedirectAdmin}
+	adminReq := handlers.Chain{handlers.RequireAdmin}
 
 	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
 
@@ -60,9 +67,9 @@ func routes(
 
 	mux.Handle("GET /{$}", authReq.Then(handlers.HomeGet(tc, logger, dss, sessionManager)))
 
-	mux.Handle("GET /login", dynamic.Then(handlers.GetUserLogin(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("POST /login", dynamic.Then(handlers.PostUserLogin(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("DELETE /session", dynamic.Then(handlers.RequireAuth((handlers.PostUserLogout(tc, logger, sessionManager)))))
+	mux.Handle("GET /login", handlers.GetUserLogin(tc, logger, indexRepo, sessionManager))
+	mux.Handle("POST /login", handlers.PostUserLogin(tc, logger, indexRepo, sessionManager))
+	mux.Handle("DELETE /session", handlers.RequireAuth((handlers.PostUserLogout(tc, logger, sessionManager))))
 
 	mux.Handle("GET /admin", adminReq.Then(handlers.GetAdmin(tc, logger, indexRepo, sessionManager)))
 	mux.Handle("GET /user/new", adminReq.Then(handlers.GetUserCreate(tc, logger, indexRepo, sessionManager)))
@@ -73,7 +80,10 @@ func routes(
 	mux.Handle("PUT /user/{id}", adminReq.Then(handlers.PutUser(tc, logger, indexRepo)))
 	mux.Handle("PUT /user/{id}/password", adminReq.Then(handlers.PutUserPassword(tc, logger, indexRepo)))
 
-	mux.Handle("PUT /user/{id}/theme", dynamic.Then(handlers.RequireAuth(handlers.PutUserTheme(tc, logger, indexRepo))))
+	mux.Handle("GET /setup", handlers.GetSetup(tc, logger, setupRequired))
+	mux.Handle("POST /setup", handlers.PostSetup(tc, logger, setupRequired, indexRepo, sessionManager))
+
+	mux.Handle("PUT /user/{id}/theme", handlers.RequireAuth(handlers.PutUserTheme(tc, logger, indexRepo)))
 
 	if debugEnabled {
 		mux.Handle("GET /debug/conn-cache-state", adminReq.Then(handlers.ConnCacheStateGet(tc, logger, dss)))

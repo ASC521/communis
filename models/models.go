@@ -135,4 +135,5 @@ type IndexRepository interface {
 	DeleteUser(ctx context.Context, id int64) error
 	UpdateUserTheme(ctx context.Context, id int64, theme string) error
 	NameExists(ctx context.Context, name string) (bool, error)
+	InitialSetupNeeded(ctx context.Context) (bool, error)
 }

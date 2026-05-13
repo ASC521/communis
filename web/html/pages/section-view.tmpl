@@ -14,7 +14,7 @@
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	</svg>
       </button>
-      <button type="button" class="svg-button" hx-get="/section/{{ .Section.Id }}/edit" hx-target="#title">
+      <button type="button" class="svg-button" hx-get="/section/{{ .Section.ID }}/edit" hx-target="#title">
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#pencil"/>
 	</svg>
@@ -24,7 +24,7 @@
   <hr class="hr-column">
   <ul class="list-of-links">
     {{ range .NoteDetails }}
-    <li><a href="/note/{{ .Id }}/{{ slugify .Title }}">{{ .Title }}</a></li>
+    <li><a href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a></li>
     {{ end }}
   </ul>
 </main>
@@ -52,7 +52,7 @@
       </div>
     <footer class="footer">
       <button command="close" commandFor="section-delete-confirm" class="text-button">Cancel</button>
-      <button hx-delete="/section/{{ .Section.Id }}" class="text-button -warn">Delete</button>
+      <button hx-delete="/section/{{ .Section.ID }}" class="text-button -warn">Delete</button>
     </footer>
     {{ end }}
 

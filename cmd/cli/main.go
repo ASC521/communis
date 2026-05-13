@@ -122,8 +122,6 @@ func main() {
 		err = DatabaseCMD(conf, subArgs)
 	case "serve":
 		err = ServeCMD(conf, subArgs)
-	case "user":
-		err = UserCMD(conf, subArgs)
 	case "generate":
 		err = GenerateCMD(conf, subArgs)
 	case "install":
