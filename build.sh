@@ -175,5 +175,5 @@ if [ "$container" = true ]; then
     fi
     container_program=podman
 
-    $container_program build -t communis:$(dist/exec/communis version -container) .
+    $container_program build -t ghcr.io/asc521/communis:$(dist/exec/communis version -container) .
 fi
