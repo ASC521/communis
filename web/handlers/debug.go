@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/ASC521/communis/services"
 )
@@ -27,5 +28,17 @@ func ConnCacheStateGet(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
+	}
+}
+
+func GetDebugBuildInfo() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		bi, ok := debug.ReadBuildInfo()
+		if !ok {
+			w.Write([]byte("failed to read build info"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(bi.String()))
 	}
 }

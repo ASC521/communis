@@ -22,11 +22,12 @@ func GenerateCMD(conf *config.Config, args []string) error {
 
 	generateFlags := flag.NewFlagSet("generate", flag.ExitOnError)
 	generateFlags.Usage = func() {
-		fmt.Fprint(os.Stdout, "Usage: communis [global options] generate <subcommand>\n\n")
-		fmt.Fprint(os.Stdout, "Available Commands:\n")
-		fmt.Fprint(os.Stdout, "css\n")
-		fmt.Fprint(os.Stdout, "config\n")
-		fmt.Fprint(os.Stdout, "systemd-unit\n\n")
+		fmt.Fprint(os.Stderr, "Usage: communis [global options] generate <subcommand>\n\n")
+		fmt.Fprint(os.Stderr, "Available Commands:\n")
+		fmt.Fprint(os.Stderr, "css\n")
+		fmt.Fprint(os.Stderr, "config\n")
+		fmt.Fprint(os.Stderr, "systemd-unit\n")
+		fmt.Fprint(os.Stderr, "systemd-container\n\n")
 	}
 	err := generateFlags.Parse(args)
 	if err != nil {
@@ -43,9 +44,18 @@ func GenerateCMD(conf *config.Config, args []string) error {
 	case "css":
 		return generateCSS(subArgs)
 	case "config":
-		return configCMD(conf, subArgs)
+
+		b, err := toml.Marshal(*conf)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(os.Stdout, string(b))
+		return err
+
 	case "systemd-unit":
 		return systemdUnitFileCMD(conf, subArgs)
+	case "systemd-container":
+		return generateSystemdContainerFile(subArgs)
 	default:
 		return fmt.Errorf("%s is not a valid command", cmd)
 	}
@@ -58,10 +68,10 @@ func generateCSS(args []string) error {
 	darkThemeF := cssFlags.String("dark-theme", "", "name of dark chroma theme")
 	lightThemeF := cssFlags.String("light-theme", "", "name of light chroma theme")
 	cssFlags.Usage = func() {
-		fmt.Fprint(os.Stdout, "Usage: communis [global options] generate-css [subcommand options]\n\n")
-		fmt.Fprint(os.Stdout, "Options:\n")
+		fmt.Fprint(os.Stderr, "Usage: communis [global options] generate-css [subcommand options]\n\n")
+		fmt.Fprint(os.Stderr, "Options:\n")
 		cssFlags.PrintDefaults()
-		fmt.Fprint(os.Stdout, "\n\n")
+		fmt.Fprint(os.Stderr, "\n\n")
 	}
 	err := cssFlags.Parse(args)
 	if err != nil {
@@ -109,7 +119,7 @@ func generateCSS(args []string) error {
 		if err = os.WriteFile(fn, buf.Bytes(), 0644); err != nil {
 			return fmt.Errorf("failed to write theme file: %v", err)
 		}
-		fmt.Fprintf(os.Stdout, "generated css file at %s\n", fn)
+		fmt.Fprintf(os.Stderr, "generated css file at %s\n", fn)
 
 		return nil
 	}
@@ -119,51 +129,6 @@ func generateCSS(args []string) error {
 		return err
 	}
 	return writeCSS(lightStyle, "light")
-}
-
-func configCMD(conf *config.Config, args []string) error {
-	configFlags := flag.NewFlagSet("config", flag.ExitOnError)
-	outF := configFlags.String("out", "", "directory to write config file")
-
-	err := configFlags.Parse(args)
-	if err != nil {
-		return err
-	}
-
-	outDir := ""
-	configFlags.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "out":
-			outDir = *outF
-		}
-	})
-
-	if outDir == "" {
-		return errors.New("out cannot be empty")
-	}
-
-	return generateConfig(conf, outDir)
-
-}
-
-func generateConfig(conf *config.Config, fileLoc string) error {
-
-	confLoc, err := homedir.Expand(fileLoc)
-	if err != nil {
-		return err
-	}
-	confLoc, err = filepath.Abs(confLoc)
-	if err != nil {
-		return err
-	}
-
-	b, err := toml.Marshal(*conf)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(confLoc, b, 0700)
-
 }
 
 const unitTemplate = `[Unit]
@@ -197,31 +162,21 @@ type UnitFileOptions struct {
 }
 
 func systemdUnitFileCMD(conf *config.Config, args []string) error {
+
+	cu, err := user.Current()
+	if err != nil {
+		return err
+	}
+
 	unitFlags := flag.NewFlagSet("unit-file", flag.ExitOnError)
-	userF := unitFlags.String("user", "communis", "name of user")
-	outF := unitFlags.String("out", "/etc/systemd/system", "directory to write unit file")
+	userF := unitFlags.String("username", cu.Username, "name of user")
 
-	err := unitFlags.Parse(args)
+	err = unitFlags.Parse(args)
 	if err != nil {
 		return err
 	}
 
-	return generateSystemdUnitFile(*outF, *userF, []string{conf.DataDirectory})
-
-}
-
-func generateSystemdUnitFile(outDirectory, username string, readWritePaths []string) error {
-
-	out, err := homedir.Expand(outDirectory)
-	if err != nil {
-		return err
-	}
-	out, err = filepath.Abs(out)
-	if err != nil {
-		return err
-	}
-
-	userP, err := user.Lookup(username)
+	userP, err := user.Lookup(*userF)
 	if err != nil {
 		return err
 	}
@@ -245,10 +200,9 @@ func generateSystemdUnitFile(outDirectory, username string, readWritePaths []str
 		User:           userP.Username,
 		Group:          group.Name,
 		ExecPath:       exe,
-		ReadWritePaths: readWritePaths,
+		ReadWritePaths: []string{conf.DataDirectory, filepath.Dir(conf.FileLocation)},
 	}
 
-	outFile := filepath.Join(out, "communis.service")
 	tmpl, err := template.New("unit").Parse(unitTemplate)
 	if err != nil {
 		return err
@@ -259,5 +213,56 @@ func generateSystemdUnitFile(outDirectory, username string, readWritePaths []str
 		return err
 	}
 
-	return os.WriteFile(outFile, b.Bytes(), 0700)
+	_, err = fmt.Fprintln(os.Stdout, b.String())
+	return err
+
+}
+
+const containerTemplate = `[Unit]
+Description=Communis Note Taking Server
+Documentation=https://github.com/ASC521/communis
+After=network.target
+
+[Container]
+Image=localhost/communis:{{ .Version }}
+Volume=communis-data:/var/opt/communis
+Volume={{ .UserConfigLoc }}:/etc/opt/communis:Z,ro
+PublishPort=6789:6789
+Exec=serve
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target`
+
+type containerOptions struct {
+	UserConfigLoc string
+	Version       string
+}
+
+func generateSystemdContainerFile(args []string) error {
+	containerFlags := flag.NewFlagSet("container", flag.ExitOnError)
+	usrConfigLocF := containerFlags.String("config-dir", "%h/.config/communis", "location of config file on user computer")
+	err := containerFlags.Parse(args)
+	if err != nil {
+		return err
+	}
+
+	opts := containerOptions{
+		UserConfigLoc: *usrConfigLocF,
+		Version:       containerVersion,
+	}
+
+	tmpl, err := template.New("container").Parse(containerTemplate)
+	if err != nil {
+		return err
+	}
+	b := new(bytes.Buffer)
+	err = tmpl.Execute(b, opts)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(os.Stdout, b.String())
+	return err
 }

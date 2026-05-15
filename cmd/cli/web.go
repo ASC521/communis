@@ -17,10 +17,10 @@ func ServeCMD(conf *config.Config, args []string) error {
 	portF := serveFlags.Uint("port", 6789, "web port for server to listen on")
 	debugF := serveFlags.Bool("debug", false, "run server in debug mode")
 	serveFlags.Usage = func() {
-		fmt.Fprint(os.Stdout, "Usage: communis [global options] web [subcommand options]\n\n")
-		fmt.Fprint(os.Stdout, "\nOptions:\n")
+		fmt.Fprint(os.Stderr, "Usage: communis [global options] web [subcommand options]\n\n")
+		fmt.Fprint(os.Stderr, "\nOptions:\n")
 		serveFlags.PrintDefaults()
-		fmt.Fprint(os.Stdout, "\n\n")
+		fmt.Fprint(os.Stderr, "\n\n")
 	}
 
 	err := serveFlags.Parse(args)

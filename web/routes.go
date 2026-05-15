@@ -87,6 +87,7 @@ func routes(
 
 	if debugEnabled {
 		mux.Handle("GET /debug/conn-cache-state", adminReq.Then(handlers.ConnCacheStateGet(tc, logger, dss)))
+		mux.Handle("GET /debug/build-info", authReq.Then(handlers.GetDebugBuildInfo()))
 	}
 
 	return baseChain.Then(mux)

@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
 )
@@ -76,14 +76,14 @@ type Config struct {
 	VerboseLogging bool   `toml:"verbose-logging"`
 }
 
-func DefaultConfig() (*Config, error) {
+func DefaultConfig(system bool) (*Config, error) {
 
-	dd, err := DefaultDataDirectory()
+	dd, err := DefaultDataDirectory(system)
 	if err != nil {
 		return nil, err
 	}
 
-	fl, err := DefaultFileLocation()
+	fl, err := DefaultFileLocation(system)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func DefaultConfig() (*Config, error) {
 			NotesDBMigrations: "sql/notes-db",
 		},
 		Web: Web{
-			Host: "localhost",
+			Host: "0.0.0.0",
 			Port: 6789,
 			LoggingIgnoredPaths: []RegexPattern{
 				{Pattern: `\/static\/.*`},
@@ -114,28 +114,36 @@ func DefaultConfig() (*Config, error) {
 	}, nil
 }
 
-func DefaultDataDirectory() (string, error) {
-	switch runtime.GOOS {
-	case LinuxOS:
-		return filepath.Join(string(filepath.Separator), "var", "lib", AppName), nil
-	case WindowsOS:
-		return filepath.Join(string(filepath.Separator), "%PROGRAMDATA%", AppName), nil
-	case MacOS:
-		return filepath.Join(string(filepath.Separator), "var", "db", AppName), nil
-	default:
-		return "", fmt.Errorf("%s operating system is not supported", runtime.GOOS)
+func DefaultDataDirectory(system bool) (string, error) {
+	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
+		return filepath.Join(xdg, AppName), nil
+	}
+
+	if !system {
+		uhd, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(uhd, ".local", "share", AppName), nil
+	} else {
+		return filepath.Join(string(filepath.Separator), "var", "opt", AppName), nil
 	}
 
 }
 
-func DefaultFileLocation() (string, error) {
-	switch runtime.GOOS {
-	case LinuxOS, MacOS:
-		return filepath.Join(string(filepath.Separator), "etc", AppName, ConfigFileName), nil
-	case WindowsOS:
-		return filepath.Join(string(filepath.Separator), "%PROGRAMDATA%", AppName, ConfigFileName), nil
-	default:
-		return "", fmt.Errorf("%s operating system is not supported", runtime.GOOS)
+func DefaultFileLocation(system bool) (string, error) {
+
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, ".config", AppName, "config.toml"), nil
 	}
 
+	if !system {
+		uhd, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(uhd, ".config", AppName, "config.toml"), nil
+	} else {
+		return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, "config.toml"), nil
+	}
 }

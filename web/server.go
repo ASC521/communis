@@ -36,7 +36,7 @@ func setupLogging(c *config.Config) *slog.Logger {
 		opts.Level = slog.LevelDebug
 	}
 
-	h := slog.NewTextHandler(os.Stdout, &opts)
+	h := slog.NewTextHandler(os.Stderr, &opts)
 
 	return slog.New(h)
 }

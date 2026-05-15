@@ -81,12 +81,13 @@ cd "$script_dir"
 
 
 function usage() {
-    echo "Usage: build.sh [-h|--help] [-b|--build]"
+    echo "Usage: build.sh [-h|--help] [-b|--build] [-c|--container] [-t|--test] [-r|--run]"
     echo
     echo "    Build communis application"
     echo
     echo "  -h|--help                  This help text"
     echo "  -b|--build                 Build communis application"
+    echo "  -c|--container             Build communis container"
     echo "  -t|--test                  Run unit tests"
     echo "  -r|--run                   Run web application"
     echo
@@ -95,6 +96,7 @@ function usage() {
 build=0
 true=0
 run=0
+container=0
 
 case "$os" in
     linux)
@@ -128,6 +130,10 @@ while [[ $# -gt 0 ]]; do
 	    run=true
 	    shift
 	    ;;
+	-c | --container)
+	    container=true
+	    shift
+	    ;;
 	*)
 	    echo "ERROR: unknown argument $1"
 	    echo
@@ -143,15 +149,31 @@ if [ "$test" = true ]; then
     exit 0
 fi
 
-
-if [ "$build" = true ]; then
-    echo "Building communis with local go: $(which go)"
-    go build -v -o ./dist/exec/communis ./cmd/cli/
-    exit 0
-fi
-
 if [ "$run" = true ]; then
     echo "Running communis web application"
     go run ./cmd/cli web run -debug
     exit 0
+fi
+
+if [ "$build" = true ]; then
+    echo "Building communis with local go: $(which go)"
+    CGO_ENABLED=0 go build -v -o ./dist/exec/communis ./cmd/cli/
+fi
+
+if [ "$container" = true ]; then
+    echo "Building communis container"
+
+    conatiner_program=""
+    which podman > /dev/null
+    if [ $? -ne 0 ]; then
+	which docker > /dev/null
+	if [$? -ne 0]; then
+	    echo "**** ERROR need podman or docker installed"
+	    exit 1
+	fi
+	container_program=docker
+    fi
+    container_program=podman
+
+    $container_program build -t communis:$(dist/exec/communis version -container) .
 fi

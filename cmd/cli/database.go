@@ -16,13 +16,13 @@ import (
 func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string) error {
 	migFlags := flag.NewFlagSet("migrate", flag.ExitOnError)
 	migFlags.Usage = func() {
-		fmt.Fprint(os.Stdout, "Usage: communis [global options] database migrate <subcommand>\n\n")
-		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
-		fmt.Fprint(os.Stdout, "down        migrate database down to an empty database\n")
-		fmt.Fprint(os.Stdout, "list        list all migrations\n")
-		fmt.Fprint(os.Stdout, "step-down   migrate database to previous version\n")
-		fmt.Fprint(os.Stdout, "step-up     migrate database to next version\n")
-		fmt.Fprint(os.Stdout, "up          migrate database up to latest version\n\n")
+		fmt.Fprint(os.Stderr, "Usage: communis [global options] database migrate <subcommand>\n\n")
+		fmt.Fprint(os.Stderr, "\nAvailable Commands:\n")
+		fmt.Fprint(os.Stderr, "down        migrate database down to an empty database\n")
+		fmt.Fprint(os.Stderr, "list        list all migrations\n")
+		fmt.Fprint(os.Stderr, "step-down   migrate database to previous version\n")
+		fmt.Fprint(os.Stderr, "step-up     migrate database to next version\n")
+		fmt.Fprint(os.Stderr, "up          migrate database up to latest version\n\n")
 	}
 	err := migFlags.Parse(args)
 	if err != nil {
@@ -58,14 +58,14 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", pm.Version, pm.Name)
+		fmt.Fprintf(os.Stderr, "database migrated to version %v - %s\n", pm.Version, pm.Name)
 		return nil
 	case "step-up":
 		nm, err := migrations.StepUp(ctx, migs, migDriver)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stdout, "database migrated to version %v - %s\n", nm.Version, nm.Name)
+		fmt.Fprintf(os.Stderr, "database migrated to version %v - %s\n", nm.Version, nm.Name)
 		return nil
 	case "up":
 		_, err = migrations.Up(ctx, migs, migDriver)
@@ -78,15 +78,15 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 		}
 
 		if cv == 0 {
-			fmt.Fprint(os.Stdout, "*** 0000 - empty database ***\n")
+			fmt.Fprint(os.Stderr, "*** 0000 - empty database ***\n")
 		} else {
-			fmt.Fprint(os.Stdout, "0000 - empty database\n")
+			fmt.Fprint(os.Stderr, "0000 - empty database\n")
 		}
 		for _, m := range migs {
 			if cv == m.Version {
-				fmt.Fprintf(os.Stdout, "*** %04d - %s ***\n", m.Version, m.Name)
+				fmt.Fprintf(os.Stderr, "*** %04d - %s ***\n", m.Version, m.Name)
 			} else {
-				fmt.Fprintf(os.Stdout, "%04d - %s\n", m.Version, m.Name)
+				fmt.Fprintf(os.Stderr, "%04d - %s\n", m.Version, m.Name)
 			}
 		}
 
@@ -103,12 +103,12 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 	notesDBName := dbFlags.String("notes-db-name", "", "file name of notes database to operate on")
 
 	dbFlags.Usage = func() {
-		fmt.Fprint(os.Stdout, "Usage: communis [global options] database [database options] <subcommand> [command options]\n\n")
-		fmt.Fprint(os.Stdout, "Database Options:\n")
+		fmt.Fprint(os.Stderr, "Usage: communis [global options] database [database options] <subcommand> [command options]\n\n")
+		fmt.Fprint(os.Stderr, "Database Options:\n")
 		dbFlags.PrintDefaults()
-		fmt.Fprint(os.Stdout, "\nAvailable Commands:\n")
-		fmt.Fprint(os.Stdout, "bootstrap    create and migrate up a database\n")
-		fmt.Fprint(os.Stdout, "migrate      manage database schema\n\n")
+		fmt.Fprint(os.Stderr, "\nAvailable Commands:\n")
+		fmt.Fprint(os.Stderr, "bootstrap    create and migrate up a database\n")
+		fmt.Fprint(os.Stderr, "migrate      manage database schema\n\n")
 
 	}
 
