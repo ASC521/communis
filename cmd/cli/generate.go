@@ -224,7 +224,7 @@ Documentation=https://github.com/ASC521/communis
 After=network.target
 
 [Container]
-Image=localhost/communis:{{ .Version }}
+Image=ghcr.io/asc521/communis:{{ .Version }}
 Volume=communis-data:/var/opt/communis
 Volume={{ .UserConfigLoc }}:/etc/opt/communis:Z,ro
 PublishPort=6789:6789
@@ -234,7 +234,7 @@ Exec=serve
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.target`
+WantedBy=default.target`
 
 type containerOptions struct {
 	UserConfigLoc string
