@@ -12,28 +12,69 @@
 
 ## Installation
 
-### Linux
+### Linux User Installation
 
-#### User Level Install
+1. Download linux binary to `~/.local/bin`
 
-1. Download linux binary and save to `~/.local/bin/communis`
-2. Download `install.sh`
-3. Execute `./install.sh --linux-user`
+2. Generate systemd unit file and start service
 
-#### System Wide Install
-
-1. Download linux binary and save to `/opt/communis/bin`
-2. Download `install.sh`
-3. Execute `install.sh --linux-system`
+```bash
+communis generate systemd-unit > ~/.config/systemd/user/communis.service
+systemctl --user daemon-reload
+systemctl --user enable communis
+```
 
 ### Docker
 
+1. Pull image
+
+```bash
+docker pull ghcr.io/asc521/communis:{TAG_VERSION}
+```
+
+#### Docker Compose
+```
+communis:
+	container_name: communis
+	image: ghcr.io/asc521/communis:{TAG_VERSION}
+	command: serve
+	volumes:
+		~/.config/communis:/etc/opt/communis
+		~/.local/share/communis:/var/opt/communis
+	ports:
+		6789:6789
+	restart:
+		unless-stopped
+```
+
 ### Podman
 
-#### User Level Install
+1. Pull container image
+```bash
+podman pull ghcr.io/asc521/communis:{TAG_VERSION}
+```
 
-1. Download `install.sh`
-2. Execute `./install.sh --podman`
+2. Create volume to persist application data
+```bash
+podman volume communis-data
+```
+
+3. Run container directory
+```bash
+podman run \ 
+-p 6789:6789 \
+-v communis-data:/var/opt/communis \
+-v ~/.config/communis:/etc/opt/communis \
+ghcr.io/asc521/communis:{TAG_VERSION} serve
+```
+
+4. Generate systemd unit file for automated management of application
+```bash
+mkdir -p ~/.config/containers/systemd
+podman run ghcr.io/asc521/communis:{TAG_VERSION} generate systemd-container > ~/.config/containers/systemd/communis.container
+systemctl --uesr daemon-reload
+systemctl --user enable communis.service
+```
 
 ## Uninstall
 ### Linux
