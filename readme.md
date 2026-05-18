@@ -33,7 +33,7 @@ docker pull ghcr.io/asc521/communis:{TAG_VERSION}
 ```
 
 #### Docker Compose
-```toml
+```
 communis:
 	container_name: communis
 	image: ghcr.io/asc521/communis:{TAG_VERSION}
