@@ -5,12 +5,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/models"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const userDBDir = "user-databases"
 
 type indexDBRepository struct {
 	db *sqlitex.SQLiteDB
@@ -117,7 +120,7 @@ func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, passw
 		if err != nil {
 			return 0, err
 		}
-		dbPath := fmt.Sprintf("notes/%v.db", userID)
+		dbPath := filepath.Join(userDBDir, fmt.Sprintf("%v.db", userID))
 		_, err = tx.ExecContext(ctx, dbStmt, userID, dbPath, 0)
 		if err != nil {
 			return 0, err

@@ -138,8 +138,10 @@ After=network.target
 
 [Service]
 Type=simple
+{{ if .User -}}
 User={{ .User }}
 Group={{ .Group }}
+{{- end -}}
 ExecStart={{ .ExecPath }} serve
 Restart=on-failure
 RestartSec=5s
@@ -163,27 +165,28 @@ type UnitFileOptions struct {
 
 func systemdUnitFileCMD(conf *config.Config, args []string) error {
 
-	cu, err := user.Current()
-	if err != nil {
-		return err
-	}
-
 	unitFlags := flag.NewFlagSet("unit-file", flag.ExitOnError)
-	userF := unitFlags.String("username", cu.Username, "name of user")
+	userF := unitFlags.String("username", "", "name of user")
 
-	err = unitFlags.Parse(args)
+	err := unitFlags.Parse(args)
 	if err != nil {
 		return err
 	}
 
-	userP, err := user.Lookup(*userF)
-	if err != nil {
-		return err
-	}
+	username := ""
+	groupname := ""
+	if *userF != "" {
+		userP, err := user.Lookup(*userF)
+		if err != nil {
+			return err
+		}
 
-	group, err := user.LookupGroupId(userP.Gid)
-	if err != nil {
-		return err
+		group, err := user.LookupGroupId(userP.Gid)
+		if err != nil {
+			return err
+		}
+		username = userP.Username
+		groupname = group.Name
 	}
 
 	exe, err := os.Executable()
@@ -197,8 +200,8 @@ func systemdUnitFileCMD(conf *config.Config, args []string) error {
 	}
 
 	opts := UnitFileOptions{
-		User:           userP.Username,
-		Group:          group.Name,
+		User:           username,
+		Group:          groupname,
 		ExecPath:       exe,
 		ReadWritePaths: []string{conf.DataDirectory, filepath.Dir(conf.FileLocation)},
 	}

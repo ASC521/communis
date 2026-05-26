@@ -1,4 +1,3 @@
-(A) Containerization support
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
@@ -34,6 +33,7 @@ x (A) Bug Fix: Note Edit page does not submit
 x (A) Build tag index +v1
 x (A) Change password needs to be implemented
 x (A) Common response headers middleware
+x (A) Containerization support
 x (A) Debug mode which prints server error on screen
 x (A) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
 x (A) Feature: toast message - App throws error on receiving invalid credentials when logging in

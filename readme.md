@@ -12,16 +12,29 @@
 
 ## Installation
 
-### Linux User Installation
+### Linux Installation
 
-1. Download linux binary to `~/.local/bin`
+1. Download linux binary to `/opt/communis/bin`
 
-2. Generate systemd unit file and start service
+2. Create a system user
 
 ```bash
-communis generate systemd-unit > ~/.config/systemd/user/communis.service
-systemctl --user daemon-reload
-systemctl --user enable communis
+sudo useradd --system --no-create-home communis-runner
+```
+
+3. Create a data directory
+
+```bash
+mkdir -p /var/opt/communis
+chown communis-runner:communis-runner /var/opt/communis
+```
+
+4. Generate systemd unit file and start service
+
+```bash
+communis generate systemd-unit -username communis-runner > /etc/systemd/system/communis.service
+systemctl daemon-reload
+systemctl enable communis
 ```
 
 ### Docker
