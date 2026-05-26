@@ -15,7 +15,6 @@ func ServeCMD(conf *config.Config, args []string) error {
 
 	hostF := serveFlags.String("host", "localhost", "web host to run server")
 	portF := serveFlags.Uint("port", 6789, "web port for server to listen on")
-	debugF := serveFlags.Bool("debug", false, "run server in debug mode")
 	serveFlags.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage: communis [global options] web [subcommand options]\n\n")
 		fmt.Fprint(os.Stderr, "\nOptions:\n")
@@ -31,11 +30,9 @@ func ServeCMD(conf *config.Config, args []string) error {
 	serveFlags.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "host":
-			conf.Web.Host = *hostF
+			conf.WebHost = *hostF
 		case "port":
-			conf.Web.Port = *portF
-		case "debug":
-			conf.Web.Debug = *debugF
+			conf.WebPort = *portF
 		}
 	})
 

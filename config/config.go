@@ -64,29 +64,24 @@ func (r *RegexPattern) UnmarshalText(text []byte) error {
 type Web struct {
 	Host                string         `toml:"host"`
 	Port                uint           `toml:"port"`
-	Debug               bool           `toml:"debug"`
 	LoggingIgnoredPaths []RegexPattern `toml:"logging-ignored-paths"`
 }
 
 type Config struct {
-	DataDirectory  string `toml:"data-directory"`
-	FileLocation   string `toml:"-"`
-	SQLite         SQLite `toml:"sqlite"`
-	Web            Web    `toml:"web"`
-	VerboseLogging bool   `toml:"verbose-logging"`
+	DataDirectory          string         `toml:"data-directory"`
+	FileLocation           string         `toml:"-"`
+	SQLite                 SQLite         `toml:"sqlite"`
+	WebHost                string         `toml:"web-host"`
+	WebPort                uint           `toml:"web-port"`
+	WebLoggingIgnoredPaths []RegexPattern `toml:"web-logging-ignored-paths"`
+	Debug                  bool           `toml:"debug"`
 }
 
-func DefaultConfig(system bool) (*Config, error) {
+func DefaultConfig() (*Config, error) {
 
-	dd, err := DefaultDataDirectory(system)
-	if err != nil {
-		return nil, err
-	}
+	dd := DefaultDataDirectory()
 
-	fl, err := DefaultFileLocation(system)
-	if err != nil {
-		return nil, err
-	}
+	fl := DefaultFileLocation()
 
 	return &Config{
 		DataDirectory: dd,
@@ -102,48 +97,31 @@ func DefaultConfig(system bool) (*Config, error) {
 			IndexDBMigrations: "sql/index-db",
 			NotesDBMigrations: "sql/notes-db",
 		},
-		Web: Web{
-			Host: "0.0.0.0",
-			Port: 6789,
-			LoggingIgnoredPaths: []RegexPattern{
-				{Pattern: `\/static\/.*`},
-			},
-			Debug: false,
+		WebHost: "0.0.0.0",
+		WebPort: 6789,
+		WebLoggingIgnoredPaths: []RegexPattern{
+			{Pattern: `\/static\/.*`},
 		},
-		VerboseLogging: false,
+
+		Debug: false,
 	}, nil
 }
 
-func DefaultDataDirectory(system bool) (string, error) {
+func DefaultDataDirectory() string {
 	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
-		return filepath.Join(xdg, AppName), nil
+		return filepath.Join(xdg, AppName)
 	}
 
-	if !system {
-		uhd, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(uhd, ".local", "share", AppName), nil
-	} else {
-		return filepath.Join(string(filepath.Separator), "var", "opt", AppName), nil
-	}
+	return filepath.Join(string(filepath.Separator), "var", "opt", AppName)
 
 }
 
-func DefaultFileLocation(system bool) (string, error) {
+func DefaultFileLocation() string {
 
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, ".config", AppName, "config.toml"), nil
+		return filepath.Join(xdg, ".config", AppName, "config.toml")
 	}
 
-	if !system {
-		uhd, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(uhd, ".config", AppName, "config.toml"), nil
-	} else {
-		return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, "config.toml"), nil
-	}
+	return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, "config.toml")
+
 }

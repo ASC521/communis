@@ -22,21 +22,13 @@ var (
 
 func main() {
 
-	defaultConfLoc, err := config.DefaultFileLocation(true)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
+	defaultConfLoc := config.DefaultFileLocation()
 
-	defaultDataDir, err := config.DefaultDataDirectory(true)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
+	defaultDataDir := config.DefaultDataDirectory()
 
 	globalFlags := flag.NewFlagSet("global", flag.ExitOnError)
 	cfp := globalFlags.String("config-file", defaultConfLoc, "location of configuration toml file")
-	verboseLogF := globalFlags.Bool("verbose-logging", false, "enable verbose logging (default: false)")
+	debugF := globalFlags.Bool("debug", false, "run application in debug mode (default: false)")
 	dataDirF := globalFlags.String("data-directory", defaultDataDir, "location of persistent data storage")
 	sqliteBT := globalFlags.Int("sqlite-busy-timeout", 0, "busy_timeout pragma setting (default 5000)")
 	sqliteCS := globalFlags.Int("sqlite-cache-size", 0, "cache_size pragma setting (default 2000)")
@@ -44,7 +36,6 @@ func main() {
 	sqliteJM := globalFlags.String("sqlite-journal-mode", "", "journal_mode pragma setting - options: DELETE | TRUNCATE | PERSIST | MEMORY | WAL | OFF (default \"WAL\")")
 	sqliteSync := globalFlags.String("sqlite-synchronous", "", "synchronous pragma setting - options: OFF | NORMAL | FULL | EXTRA (default\"NORMAL\")")
 	sqliteTS := globalFlags.String("sqlite-temp-store", "", "temp_store pragma setting - options: DEFAULT | FILE | MEMORY (default \"MEMORY\")")
-	systemInstallF := globalFlags.Bool("system", false, "application installed system wide (default: false)")
 
 	globalFlags.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage: communis [global options] <command> [command options]\n\n")
@@ -76,7 +67,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to resolve relative path of the config file: %s", err.Error())
 		os.Exit(1)
 	}
-	conf, err := config.DefaultConfig(*systemInstallF)
+	conf, err := config.DefaultConfig()
 	if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 	}
@@ -102,8 +93,8 @@ func main() {
 
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
-		case "verbose-logging":
-			conf.VerboseLogging = *verboseLogF
+		case "debug":
+			conf.Debug = *debugF
 		case "sqlite-busy-timeout":
 			conf.SQLite.BusyTimeout = *sqliteBT
 		case "sqlite-cache-size":

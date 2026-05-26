@@ -32,7 +32,7 @@ var htmlFiles embed.FS
 
 func setupLogging(c *config.Config) *slog.Logger {
 	opts := slog.HandlerOptions{}
-	if c.VerboseLogging {
+	if c.Debug {
 		opts.Level = slog.LevelDebug
 	}
 
@@ -58,7 +58,7 @@ func RunServer(conf *config.Config) error {
 
 `)
 
-	tc, err := handlers.NewTemplateCache(htmlFiles, conf.Web.Debug)
+	tc, err := handlers.NewTemplateCache(htmlFiles, conf.Debug)
 	if err != nil {
 		return err
 	}
@@ -86,10 +86,10 @@ func RunServer(conf *config.Config) error {
 	}
 	logger.Info(fmt.Sprintf("initial setup = %v", initialSetupNeeded))
 
-	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.Web.LoggingIgnoredPaths, conf.Web.Debug, &initialSetupNeeded)
+	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.WebLoggingIgnoredPaths, conf.Debug, &initialSetupNeeded)
 
 	srv := &http.Server{
-		Addr:    net.JoinHostPort(conf.Web.Host, strconv.Itoa(int(conf.Web.Port))),
+		Addr:    net.JoinHostPort(conf.WebHost, strconv.Itoa(int(conf.WebPort))),
 		Handler: handler,
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
