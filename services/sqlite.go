@@ -28,6 +28,7 @@ const (
 	cmdDeleteDB
 	cmdCheckMigrations
 	cmdGetState
+	cmdRemoveExpired
 )
 
 type CacheState struct {
@@ -137,6 +138,33 @@ func (c sqliteConnCmd) WithResult(ch chan any) sqliteConnCmd {
 	return c
 }
 
+func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteConnCmd, logger *slog.Logger) {
+
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+	logger.Debug("started cache poller")
+	for {
+		select {
+		case <-ctx.Done():
+
+			logger.Debug("stopped connection cache expiry timer")
+			return
+
+		case <-timer.C:
+
+			logger.Debug("sending message to clean cache")
+			err := chanutil.SendReceiveError[sqliteConnCmd](cmdCh, sqliteConnCmd{tag: cmdRemoveExpired})
+			if err != nil {
+				logger.Warn("error returned from removing expiried connects", "errMsg", err.Error())
+			}
+			timer.Reset(interval)
+			logger.Debug("reset timer for cache poller")
+
+		}
+	}
+
+}
+
 // SQLiteDataStoreActor manages the creation of connections to individual notes sqlite databases.
 type SQLiteDataStoreActor struct {
 	connections map[int64]*cachedConn
@@ -146,9 +174,10 @@ type SQLiteDataStoreActor struct {
 	commands    chan sqliteConnCmd
 	conf        SQLiteDataStoreConfig
 	logger      *slog.Logger
+	ctx         context.Context
 }
 
-func NewSQLiteDataStoreActor(wg *sync.WaitGroup, ttl time.Duration, conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreActor, error) {
+func NewSQLiteDataStoreActor(ctx context.Context, wg *sync.WaitGroup, ttl time.Duration, conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreActor, error) {
 
 	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
 	if err != nil {
@@ -163,6 +192,7 @@ func NewSQLiteDataStoreActor(wg *sync.WaitGroup, ttl time.Duration, conf SQLiteD
 		conf:        conf,
 		indexDB:     indexDB,
 		logger:      logger,
+		ctx:         ctx,
 	}
 
 	go svc.run()
@@ -175,46 +205,43 @@ func (s *SQLiteDataStoreActor) run() {
 	s.wg.Add(1)
 	defer s.wg.Done()
 
-	expiryCheckTimer := time.NewTicker(60 * time.Second)
-	defer expiryCheckTimer.Stop()
+	timerCtx, cancelTimer := context.WithCancel(s.ctx)
+	defer cancelTimer()
 
-	for {
-		select {
-		case msg, ok := <-s.commands:
+	s.wg.Go(func() {
+		runPoller(timerCtx, 10*time.Minute, s.commands, s.logger)
+	})
 
-			if !ok {
-				return // channel closed
+	for msg := range s.commands {
+
+		switch msg.tag {
+		case cmdGetConn:
+			nr, err := s.getNotesStore(msg.ctx, msg.key)
+			if err != nil {
+				msg.result <- err
+			} else {
+				msg.result <- nr
 			}
 
-			switch msg.tag {
-			case cmdGetConn:
-				nr, err := s.getNotesStore(msg.ctx, msg.key)
-				if err != nil {
-					msg.result <- err
-				} else {
-					msg.result <- nr
-				}
+		case cmdRemoveConn:
+			msg.result <- s.removeConnection(msg.key)
 
-			case cmdRemoveConn:
-				msg.result <- s.removeConnection(msg.key)
+		case cmdCreateDB:
+			msg.result <- s.createDatabase(msg.ctx, msg.key)
 
-			case cmdCreateDB:
-				msg.result <- s.createDatabase(msg.ctx, msg.key)
+		case cmdDeleteDB:
+			msg.result <- s.deleteDatabase(msg.ctx, msg.key)
 
-			case cmdDeleteDB:
-				msg.result <- s.deleteDatabase(msg.ctx, msg.key)
+		case cmdCheckMigrations:
+			msg.result <- s.runMigrations(msg.ctx)
 
-			case cmdCheckMigrations:
-				msg.result <- s.runMigrations(msg.ctx)
+		case cmdGetState:
+			msg.result <- s.getState()
 
-			case cmdGetState:
-				msg.result <- s.getState()
-
-			}
-			close(msg.result)
-		case <-expiryCheckTimer.C:
-			s.removeExpired()
+		case cmdRemoveExpired:
+			msg.result <- s.removeExpired()
 		}
+		close(msg.result)
 	}
 
 }
@@ -244,6 +271,7 @@ func (s *SQLiteDataStoreActor) GetNotesStore(ctx context.Context, key int64) (mo
 func (s *SQLiteDataStoreActor) getNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
 	cc, ok := s.connections[key]
 	if !ok {
+		s.logger.Debug("cache miss -- create new connection")
 		conn, err := s.createNewConnection(ctx, key)
 		if err != nil {
 			return nil, err
@@ -418,18 +446,23 @@ func (s *SQLiteDataStoreActor) Stop() error {
 		}
 	}
 	close(s.commands)
+	s.logger.Debug("stopped sqlite connection cache")
 	return nil
 }
 
-func (s *SQLiteDataStoreActor) removeExpired() {
+func (s *SQLiteDataStoreActor) removeExpired() error {
+	s.logger.Debug("cleaning cache of expired connections")
 	for key, cc := range s.connections {
 		if !time.Now().After(cc.expiry) {
 			continue
 		}
-		err := cc.conn.Close()
-		s.logger.Warn(fmt.Sprintf("failed to close database connection to %s", cc.conn.DBPath), "errMsg", err.Error())
-		delete(s.connections, key)
+		err := s.removeConnection(key)
+		if err != nil {
+			return err
+		}
+		s.logger.Debug(fmt.Sprintf("connection removed for user %v", key))
 	}
+	return nil
 }
 
 func (s *SQLiteDataStoreActor) GetState() CacheState {
