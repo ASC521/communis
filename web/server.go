@@ -67,7 +67,7 @@ func RunServer(conf *config.Config) error {
 	if err != nil {
 		return err
 	}
-	dataStoreSvc, err := services.NewSQLiteDataStoreActor(wg, time.Hour*12, dataStoreConfig, logger)
+	dataStoreSvc, err := services.NewSQLiteDataStoreActor(ctx, wg, 8*time.Hour, dataStoreConfig, logger)
 	if err != nil {
 		return err
 	}

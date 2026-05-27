@@ -8,7 +8,9 @@
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (F) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) PostUser should be happening within a transaction
+Add ability to copy code blocks from rendered note
 Add advanced query support to search screen +v1
+Bug Fix: Can't save from note preview screen
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Security is blocking external images being loaded in markdown
