@@ -4,7 +4,7 @@
 
 <main id="mde-container">
   {{ if eq .Form.ID 0 }}
-  <form id="note-editor" class="note-editor" action="/note" method="POST" autocomplete="off">
+  <form id="note-editor" class="note-editor" hx-post="/note" autocomplete="off">
     {{ else }}
     <form id="note-editor" class="note-editor" hx-put="/note/{{ .Form.ID }}/{{ slugify .Form.Title}}" autocomplete="off">
       {{ end }}
@@ -26,7 +26,7 @@
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	      </svg>
 	    </button>
-	    <button id="mde-preview-btn" type="button" name="terms" hx-post="/note/preview" hx-target="#mde-preview" class="svg-button">
+	    <button id="mde-preview-btn" type="button" name="terms" hx-post="/note/preview/{{ .Form.ID }}" hx-target="#mde-preview" class="svg-button">
 	      <svg>
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#eye"/>
 	      </svg>
