@@ -1,8 +1,8 @@
+(B) Replace structured logging with human readable logging
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
 (D) Refactor organization of handlers, parsing of forms
-(D) Replace structured logging with human readable logging
 (E) Add support for HTTPS server
 (E) HTTP Cache Headers
 (F) Add form validation feedback to note create +v1 +create-note-rework
@@ -10,19 +10,17 @@
 (F) PostUser should be happening within a transaction
 Add ability to copy code blocks from rendered note
 Add advanced query support to search screen +v1
-Bug Fix: Can't save from note preview screen
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
+Bug Fix: New note screen delete button should be disabled +v1
 Bug Fix: Security is blocking external images being loaded in markdown
 Edit note screen - delete button should use native dialog +v1
 Error Screens +v1
 Fix note preview page -  buttons don't line up
-New note screen delete button should be disabled +v1
 Refactor organization of html templates to better fit htmx
 Search results should contain rendered html from markdown not raw markdown
 Unit tests on note form parsing and validation +v1
 Unsaved changes will be lost warning on navigating away from page +v1
-Write proper readme +v1
 ctrl+k search modal
 kindle highlight and note parser
 kobo highlight and note parser
@@ -31,6 +29,7 @@ x (A) Add capability to add, edit, and delete users +v1 +auth-user
 x (A) Add middleware to check auth user and retrieve correct db connection +v1 +user-auth
 x (A) Add section view page - list associated notes in section, have links to edit name or delete +v1
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
+x (A) Bug Fix: Can't save from note preview screen
 x (A) Bug Fix: Note Edit page does not submit
 x (A) Build tag index +v1
 x (A) Change password needs to be implemented
@@ -87,4 +86,5 @@ x Refactor TemplateCache - don't like having to pass in file name and then defin
 x Refactor css
 x Refactor note, tag, and section repositories to single repository interface +v1
 x SQLite Migrations and DB Bootstrapping
+x Write proper readme +v1
 x investage why connections aren't closing

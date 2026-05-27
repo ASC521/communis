@@ -16,7 +16,11 @@
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#eye-off"/>
 	</svg>
       </button>
-      <button type="submit" class="svg-button">
+      {{ if eq .Note.ID 0 }}
+      <button hx-post="/note" form="note-editor" class="svg-button">
+	{{ else }}
+	<button hx-put="/note/{{ .Note.ID }}/{{ slugify .Note.Title }}" form="note-editor" class="svg-button">
+	{{ end }}
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#save"/>
 	</svg>

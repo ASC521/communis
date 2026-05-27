@@ -39,7 +39,7 @@ func routes(
 
 	mux.Handle("GET /note/{id}/{slug}", authReq.Then(handlers.NoteViewGet(tc, logger, dss, sessionManager)))
 	mux.Handle("GET /note/new", authReq.Then(handlers.NoteNewGet(tc, logger, dss, sessionManager)))
-	mux.Handle("POST /note/preview", authReq.Then(handlers.NotePreviewPost(tc, logger, dss)))
+	mux.Handle("POST /note/preview/{id}", authReq.Then(handlers.NotePreviewPost(tc, logger, dss)))
 	mux.Handle("POST /note", authReq.Then(handlers.NotePost(tc, logger, dss)))
 	mux.Handle("PUT /note/{id}/{slug}", authReq.Then(handlers.NotePut(tc, logger, dss, sessionManager)))
 	mux.Handle("DELETE /note/{id}/{slug}", authReq.Then(handlers.NoteDelete(tc, logger, dss)))

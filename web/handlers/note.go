@@ -319,8 +319,9 @@ func NotePost(
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, slugify(nf.Title)), http.StatusSeeOther)
-
+		ru := fmt.Sprintf("/note/%v/%s", id, slugify(nf.Title))
+		w.Header().Set("HX-Redirect", ru)
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
