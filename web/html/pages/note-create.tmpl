@@ -21,12 +21,15 @@
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#tags"/>
 	      </svg>
 	    </button>
-	    <button type="button" hx-target="body" hx-delete="/note/{{ .Form.ID }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="svg-button">
+	    {{ if ne .Form.ID 0 }}
+	      <button type="button" hx-target="body" hx-delete="/note/{{ .Form.ID }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="svg-button">
 	      <svg>
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	      </svg>
 	    </button>
-	    <button id="mde-preview-btn" type="button" name="terms" hx-post="/note/preview/{{ .Form.ID }}" hx-target="#mde-preview" class="svg-button">
+		{{ end }}
+
+	      <button id="mde-preview-btn" type="button" name="terms" hx-post="/note/preview/{{ .Form.ID }}" hx-target="#mde-preview" class="svg-button">
 	      <svg>
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#eye"/>
 	      </svg>

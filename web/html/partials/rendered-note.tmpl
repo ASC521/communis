@@ -6,11 +6,13 @@
 
     <div class="buttons">
       {{ if .IsPreview }}
+      {{ if ne .Note.ID 0 }}
       <button type="button" hx-target="body" hx-delete="/note/{{ .Note.ID }}/{{ slugify .Note.Title }}"  hx-confirm="Delete {{ .Note.Title }}?" class="svg-button">
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	</svg>
       </button>
+      {{ end }}
       <button id="mde-preview-btn" type="button" class="svg-button">
 	<svg class="icon">
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#eye-off"/>
