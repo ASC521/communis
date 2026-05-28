@@ -14,6 +14,8 @@ class MDEditor {
     saveTimeout = null;
     textarea = null;
     container = null;
+    saveBtnClicked = false;
+    deleteBtnClicked = false;
 
     constructor(textarea, container) {
 	this.textarea = textarea;
@@ -128,7 +130,7 @@ function mdeMonitorChanges(event) {
 }
 
 function mdeConfirmChangesLoss(event) {
-    if (!mdEditor.isDirty) {
+    if (!mdEditor.isDirty || mdEditor.saveBtnClicked || mdEditor.deleteBtnClicked) {
 	return
     }
     
@@ -379,6 +381,10 @@ function mdeHandleClick(event) {
     case "mde-redo-btn":
 	mdeRedo(mdEditor);
 	break;
+    case "mde-save-btn":
+	mdEditor.saveBtnClicked = true;
+    case "mde-delete-btn":
+	mdEditor.deleteBtnClicked = true;
     default:
 	return
     }
