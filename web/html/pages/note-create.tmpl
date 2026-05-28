@@ -22,7 +22,7 @@
 	      </svg>
 	    </button>
 	    {{ if ne .Form.ID 0 }}
-	      <button type="button" hx-target="body" hx-delete="/note/{{ .Form.ID }}/{{ slugify .Form.Title }}"  hx-confirm="Delete {{ .Form.Title }}?" class="svg-button">
+	      <button type="button" command="show-modal" commandFor="delete-note" class="svg-button">
 	      <svg>
 		<use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	      </svg>
@@ -188,5 +188,26 @@
 
 
 </main>
+
+
+<dialog id="delete-note">
+  <article class="dialog-modal">
+    <header class="header">
+      <h4>Confirm Deletion</h4>
+      <button rel="prev" class="svg-button" type="button" command="close" commandFor="delete-note" aria-label="close">
+	<svg>
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#x"/>
+	</svg>
+      </button>
+    </header>
+    <div class="content">
+      <p>Delete note {{ .Form.Title }}?<p>
+    </div>
+    <footer class="footer">
+      <button class="text-button" command="close" commandFor="delete-note">Cancel</button>
+      <button class="text-button -warn" hx-delete="/note/{{ .Form.ID }}/{{ slugify .Form.Title }}">Delete</button>
+    </footer>
+  </article>
+</dialog>
 
 {{end}}

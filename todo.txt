@@ -14,7 +14,6 @@ Bug Fix: Entering search from home screen results in querying the server twice o
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: New note screen delete button should be disabled +v1
 Bug Fix: Security is blocking external images being loaded in markdown
-Edit note screen - delete button should use native dialog +v1
 Error Screens +v1
 Fix note preview page -  buttons don't line up
 Refactor organization of html templates to better fit htmx
@@ -77,6 +76,7 @@ x (F) Add way to go to edit screen from view note screen +v1
 x Add license +v1
 x Bug Fix: Executing template is partially writing to screen - should be finding errors when writing first to buffer
 x Data Model
+x Edit note screen - delete button should use native dialog +v1
 x Feature: MarkDown table support
 x Full Text Search for Notes
 x Implement Repository Pattern for SQLite backend
