@@ -9,6 +9,7 @@ class MDEditor {
     history = [];
     currentIndex = 0;
     isUndoRedo = false;
+    isDirty = false;
     maxHistory = 10;
     saveTimeout = null;
     textarea = null;
@@ -120,6 +121,18 @@ function mdeHandleKeyDown(event) {
     mdEditor.textarea.setSelectionRange(u.selectionStart, u.selectionEnd);
     mdeAddHistoryEntry(mdEditor);
     mdEditor.textarea.focus();
+}
+
+function mdeMonitorChanges(event) {
+    mdEditor.isDirty = true;
+}
+
+function mdeConfirmChangesLoss(event) {
+    if (!mdEditor.isDirty) {
+	return
+    }
+    
+    event.preventDefault()
 }
 
 
@@ -391,6 +404,8 @@ document.addEventListener("DOMContentLoaded", (e) => {
 	    mdEditor.textarea.removeEventListener("input", mdeHandleOnInput);
 	    mdEditor.textarea.removeEventListener("keydown", mdeHandleKeyDown);
 	    mdEditor.container.removeEventListener("click", mdeHandleClick);
+	    mdEditor.container.removeEventListener("change", mdeMonitorChanges)
+	    removeEventListener("beforeunload", mdeConfirmChangesLoss)
 	    mdEditor = null;
 	}
 	return
@@ -402,6 +417,8 @@ document.addEventListener("DOMContentLoaded", (e) => {
 	mdEditor.textarea.addEventListener("input", mdeHandleOnInput);
 	mdEditor.textarea.addEventListener("keydown", mdeHandleKeyDown);
 	mdEditor.container.addEventListener("click", mdeHandleClick);
+	mdEditor.container.addEventListener("change", mdeMonitorChanges)
+	addEventListener("beforeunload", mdeConfirmChangesLoss)
     }
     
 });
