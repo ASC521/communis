@@ -74,6 +74,9 @@ type Config struct {
 	WebHost                string         `toml:"web-host"`
 	WebPort                uint           `toml:"web-port"`
 	WebLoggingIgnoredPaths []RegexPattern `toml:"web-logging-ignored-paths"`
+	WebEnableHTTPS         bool           `toml:"web-enable-https"`
+	WebCert                string         `toml:"web-cert"`
+	WebKey                 string         `toml:"web-key"`
 	Debug                  bool           `toml:"debug"`
 }
 
@@ -102,8 +105,8 @@ func DefaultConfig() (*Config, error) {
 		WebLoggingIgnoredPaths: []RegexPattern{
 			{Pattern: `\/static\/.*`},
 		},
-
-		Debug: false,
+		WebEnableHTTPS: false,
+		Debug:          false,
 	}, nil
 }
 

@@ -94,6 +94,7 @@ func RunServer(conf *config.Config) error {
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
 		},
+		ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
 	shutdownError := make(chan error)
@@ -121,7 +122,12 @@ func RunServer(conf *config.Config) error {
 	}()
 
 	logger.Info("starting server", "addr", srv.Addr)
-	err = srv.ListenAndServe()
+	if conf.WebEnableHTTPS {
+		err = srv.ListenAndServeTLS(conf.WebCert, conf.WebKey)
+	} else {
+		err = srv.ListenAndServe()
+	}
+
 	if !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
