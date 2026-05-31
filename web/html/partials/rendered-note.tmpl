@@ -7,7 +7,7 @@
     <div class="buttons">
       {{ if .IsPreview }}
       {{ if ne .Note.ID 0 }}
-      <button type="button" command="show-modal" commandFor="delete-note" class="svg-button">
+      <button type="button" command="show-modal" commandFor="delete-note" class="svg-button" id="mde-delete-btn">
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
 	</svg>
@@ -19,9 +19,9 @@
 	</svg>
       </button>
       {{ if eq .Note.ID 0 }}
-      <button hx-post="/note" form="note-editor" class="svg-button">
+      <button hx-post="/note" form="note-editor" class="svg-button" id="mde-save-btn">
 	{{ else }}
-	<button hx-put="/note/{{ .Note.ID }}/{{ slugify .Note.Title }}" form="note-editor" class="svg-button">
+	<button hx-put="/note/{{ .Note.ID }}/{{ slugify .Note.Title }}" form="note-editor" class="svg-button" id="mde-save-btn">
 	{{ end }}
 	<svg>
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#save"/>
