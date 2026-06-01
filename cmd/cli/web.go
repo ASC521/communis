@@ -1,12 +1,13 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/ASC521/communis/config"
+	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web"
 )
 
@@ -46,25 +47,26 @@ func ServeCMD(conf *config.Config, args []string) error {
 		}
 	})
 
-	if conf.WebEnableHTTPS {
-		if conf.WebCert == "" {
-			return errors.New("certificate file is required to run an HTTPS server")
-		}
+	logOpts := slog.HandlerOptions{}
+	if conf.Debug {
+		logOpts.Level = slog.LevelDebug
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &logOpts))
 
-		if _, err := os.Stat(conf.WebCert); os.IsNotExist(err) {
-			return errors.New("certificate file does not exist")
-		}
-
-		if conf.WebKey == "" {
-			return errors.New("key file is required to run an HTTPS server")
-		}
-
-		if _, err := os.Stat(conf.WebKey); os.IsNotExist(err) {
-			return errors.New("key file does not exist")
-		}
-
+	dsmConf, err := services.ConfigToSQLiteDataStoreConfig(conf)
+	if err != nil {
+		return err
+	}
+	dsm, err := services.NewSQLiteDataStoreActor(dsmConf, logger)
+	if err != nil {
+		return err
 	}
 
-	return web.RunServer(conf)
+	svrConf, err := web.ConfigToServerConfig(conf)
+	if err != nil {
+		return err
+	}
+
+	return web.RunServer(svrConf, dsm, logger)
 
 }
