@@ -18,6 +18,7 @@ import (
 
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx/sqlitex"
+	"github.com/ASC521/communis/hdx"
 	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers"
 
@@ -30,20 +31,60 @@ var staticFiles embed.FS
 //go:embed "html"
 var htmlFiles embed.FS
 
-func setupLogging(c *config.Config) *slog.Logger {
-	opts := slog.HandlerOptions{}
-	if c.Debug {
-		opts.Level = slog.LevelDebug
-	}
-
-	h := slog.NewTextHandler(os.Stderr, &opts)
-
-	return slog.New(h)
+type ServerConfig struct {
+	Host                string
+	Port                uint
+	HTTPSEnabled        bool
+	CertFile            string
+	KeyFile             string
+	Debug               bool
+	IgnoredLoggingPaths []string
 }
 
-func RunServer(conf *config.Config) error {
-	logger := setupLogging(conf)
+func ConfigToServerConfig(conf *config.Config) (ServerConfig, error) {
 
+	svrConf := ServerConfig{
+		Debug: conf.Debug,
+	}
+
+	if conf.WebHost == "" {
+		return ServerConfig{}, errors.New("web host is required")
+	}
+	svrConf.Host = conf.WebHost
+
+	if conf.WebPort == 0 {
+		return ServerConfig{}, errors.New("web port is required")
+	}
+	svrConf.Port = conf.WebPort
+
+	if conf.WebEnableHTTPS {
+		svrConf.HTTPSEnabled = true
+		if conf.WebCert == "" {
+			return ServerConfig{}, errors.New("https enabled - certificate file required")
+		}
+		certFile, err := hdx.ResolveFile(conf.WebCert)
+		if err != nil {
+			return ServerConfig{}, fmt.Errorf("failed to resolve path to certificate file: %s", err.Error())
+		}
+		svrConf.CertFile = certFile
+
+		keyFile, err := hdx.ResolveFile(conf.WebKey)
+		if err != nil {
+			return ServerConfig{}, fmt.Errorf("failed to resolve path to key file: %s", err.Error())
+		}
+		svrConf.KeyFile = keyFile
+	}
+
+	svrConf.IgnoredLoggingPaths = make([]string, len(conf.WebLoggingIgnoredPaths))
+	for i, ip := range conf.WebLoggingIgnoredPaths {
+		svrConf.IgnoredLoggingPaths[i] = ip.Pattern
+	}
+
+	return svrConf, nil
+
+}
+
+func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Logger) error {
 	ctx := context.Background()
 	wg := &sync.WaitGroup{}
 
@@ -63,33 +104,26 @@ func RunServer(conf *config.Config) error {
 		return err
 	}
 
-	dataStoreConfig, err := services.ConfigToSQLiteDataStoreConfig(*conf)
-	if err != nil {
-		return err
-	}
-	dataStoreSvc, err := services.NewSQLiteDataStoreActor(ctx, wg, 8*time.Hour, dataStoreConfig, logger)
-	if err != nil {
-		return err
-	}
-	err = dataStoreSvc.RunMigrations(ctx)
+	dsm.Start(ctx, wg)
+	err = dsm.RunMigrations(ctx)
 	if err != nil {
 		return err
 	}
 
 	sessionManager := scs.New()
-	sessionManager.Store = sqlitex.NewSessionStore(dataStoreSvc.GetIndexDatabase())
+	sessionManager.Store = sqlitex.NewSessionStore(dsm.GetIndexDatabase())
 
 	// Check if initial setup needs to be run
-	initialSetupNeeded, err := dataStoreSvc.GetUserStore().InitialSetupNeeded(ctx)
+	initialSetupNeeded, err := dsm.GetUserStore().InitialSetupNeeded(ctx)
 	if err != nil {
 		return err
 	}
 	logger.Info(fmt.Sprintf("initial setup = %v", initialSetupNeeded))
 
-	handler := routes(logger, tc, dataStoreSvc, sessionManager, conf.WebLoggingIgnoredPaths, conf.Debug, &initialSetupNeeded)
+	handler := routes(logger, tc, dsm, sessionManager, conf.IgnoredLoggingPaths, conf.Debug, &initialSetupNeeded)
 
 	srv := &http.Server{
-		Addr:    net.JoinHostPort(conf.WebHost, strconv.Itoa(int(conf.WebPort))),
+		Addr:    net.JoinHostPort(conf.Host, strconv.Itoa(int(conf.Port))),
 		Handler: handler,
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
@@ -115,15 +149,15 @@ func RunServer(conf *config.Config) error {
 
 		logger.Info("completing background tasks", "addr", srv.Addr)
 
-		dataStoreSvc.Stop()
+		dsm.Stop()
 
 		wg.Wait()
 		shutdownError <- nil
 	}()
 
 	logger.Info("starting server", "addr", srv.Addr)
-	if conf.WebEnableHTTPS {
-		err = srv.ListenAndServeTLS(conf.WebCert, conf.WebKey)
+	if conf.HTTPSEnabled {
+		err = srv.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
 	} else {
 		err = srv.ListenAndServe()
 	}

@@ -46,7 +46,7 @@ type SQLiteDataStoreConfig struct {
 	SQLiteOptions     []sqlitex.SQLiteOption
 }
 
-func ConfigToSQLiteDataStoreConfig(conf config.Config) (SQLiteDataStoreConfig, error) {
+func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, error) {
 
 	var dbd string
 	if conf.DataDirectory == "" {
@@ -168,16 +168,14 @@ func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteCon
 // SQLiteDataStoreActor manages the creation of connections to individual notes sqlite databases.
 type SQLiteDataStoreActor struct {
 	connections map[int64]*cachedConn
-	ttl         time.Duration
-	wg          *sync.WaitGroup
 	indexDB     *sqlitex.SQLiteDB
 	commands    chan sqliteConnCmd
 	conf        SQLiteDataStoreConfig
 	logger      *slog.Logger
-	ctx         context.Context
+	ttl         time.Duration
 }
 
-func NewSQLiteDataStoreActor(ctx context.Context, wg *sync.WaitGroup, ttl time.Duration, conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreActor, error) {
+func NewSQLiteDataStoreActor(conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreActor, error) {
 
 	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
 	if err != nil {
@@ -186,64 +184,57 @@ func NewSQLiteDataStoreActor(ctx context.Context, wg *sync.WaitGroup, ttl time.D
 
 	svc := &SQLiteDataStoreActor{
 		connections: map[int64]*cachedConn{},
-		ttl:         ttl,
-		wg:          wg,
+		ttl:         8 * time.Hour,
 		commands:    make(chan sqliteConnCmd),
 		conf:        conf,
 		indexDB:     indexDB,
 		logger:      logger,
-		ctx:         ctx,
 	}
-
-	go svc.run()
 
 	return svc, nil
 }
 
-func (s *SQLiteDataStoreActor) run() {
-
-	s.wg.Add(1)
-	defer s.wg.Done()
-
-	timerCtx, cancelTimer := context.WithCancel(s.ctx)
+func (s *SQLiteDataStoreActor) Start(ctx context.Context, wg *sync.WaitGroup) {
+	timerCtx, cancelTimer := context.WithCancel(ctx)
 	defer cancelTimer()
 
-	s.wg.Go(func() {
+	wg.Go(func() {
 		runPoller(timerCtx, 10*time.Minute, s.commands, s.logger)
 	})
 
-	for msg := range s.commands {
+	wg.Go(func() {
+		for msg := range s.commands {
 
-		switch msg.tag {
-		case cmdGetConn:
-			nr, err := s.getNotesStore(msg.ctx, msg.key)
-			if err != nil {
-				msg.result <- err
-			} else {
-				msg.result <- nr
+			switch msg.tag {
+			case cmdGetConn:
+				nr, err := s.getNotesStore(msg.ctx, msg.key)
+				if err != nil {
+					msg.result <- err
+				} else {
+					msg.result <- nr
+				}
+
+			case cmdRemoveConn:
+				msg.result <- s.removeConnection(msg.key)
+
+			case cmdCreateDB:
+				msg.result <- s.createDatabase(msg.ctx, msg.key)
+
+			case cmdDeleteDB:
+				msg.result <- s.deleteDatabase(msg.ctx, msg.key)
+
+			case cmdCheckMigrations:
+				msg.result <- s.runMigrations(msg.ctx)
+
+			case cmdGetState:
+				msg.result <- s.getState()
+
+			case cmdRemoveExpired:
+				msg.result <- s.removeExpired()
 			}
-
-		case cmdRemoveConn:
-			msg.result <- s.removeConnection(msg.key)
-
-		case cmdCreateDB:
-			msg.result <- s.createDatabase(msg.ctx, msg.key)
-
-		case cmdDeleteDB:
-			msg.result <- s.deleteDatabase(msg.ctx, msg.key)
-
-		case cmdCheckMigrations:
-			msg.result <- s.runMigrations(msg.ctx)
-
-		case cmdGetState:
-			msg.result <- s.getState()
-
-		case cmdRemoveExpired:
-			msg.result <- s.removeExpired()
+			close(msg.result)
 		}
-		close(msg.result)
-	}
-
+	})
 }
 
 func (s *SQLiteDataStoreActor) createNewConnection(ctx context.Context, key int64) (*sqlitex.SQLiteDB, error) {

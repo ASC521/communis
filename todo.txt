@@ -1,4 +1,3 @@
-(A) Bug Fix: Save from preview warns user about losing changes
 (B) Replace structured logging with human readable logging
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
@@ -15,10 +14,10 @@ Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when n
 Bug Fix: Security is blocking external images being loaded in markdown
 Error Screens +v1
 Fix note preview page -  buttons don't line up
+Redo UI to be mobile friendly
 Refactor organization of html templates to better fit htmx
 Search results should contain rendered html from markdown not raw markdown
 Unit tests on note form parsing and validation +v1
-Redo UI to be mobile friendly
 ctrl+k search modal
 kindle highlight and note parser
 kobo highlight and note parser
@@ -30,6 +29,7 @@ x (A) Add support for HTTPS server
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
 x (A) Bug Fix: Can't save from note preview screen
 x (A) Bug Fix: Note Edit page does not submit
+x (A) Bug Fix: Save from preview warns user about losing changes
 x (A) Build tag index +v1
 x (A) Change password needs to be implemented
 x (A) Common response headers middleware

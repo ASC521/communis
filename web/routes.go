@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
@@ -15,7 +14,7 @@ func routes(
 	tc *handlers.TemplateCache,
 	dss services.DataStoreService,
 	sessionManager *scs.SessionManager,
-	ignoredLoggingPaths []config.RegexPattern,
+	ignoredLoggingPaths []string,
 	debugEnabled bool,
 	setupRequired *bool,
 ) http.Handler {
