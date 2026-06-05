@@ -142,7 +142,8 @@ func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteCon
 
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
-	logger.Debug("started cache poller")
+	logger.Debug("starting cache poller")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -182,27 +183,28 @@ func NewSQLiteDataStoreActor(conf SQLiteDataStoreConfig, logger *slog.Logger) (*
 		return nil, err
 	}
 
+	al := logger.WithGroup("DATA-STORE-CACHE")
 	svc := &SQLiteDataStoreActor{
 		connections: map[int64]*cachedConn{},
 		ttl:         8 * time.Hour,
 		commands:    make(chan sqliteConnCmd),
 		conf:        conf,
 		indexDB:     indexDB,
-		logger:      logger,
+		logger:      al,
 	}
 
 	return svc, nil
 }
 
 func (s *SQLiteDataStoreActor) Start(ctx context.Context, wg *sync.WaitGroup) {
-	timerCtx, cancelTimer := context.WithCancel(ctx)
-	defer cancelTimer()
 
 	wg.Go(func() {
-		runPoller(timerCtx, 10*time.Minute, s.commands, s.logger)
-	})
+		timerCtx, cancelTimer := context.WithCancel(ctx)
+		defer cancelTimer()
+		wg.Go(func() {
+			runPoller(timerCtx, 10*time.Minute, s.commands, s.logger)
+		})
 
-	wg.Go(func() {
 		for msg := range s.commands {
 
 			switch msg.tag {
