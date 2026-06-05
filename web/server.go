@@ -98,6 +98,7 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 ------------------------------------------
 
 `)
+	serverLogger := logger.WithGroup("SERVER")
 
 	tc, err := handlers.NewTemplateCache(htmlFiles, conf.Debug)
 	if err != nil {
@@ -118,9 +119,9 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 	if err != nil {
 		return err
 	}
-	logger.Info(fmt.Sprintf("initial setup = %v", initialSetupNeeded))
+	serverLogger.Info(fmt.Sprintf("initial setup = %v", initialSetupNeeded))
 
-	handler := routes(logger, tc, dsm, sessionManager, conf.IgnoredLoggingPaths, conf.Debug, &initialSetupNeeded)
+	handler := routes(serverLogger, tc, dsm, sessionManager, conf.IgnoredLoggingPaths, conf.Debug, &initialSetupNeeded)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Host, strconv.Itoa(int(conf.Port))),
@@ -128,7 +129,7 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
 		},
-		ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		ErrorLog: slog.NewLogLogger(serverLogger.Handler(), slog.LevelError),
 	}
 
 	shutdownError := make(chan error)
@@ -137,7 +138,7 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		s := <-quit
 
-		logger.Info("caught signal", "signal", s.String())
+		serverLogger.Info("caught signal", "signal", s.String())
 
 		ctxWTO, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
@@ -147,7 +148,7 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 			shutdownError <- err
 		}
 
-		logger.Info("completing background tasks", "addr", srv.Addr)
+		serverLogger.Info("completing background tasks", "addr", srv.Addr)
 
 		dsm.Stop()
 
@@ -155,7 +156,7 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 		shutdownError <- nil
 	}()
 
-	logger.Info("starting server", "addr", srv.Addr)
+	serverLogger.Info("starting server", "addr", srv.Addr)
 	if conf.HTTPSEnabled {
 		err = srv.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
 	} else {
@@ -171,7 +172,7 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 		return err
 	}
 
-	logger.Info("stopped server", "addr", srv.Addr)
+	serverLogger.Info("stopped server", "addr", srv.Addr)
 
 	return nil
 }

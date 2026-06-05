@@ -1,4 +1,3 @@
-// https://github.com/golang/example/tree/master/slog-handler-guide
 package slogx
 
 import (
@@ -33,6 +32,11 @@ type groupOrAttrs struct {
 	attrs []slog.Attr
 }
 
+// PipeHandler was implemented following the slog Handler creation guide @ https://github.com/golang/example/tree/master/slog-handler-guide
+// Additional optimizations which could be implemented if needed:
+//   - Implement a buffer pool instead of creating a buffer for every log record
+//   - Preformat Attrs and Group name
+
 type PipeHandler struct {
 	opts HandlerOptions
 	mu   *sync.Mutex
@@ -62,17 +66,17 @@ func (h *PipeHandler) Handle(ctx context.Context, r slog.Record) error {
 	}
 
 	goas := h.goas
-	// TODO: Add support for concatenating multiple group names
-	var groupName strings.Builder
+	groupNames := []string{}
 	for _, goa := range goas {
 		if goa.group != "" {
-			groupName.WriteString(goa.group)
+			groupNames = append(groupNames, goa.group)
 		}
 	}
+	groupName := strings.Join(groupNames, ".")
 
 	buf = fmt.Appendf(buf, " %s |", levelValues[r.Level])
-	if groupName.String() != "" {
-		buf = fmt.Appendf(buf, " %s | %s | ", groupName.String(), r.Message)
+	if groupName != "" {
+		buf = fmt.Appendf(buf, " %s | %s | ", groupName, r.Message)
 	} else {
 		buf = fmt.Appendf(buf, " %s | ", r.Message)
 	}
