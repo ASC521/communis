@@ -59,7 +59,7 @@ func DeleteUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	indexRepo models.IndexRepository,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := parseIDFromPath(r)
@@ -116,7 +116,7 @@ func PostUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	indexRepo models.IndexRepository,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	type newUserForm struct {

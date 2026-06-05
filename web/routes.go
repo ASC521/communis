@@ -12,7 +12,7 @@ import (
 func routes(
 	logger *slog.Logger,
 	tc *handlers.TemplateCache,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 	ignoredLoggingPaths []string,
 	debugEnabled bool,

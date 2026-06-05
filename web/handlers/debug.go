@@ -12,7 +12,7 @@ import (
 func ConnCacheStateGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state := dss.GetState()

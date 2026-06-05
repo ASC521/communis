@@ -63,7 +63,7 @@ func parseIDFromPath(r *http.Request) (int64, error) {
 
 var ErrNotesRepoNotFound = errors.New("notes repository not found in context")
 
-func GetNotesRepo(r *http.Request, dss services.DataStoreService) (models.NotesRepository, error) {
+func GetNotesRepo(r *http.Request, dss *services.SQLiteDataStoreActor) (models.NotesRepository, error) {
 
 	userID, ok := r.Context().Value(userIDContextKey).(int64)
 	if !ok {

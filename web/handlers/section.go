@@ -67,7 +67,7 @@ func validateSectionForm(form *sectionForm) {
 func SectionGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -102,7 +102,7 @@ func SectionGet(
 func SectionPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +146,7 @@ func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.HandlerFunc {
 func SectionDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -176,7 +176,7 @@ func SectionDelete(
 func SectionPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		form, err := parseSectionFormFromRequest(r)
@@ -210,7 +210,7 @@ func SectionPut(
 func SectionEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sectionId, err := parseIDFromPath(r)
@@ -244,7 +244,7 @@ func SectionEditGet(
 func SectionViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	type td struct {

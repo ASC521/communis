@@ -219,7 +219,7 @@ type noteCreateData struct {
 func NoteNewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -258,7 +258,7 @@ func NoteNewGet(
 func NotePost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +328,7 @@ func NotePost(
 func NoteEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -398,7 +398,7 @@ func NoteEditGet(
 func NotePut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -482,7 +482,7 @@ type renderedNotePageData struct {
 func NotePreviewPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -556,7 +556,7 @@ func NotePreviewPost(
 func NoteViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -623,7 +623,7 @@ func NoteViewGet(
 func NoteSearchGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -674,7 +674,7 @@ func NoteSearchGet(
 func NoteDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)

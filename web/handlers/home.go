@@ -12,7 +12,7 @@ import (
 func HomeGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 

@@ -70,7 +70,7 @@ func validateTagForm(ctx context.Context, tf *tagForm, nr models.NotesRepository
 func TagGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -103,7 +103,7 @@ func TagGet(
 func TagViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	type td struct {
@@ -149,7 +149,7 @@ func TagViewGet(
 func TagEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	type td struct {
@@ -184,7 +184,7 @@ func TagEditGet(
 func TagPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesRepo(r, dss)
@@ -220,10 +220,10 @@ func TagPut(
 func TagDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagId, err := parseIDFromPath(r)
+		tagID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -234,7 +234,7 @@ func TagDelete(
 			return
 		}
 
-		err = notesRepo.DeleteTag(r.Context(), tagId)
+		err = notesRepo.DeleteTag(r.Context(), tagID)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -248,7 +248,7 @@ func TagDelete(
 func TagPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *services.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	type td struct {

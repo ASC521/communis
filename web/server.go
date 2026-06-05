@@ -84,7 +84,7 @@ func ConfigToServerConfig(conf *config.Config) (ServerConfig, error) {
 
 }
 
-func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Logger) error {
+func RunServer(conf ServerConfig, dsm *services.SQLiteDataStoreActor, logger *slog.Logger) error {
 	ctx := context.Background()
 	wg := &sync.WaitGroup{}
 
