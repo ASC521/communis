@@ -1,4 +1,3 @@
-(B) Replace structured logging with human readable logging
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
@@ -7,13 +6,13 @@
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (F) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) PostUser should be happening within a transaction
-Feature: Bookmark a note and list bookmarked notes on homescreen
 Add ability to copy code blocks from rendered note
 Add advanced query support to search screen +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Security is blocking external images being loaded in markdown
 Error Screens +v1
+Feature: Bookmark a note and list bookmarked notes on homescreen
 Fix note preview page -  buttons don't line up
 Redo UI to be mobile friendly
 Refactor organization of html templates to better fit htmx
@@ -69,6 +68,7 @@ x (A) Unsaved changes will be lost warning on navigating away from page +v1
 x (B) Add navbar for login page
 x (B) DB Connection Cache should renew expiry time each auth check
 x (B) Refactor database repositories to support database connection in each handler +v1 +user-auth
+x (B) Replace structured logging with human readable logging
 x (C) Add navbar for admin page
 x (D) Add install subcommand to automate installation of application
 x (D) Add uninstall subcommand to automate uninstallation of application
