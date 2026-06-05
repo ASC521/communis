@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/services"
+	userstore "github.com/ASC521/communis/user-store"
+	userstoredb "github.com/ASC521/communis/user-store/sqlite"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -58,8 +58,8 @@ func parseUserEditFormFromRequest(r *http.Request) (userEditForm, error) {
 func DeleteUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
-	dss *services.SQLiteDataStoreActor,
+	indexRepo *userstoredb.IndexDBRepository,
+	dss *userstoredb.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := parseIDFromPath(r)
@@ -103,7 +103,7 @@ func DeleteUser(
 func GetUserCreate(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstoredb.IndexDBRepository,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -115,8 +115,8 @@ func GetUserCreate(
 func PostUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
-	dss *services.SQLiteDataStoreActor,
+	indexRepo *userstoredb.IndexDBRepository,
+	dss *userstoredb.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	type newUserForm struct {
@@ -190,13 +190,13 @@ func PostUser(
 func GetAdmin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstoredb.IndexDBRepository,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
 	type td struct {
 		BaseData
-		Users []models.User
+		Users []userstore.User
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -219,13 +219,13 @@ func GetAdmin(
 func PutUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstoredb.IndexDBRepository,
 ) http.HandlerFunc {
 
 	type td struct {
 		BaseData
 		Form userEditForm
-		User models.User
+		User userstore.User
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -298,7 +298,7 @@ type changePasswordForm struct {
 func PutUserPassword(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstoredb.IndexDBRepository,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -358,13 +358,13 @@ func PutUserPassword(
 func GetUserEdit(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstoredb.IndexDBRepository,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
 	type td struct {
 		BaseData
-		User               models.User
+		User               userstore.User
 		EditUserForm       userEditForm
 		ChangePasswordForm changePasswordForm
 	}
@@ -402,7 +402,7 @@ func GetUserEdit(
 func GetUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstoredb.IndexDBRepository,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -459,7 +459,7 @@ func PostSetup(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	setupRequired *bool,
-	indexRepo models.IndexRepository,
+	indexRepo *userstoredb.IndexDBRepository,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 

@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/services"
+	userstore "github.com/ASC521/communis/user-store/sqlite"
 	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
 )
@@ -12,14 +12,12 @@ import (
 func routes(
 	logger *slog.Logger,
 	tc *handlers.TemplateCache,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstore.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 	ignoredLoggingPaths []string,
 	debugEnabled bool,
 	setupRequired *bool,
 ) http.Handler {
-
-	indexRepo := dss.GetUserStore()
 
 	mux := http.NewServeMux()
 
@@ -28,7 +26,7 @@ func routes(
 		handlers.RequestLogger(ignoredLoggingPaths, logger),
 		handlers.CommonHeaders, handlers.CrossOriginProtection,
 		sessionManager.LoadAndSave,
-		handlers.Authenticate(sessionManager, indexRepo),
+		handlers.Authenticate(sessionManager, dss.UserStore),
 		handlers.InitialSetup(setupRequired),
 	}
 	authReq := handlers.Chain{handlers.RequireAuth, handlers.RedirectAdmin}
@@ -66,23 +64,23 @@ func routes(
 
 	mux.Handle("GET /{$}", authReq.Then(handlers.HomeGet(tc, logger, dss, sessionManager)))
 
-	mux.Handle("GET /login", handlers.GetUserLogin(tc, logger, indexRepo, sessionManager))
-	mux.Handle("POST /login", handlers.PostUserLogin(tc, logger, indexRepo, sessionManager))
+	mux.Handle("GET /login", handlers.GetUserLogin(tc, logger, dss.UserStore, sessionManager))
+	mux.Handle("POST /login", handlers.PostUserLogin(tc, logger, dss.UserStore, sessionManager))
 	mux.Handle("DELETE /session", handlers.RequireAuth((handlers.PostUserLogout(tc, logger, sessionManager))))
 
-	mux.Handle("GET /admin", adminReq.Then(handlers.GetAdmin(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("GET /user/new", adminReq.Then(handlers.GetUserCreate(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("POST /user", adminReq.Then(handlers.PostUser(tc, logger, indexRepo, dss)))
-	mux.Handle("GET /user/{id}", adminReq.Then(handlers.GetUser(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("GET /user/{id}/edit", adminReq.Then(handlers.GetUserEdit(tc, logger, indexRepo, sessionManager)))
-	mux.Handle("DELETE /user/{id}", adminReq.Then(handlers.DeleteUser(tc, logger, indexRepo, dss)))
-	mux.Handle("PUT /user/{id}", adminReq.Then(handlers.PutUser(tc, logger, indexRepo)))
-	mux.Handle("PUT /user/{id}/password", adminReq.Then(handlers.PutUserPassword(tc, logger, indexRepo)))
+	mux.Handle("GET /admin", adminReq.Then(handlers.GetAdmin(tc, logger, dss.UserStore, sessionManager)))
+	mux.Handle("GET /user/new", adminReq.Then(handlers.GetUserCreate(tc, logger, dss.UserStore, sessionManager)))
+	mux.Handle("POST /user", adminReq.Then(handlers.PostUser(tc, logger, dss.UserStore, dss)))
+	mux.Handle("GET /user/{id}", adminReq.Then(handlers.GetUser(tc, logger, dss.UserStore, sessionManager)))
+	mux.Handle("GET /user/{id}/edit", adminReq.Then(handlers.GetUserEdit(tc, logger, dss.UserStore, sessionManager)))
+	mux.Handle("DELETE /user/{id}", adminReq.Then(handlers.DeleteUser(tc, logger, dss.UserStore, dss)))
+	mux.Handle("PUT /user/{id}", adminReq.Then(handlers.PutUser(tc, logger, dss.UserStore)))
+	mux.Handle("PUT /user/{id}/password", adminReq.Then(handlers.PutUserPassword(tc, logger, dss.UserStore)))
 
 	mux.Handle("GET /setup", handlers.GetSetup(tc, logger, setupRequired))
-	mux.Handle("POST /setup", handlers.PostSetup(tc, logger, setupRequired, indexRepo, sessionManager))
+	mux.Handle("POST /setup", handlers.PostSetup(tc, logger, setupRequired, dss.UserStore, sessionManager))
 
-	mux.Handle("PUT /user/{id}/theme", handlers.RequireAuth(handlers.PutUserTheme(tc, logger, indexRepo)))
+	mux.Handle("PUT /user/{id}/theme", handlers.RequireAuth(handlers.PutUserTheme(tc, logger, dss.UserStore)))
 
 	if debugEnabled {
 		mux.Handle("GET /debug/conn-cache-state", adminReq.Then(handlers.ConnCacheStateGet(tc, logger, dss)))

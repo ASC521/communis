@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ASC521/communis/models"
+	datastore "github.com/ASC521/communis/data-store"
 )
 
-func (r *NotesRepository) CreateSection(ctx context.Context, s models.Section) (int64, error) {
+func (r *NotesRepository) CreateSection(ctx context.Context, s datastore.Section) (int64, error) {
 
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -19,33 +19,33 @@ func (r *NotesRepository) CreateSection(ctx context.Context, s models.Section) (
 
 }
 
-func (r *NotesRepository) FindSectionById(ctx context.Context, id int64) (models.Section, error) {
+func (r *NotesRepository) FindSectionById(ctx context.Context, id int64) (datastore.Section, error) {
 	sql := "SELECT id, name FROM sections WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	nb := models.Section{}
+	nb := datastore.Section{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&nb.ID, &nb.Name)
 	if err != nil {
-		return models.Section{}, err
+		return datastore.Section{}, err
 	}
 	return nb, nil
 }
 
-func (r *NotesRepository) FindSectionByName(ctx context.Context, name string) (models.Section, error) {
+func (r *NotesRepository) FindSectionByName(ctx context.Context, name string) (datastore.Section, error) {
 	sql := "SELECT id, name FROM sections WHERE name = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	nb := models.Section{}
+	nb := datastore.Section{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&nb.ID, &nb.Name)
 	if err != nil {
-		return models.Section{}, err
+		return datastore.Section{}, err
 	}
 	return nb, nil
 }
 
-func (r *NotesRepository) UpdateSection(ctx context.Context, s models.Section) error {
+func (r *NotesRepository) UpdateSection(ctx context.Context, s datastore.Section) error {
 
 	sql := "UPDATE sections SET name = ? WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
@@ -72,7 +72,7 @@ func (r *NotesRepository) DeleteSection(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *NotesRepository) ListAllSections(ctx context.Context) ([]models.Section, error) {
+func (r *NotesRepository) ListAllSections(ctx context.Context) ([]datastore.Section, error) {
 	query := "SELECT id, name FROM sections ORDER BY name ASC"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -82,9 +82,9 @@ func (r *NotesRepository) ListAllSections(ctx context.Context) ([]models.Section
 	}
 	defer rows.Close()
 
-	var secs []models.Section
+	var secs []datastore.Section
 	for rows.Next() {
-		sec := models.Section{}
+		sec := datastore.Section{}
 		err = rows.Scan(&sec.ID, &sec.Name)
 		if err != nil {
 			return nil, err

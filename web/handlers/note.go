@@ -12,8 +12,9 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/services"
+	datastore "github.com/ASC521/communis/data-store"
+	datastoredb "github.com/ASC521/communis/data-store/sqlite"
+	userstoredb "github.com/ASC521/communis/user-store/sqlite"
 	"github.com/ASC521/communis/web/handlers/validator"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alexedwards/scs/v2"
@@ -135,7 +136,7 @@ func parseNoteForm(r *http.Request) (noteForm, error) {
 	return nf, nil
 }
 
-func validateNoteForm(ctx context.Context, nf noteForm, notesRepo models.NotesRepository) (map[string]string, error) {
+func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastoredb.NotesRepository) (map[string]string, error) {
 	fe := map[string]string{}
 
 	// Note Id Validation
@@ -192,7 +193,7 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo models.NotesRe
 
 		if len(tags) != len(nf.TagIds) {
 			for _, tid := range nf.TagIds {
-				if !slices.ContainsFunc(tags, func(t models.Tag) bool {
+				if !slices.ContainsFunc(tags, func(t datastore.Tag) bool {
 					return t.ID == tid
 				}) {
 					fe["tags"] = fmt.Sprintf("tags %v does not exist", tid)
@@ -209,17 +210,17 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo models.NotesRe
 type noteCreateData struct {
 	BaseData
 	Form                   noteForm
-	Tags                   []models.Tag
-	Sections               []models.Section
+	Tags                   []datastore.Tag
+	Sections               []datastore.Section
 	RenderedNote           renderedNotePageData
-	SelectedReferenceNotes []models.NoteDetail
-	ReferencedByNotes      []models.NoteDetail
+	SelectedReferenceNotes []datastore.NoteDetail
+	ReferencedByNotes      []datastore.NoteDetail
 }
 
 func NoteNewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -249,7 +250,7 @@ func NoteNewGet(
 			Tags:                   tags,
 			Sections:               sec,
 			RenderedNote:           renderedNotePageData{IsPreview: true},
-			SelectedReferenceNotes: []models.NoteDetail{},
+			SelectedReferenceNotes: []datastore.NoteDetail{},
 		}
 		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
 	}
@@ -258,7 +259,7 @@ func NoteNewGet(
 func NotePost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +329,7 @@ func NotePost(
 func NoteEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -398,7 +399,7 @@ func NoteEditGet(
 func NotePut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -474,7 +475,7 @@ func NotePut(
 }
 
 type renderedNotePageData struct {
-	Note         models.Note
+	Note         datastore.Note
 	RenderedHTML template.HTML
 	IsPreview    bool
 }
@@ -482,7 +483,7 @@ type renderedNotePageData struct {
 func NotePreviewPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -496,7 +497,7 @@ func NotePreviewPost(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		ts := make([]models.Tag, len(nf.TagIds))
+		ts := make([]datastore.Tag, len(nf.TagIds))
 		for i, tid := range nf.TagIds {
 			et, err := notesRepo.FindTagById(r.Context(), tid)
 			if err != nil {
@@ -519,11 +520,11 @@ func NotePreviewPost(
 			return
 		}
 
-		n := models.Note{
+		n := datastore.Note{
 			ID:               nf.ID,
 			Title:            nf.Title,
 			Content:          nf.Content,
-			Section:          models.Section{ID: nf.SectionID},
+			Section:          datastore.Section{ID: nf.SectionID},
 			ReferenceNotes:   refNotes,
 			ReferenceByNotes: refByNotes,
 			Tags:             ts,
@@ -556,7 +557,7 @@ func NotePreviewPost(
 func NoteViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -623,13 +624,13 @@ func NoteViewGet(
 func NoteSearchGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
 	type td struct {
 		BaseData
-		SearchResults []models.NoteSearchResult
+		SearchResults []datastore.NoteSearchResult
 		Form          searchForm
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -655,7 +656,7 @@ func NoteSearchGet(
 			data.SearchResults = srs
 			data.Form = searchForm{Query: q}
 		} else {
-			data.SearchResults = []models.NoteSearchResult{}
+			data.SearchResults = []datastore.NoteSearchResult{}
 			data.Form = searchForm{Query: ""}
 		}
 
@@ -674,7 +675,7 @@ func NoteSearchGet(
 func NoteDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)

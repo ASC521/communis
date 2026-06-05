@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/ASC521/communis/services"
+	userstoredb "github.com/ASC521/communis/user-store/sqlite"
 )
 
 func ConnCacheStateGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state := dss.GetState()

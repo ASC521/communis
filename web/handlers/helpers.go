@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/services"
+	datastoredb "github.com/ASC521/communis/data-store/sqlite"
+	userstoredb "github.com/ASC521/communis/user-store/sqlite"
 )
 
 var ErrUserIDNotFound = errors.New("user id not found in request context")
@@ -63,7 +63,7 @@ func parseIDFromPath(r *http.Request) (int64, error) {
 
 var ErrNotesRepoNotFound = errors.New("notes repository not found in context")
 
-func GetNotesRepo(r *http.Request, dss *services.SQLiteDataStoreActor) (models.NotesRepository, error) {
+func GetNotesRepo(r *http.Request, dss *userstoredb.SQLiteDataStoreActor) (*datastoredb.NotesRepository, error) {
 
 	userID, ok := r.Context().Value(userIDContextKey).(int64)
 	if !ok {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	datastore "github.com/ASC521/communis/data-store"
 	"github.com/ASC521/communis/dbx/sqlitex"
-	"github.com/ASC521/communis/models"
 )
 
 const delTagFTSSql = `INSERT INTO notes_details_fts(notes_details_fts, rowid, title, content, tags_txt)
@@ -20,7 +20,7 @@ const insTagFTSSql = `INSERT INTO notes_details_fts(rowid, title, content, tags_
 		   FROM notes_details, json_each(notes_details.tags_json)
 		   WHERE json_extract(value, '$.id') = ?;`
 
-func (r *NotesRepository) CreateTag(ctx context.Context, t models.Tag) (int64, error) {
+func (r *NotesRepository) CreateTag(ctx context.Context, t datastore.Tag) (int64, error) {
 
 	sql := "INSERT INTO tags (name) VALUES (?);"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
@@ -34,33 +34,33 @@ func (r *NotesRepository) CreateTag(ctx context.Context, t models.Tag) (int64, e
 
 }
 
-func (r *NotesRepository) FindTagById(ctx context.Context, id int64) (models.Tag, error) {
+func (r *NotesRepository) FindTagById(ctx context.Context, id int64) (datastore.Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	t := models.Tag{}
+	t := datastore.Tag{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&t.ID, &t.Name)
 	if err != nil {
-		return models.Tag{}, err
+		return datastore.Tag{}, err
 	}
 	return t, nil
 }
 
-func (r *NotesRepository) FindTagByName(ctx context.Context, name string) (models.Tag, error) {
+func (r *NotesRepository) FindTagByName(ctx context.Context, name string) (datastore.Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE name = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	t := models.Tag{}
+	t := datastore.Tag{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&t.ID, &t.Name)
 	if err != nil {
-		return models.Tag{}, err
+		return datastore.Tag{}, err
 	}
 	return t, nil
 }
 
-func (r *NotesRepository) UpdateTag(ctx context.Context, t models.Tag) error {
+func (r *NotesRepository) UpdateTag(ctx context.Context, t datastore.Tag) error {
 
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
@@ -107,7 +107,7 @@ func (r *NotesRepository) DeleteTag(ctx context.Context, id int64) error {
 
 }
 
-func (r *NotesRepository) ListAllTags(ctx context.Context) ([]models.Tag, error) {
+func (r *NotesRepository) ListAllTags(ctx context.Context) ([]datastore.Tag, error) {
 	query := "SELECT id, name FROM tags ORDER BY name ASC"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -118,9 +118,9 @@ func (r *NotesRepository) ListAllTags(ctx context.Context) ([]models.Tag, error)
 	}
 	defer rows.Close()
 
-	ts := []models.Tag{}
+	ts := []datastore.Tag{}
 	for rows.Next() {
-		t := models.Tag{}
+		t := datastore.Tag{}
 		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return nil, err
@@ -137,7 +137,7 @@ func (r *NotesRepository) ListAllTags(ctx context.Context) ([]models.Tag, error)
 
 }
 
-func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (models.PaginatedTags, error) {
+func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (datastore.PaginatedTags, error) {
 
 	if limit <= 0 {
 		limit = 10
@@ -153,23 +153,23 @@ func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (mode
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
-		return models.PaginatedTags{}, fmt.Errorf("failed to query tags: %w", err)
+		return datastore.PaginatedTags{}, fmt.Errorf("failed to query tags: %w", err)
 	}
 	defer rows.Close()
 
-	ts := make([]models.Tag, 0, limit)
+	ts := make([]datastore.Tag, 0, limit)
 	for rows.Next() {
-		t := models.Tag{}
+		t := datastore.Tag{}
 		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
-			return models.PaginatedTags{}, err
+			return datastore.PaginatedTags{}, err
 		}
 
 		ts = append(ts, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		return models.PaginatedTags{}, fmt.Errorf("error iterating tags: %w", err)
+		return datastore.PaginatedTags{}, fmt.Errorf("error iterating tags: %w", err)
 	}
 
 	var nextOffset *int
@@ -180,11 +180,11 @@ func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (mode
 		nextOffset = &next
 	}
 
-	return models.PaginatedTags{Tags: ts, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
+	return datastore.PaginatedTags{Tags: ts, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
 
 }
 
-func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]models.Tag, error) {
+func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]datastore.Tag, error) {
 	placeholders := make([]string, len(ids))
 	args := make([]any, len(ids))
 
@@ -210,9 +210,9 @@ func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]models.
 	}
 	defer rows.Close()
 
-	tags := []models.Tag{}
+	tags := []datastore.Tag{}
 	for rows.Next() {
-		var t models.Tag
+		var t datastore.Tag
 		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return nil, err

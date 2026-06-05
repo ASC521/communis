@@ -4,21 +4,21 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/services"
+	datastore "github.com/ASC521/communis/data-store"
+	userstoredb "github.com/ASC521/communis/user-store/sqlite"
 	"github.com/alexedwards/scs/v2"
 )
 
 func HomeGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *services.SQLiteDataStoreActor,
+	dss *userstoredb.SQLiteDataStoreActor,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
 	type td struct {
 		BaseData
-		NoteDetails []models.NoteDetail
+		NoteDetails []datastore.NoteDetail
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

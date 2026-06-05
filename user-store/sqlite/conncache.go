@@ -1,4 +1,4 @@
-package services
+package sqlite
 
 import (
 	"context"
@@ -12,10 +12,9 @@ import (
 
 	"github.com/ASC521/communis/chanutil"
 	"github.com/ASC521/communis/config"
+	datastore "github.com/ASC521/communis/data-store/sqlite"
 	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/repository/sqlite"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -169,7 +168,8 @@ func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteCon
 // SQLiteDataStoreActor manages the creation of connections to individual notes sqlite databases.
 type SQLiteDataStoreActor struct {
 	connections map[int64]*cachedConn
-	indexDB     *sqlitex.SQLiteDB
+	IndexDB     *sqlitex.SQLiteDB
+	UserStore   *IndexDBRepository
 	commands    chan sqliteConnCmd
 	conf        SQLiteDataStoreConfig
 	logger      *slog.Logger
@@ -189,7 +189,8 @@ func NewSQLiteDataStoreActor(conf SQLiteDataStoreConfig, logger *slog.Logger) (*
 		ttl:         8 * time.Hour,
 		commands:    make(chan sqliteConnCmd),
 		conf:        conf,
-		indexDB:     indexDB,
+		IndexDB:     indexDB,
+		UserStore:   NewIndexDBRepository(indexDB),
 		logger:      al,
 	}
 
@@ -241,8 +242,7 @@ func (s *SQLiteDataStoreActor) Start(ctx context.Context, wg *sync.WaitGroup) {
 
 func (s *SQLiteDataStoreActor) createNewConnection(ctx context.Context, key int64) (*sqlitex.SQLiteDB, error) {
 
-	us := sqlite.NewIndexDBRepository(s.indexDB)
-	userDB, err := us.GetUserDB(ctx, key)
+	userDB, err := s.UserStore.GetUserDB(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -251,17 +251,17 @@ func (s *SQLiteDataStoreActor) createNewConnection(ctx context.Context, key int6
 
 }
 
-func (s *SQLiteDataStoreActor) GetNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
+func (s *SQLiteDataStoreActor) GetNotesStore(ctx context.Context, key int64) (*datastore.NotesRepository, error) {
 	cmd := sqliteConnCmd{
 		tag: cmdGetConn,
 		ctx: ctx,
 		key: key,
 	}
 
-	return chanutil.SendReceive[sqliteConnCmd, models.NotesRepository](s.commands, cmd)
+	return chanutil.SendReceive[sqliteConnCmd, *datastore.NotesRepository](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreActor) getNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
+func (s *SQLiteDataStoreActor) getNotesStore(ctx context.Context, key int64) (*datastore.NotesRepository, error) {
 	cc, ok := s.connections[key]
 	if !ok {
 		s.logger.Debug("cache miss -- create new connection")
@@ -274,7 +274,7 @@ func (s *SQLiteDataStoreActor) getNotesStore(ctx context.Context, key int64) (mo
 		s.connections[key] = cc
 	}
 	cc.expiry = time.Now().Add(s.ttl)
-	return sqlite.NewNotesRepository(cc.conn), nil
+	return datastore.NewNotesRepository(cc.conn), nil
 }
 
 func (s *SQLiteDataStoreActor) Remove(key int64) error {
@@ -322,8 +322,7 @@ func (s *SQLiteDataStoreActor) createDatabase(ctx context.Context, key int64) er
 		return err
 	}
 
-	indexDB := sqlite.NewIndexDBRepository(s.indexDB)
-	return indexDB.UpdateDBVersion(ctx, key, ver)
+	return s.UserStore.UpdateDBVersion(ctx, key, ver)
 }
 
 func (s *SQLiteDataStoreActor) DeleteDB(ctx context.Context, key int64) error {
@@ -343,8 +342,7 @@ func (s *SQLiteDataStoreActor) DeleteDB(ctx context.Context, key int64) error {
 }
 
 func (s *SQLiteDataStoreActor) deleteDatabase(ctx context.Context, key int64) error {
-	indexDB := sqlite.NewIndexDBRepository(s.indexDB)
-	userDB, err := indexDB.GetUserDB(ctx, key)
+	userDB, err := s.UserStore.GetUserDB(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -353,20 +351,14 @@ func (s *SQLiteDataStoreActor) deleteDatabase(ctx context.Context, key int64) er
 
 }
 
-func (s *SQLiteDataStoreActor) GetUserStore() models.IndexRepository {
-	return sqlite.NewIndexDBRepository(s.indexDB)
-}
-
-func (s *SQLiteDataStoreActor) GetIndexDatabase() *sqlitex.SQLiteDB {
-	return s.indexDB
-}
+// TODO Remove Getter and expose underlying
 
 func (s *SQLiteDataStoreActor) RunMigrations(ctx context.Context) error {
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, sqliteConnCmd{tag: cmdCheckMigrations, ctx: ctx})
 }
 
 func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
-	indexDriver := sqlitex.NewMigrationDriver(s.indexDB)
+	indexDriver := sqlitex.NewMigrationDriver(s.IndexDB)
 
 	isEmpty, err := indexDriver.IsEmpty(ctx)
 	if err != nil {
@@ -399,13 +391,11 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 		return err
 	}
 
-	us := sqlite.NewIndexDBRepository(s.indexDB)
-	dbsToUpgrade, err := us.DBVersionBefore(ctx, int(latestNotesVer.Version))
+	dbsToUpgrade, err := s.UserStore.DBVersionBefore(ctx, int(latestNotesVer.Version))
 	if err != nil {
 		return err
 	}
 
-	userStore := sqlite.NewIndexDBRepository(s.indexDB)
 	for _, userDB := range dbsToUpgrade {
 		s.logger.Info(fmt.Sprintf("Notes database migration found for user %v - running up migration", userDB.UserID))
 		conn, err := sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
@@ -418,7 +408,7 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 			return err
 		}
 
-		err = userStore.UpdateDBVersion(ctx, userDB.UserID, ver)
+		err = s.UserStore.UpdateDBVersion(ctx, userDB.UserID, ver)
 		if err != nil {
 			return err
 		}
@@ -427,7 +417,7 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 }
 
 func (s *SQLiteDataStoreActor) Stop() error {
-	err := s.indexDB.Close()
+	err := s.IndexDB.Close()
 	if err != nil {
 		return err
 	}
