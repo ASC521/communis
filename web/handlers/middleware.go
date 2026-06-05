@@ -52,6 +52,7 @@ func (rw *responseWriter) WriteHeader(code int) {
 
 func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
 
+	routerLogger := logger.WithGroup("ROUTER")
 	var ignore []*regexp.Regexp
 	for _, re := range ignoreRE {
 		regex, err := regexp.Compile(re)
@@ -77,7 +78,7 @@ func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handle
 			}
 
 			if !exclude {
-				logger.Info(
+				routerLogger.Info(
 					fmt.Sprintf("%s %s from %s", r.Method, r.URL.EscapedPath(), r.RemoteAddr),
 					"respStatus", wrw.Status(),
 					"method", r.Method,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/services"
+	"github.com/ASC521/communis/slogx"
 	"github.com/ASC521/communis/web"
 )
 
@@ -47,12 +48,7 @@ func ServeCMD(conf *config.Config, args []string) error {
 		}
 	})
 
-	logOpts := slog.HandlerOptions{}
-	if conf.Debug {
-		logOpts.Level = slog.LevelDebug
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &logOpts))
-
+	logger := slog.New(slogx.NewPipeHandler(os.Stderr, &slogx.HandlerOptions{Level: slog.LevelDebug, IncludeSource: false}))
 	dsmConf, err := services.ConfigToSQLiteDataStoreConfig(conf)
 	if err != nil {
 		return err
