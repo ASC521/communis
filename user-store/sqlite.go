@@ -1,4 +1,4 @@
-package sqlite
+package userstore
 
 import (
 	"context"
@@ -9,36 +9,38 @@ import (
 	"time"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
-	"github.com/ASC521/communis/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
-const userDBDir = "user-databases"
+const (
+	userDBDir     = "user-databases"
+	sqliteTimeFmt = "2006-01-02 15:04:05"
+)
 
-type indexDBRepository struct {
-	db *sqlitex.SQLiteDB
+type SQLite struct {
+	DB *sqlitex.SQLiteDB
 }
 
-func NewIndexDBRepository(db *sqlitex.SQLiteDB) *indexDBRepository {
-	return &indexDBRepository{db: db}
+func NewSQLite(db *sqlitex.SQLiteDB) *SQLite {
+	return &SQLite{DB: db}
 }
 
-func (r *indexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) ([]models.UserDatabase, error) {
+func (r *SQLite) DBVersionBefore(ctx context.Context, latestVer int) ([]UserDatabase, error) {
 	sql := `SELECT user_databases.id, user_databases.user_id, user_databases.db_path, user_databases.db_version
 		FROM user_databases
 		INNER JOIN users ON user_databases.user_id = users.id
 		WHERE db_version < ? AND users.is_admin = 0;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
-	rows, err := r.db.Read.QueryContext(ctxWTO, sql, latestVer)
+	rows, err := r.DB.Read.QueryContext(ctxWTO, sql, latestVer)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	userDBs := []models.UserDatabase{}
+	userDBs := []UserDatabase{}
 	for rows.Next() {
-		userDB := models.UserDatabase{}
+		userDB := UserDatabase{}
 		err = rows.Scan(&userDB.ID, &userDB.UserID, &userDB.Path, &userDB.Version)
 		if err != nil {
 			return nil, err
@@ -53,10 +55,10 @@ func (r *indexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) 
 	return userDBs, nil
 }
 
-func (r *indexDBRepository) UpdateDBVersion(ctx context.Context, userID int64, version int) error {
+func (r *SQLite) UpdateDBVersion(ctx context.Context, userID int64, version int) error {
 	updateStmt := `UPDATE user_databases SET db_version = ? WHERE user_id = ?;`
 
-	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	_, err := sqlitex.WithTransaction(r.DB.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 		_, err := tx.Exec(updateStmt, version, userID)
 		if err != nil {
 			return -1, err
@@ -68,38 +70,38 @@ func (r *indexDBRepository) UpdateDBVersion(ctx context.Context, userID int64, v
 	return err
 }
 
-func (r *indexDBRepository) GetUserDB(ctx context.Context, userID int64) (models.UserDatabase, error) {
+func (r *SQLite) GetUserDB(ctx context.Context, userID int64) (UserDatabase, error) {
 	q := `SELECT id, db_path, db_version FROM user_databases WHERE user_id = ?;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	userDB := models.UserDatabase{UserID: userID}
-	row := r.db.Read.QueryRowContext(ctxWTO, q, userID)
+	userDB := UserDatabase{UserID: userID}
+	row := r.DB.Read.QueryRowContext(ctxWTO, q, userID)
 	err := row.Scan(&userDB.ID, &userDB.Path, &userDB.Version)
 	if err != nil {
-		return models.UserDatabase{}, err
+		return UserDatabase{}, err
 	}
 	return userDB, nil
 }
 
-func (r *indexDBRepository) CreateAdminUser(ctx context.Context, username, password string) (int64, error) {
+func (r *SQLite) CreateAdminUser(ctx context.Context, username, password string) (int64, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return 0, err
 	}
 
 	stmt := `INSERT INTO users (name, hashed_password, is_admin) VALUES (?, ?, ?)`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	res, err := r.db.Write.ExecContext(ctxWTO, stmt, username, hashedPassword, true)
+	res, err := r.DB.Write.ExecContext(ctxWTO, stmt, username, hashedPassword, true)
 	if err != nil {
 		return 0, err
 	}
 	return res.LastInsertId()
 }
 
-func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, password string) (int64, error) {
+func (r *SQLite) CreateUserAndDB(ctx context.Context, userName, password string) (int64, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
@@ -108,10 +110,10 @@ func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, passw
 
 	userStmt := `INSERT INTO users (name, hashed_password, is_admin) VALUES (?, ?, ?);`
 	dbStmt := `INSERT INTO user_databases (user_id, db_path, db_version) VALUES (?, ?, ?)`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	return sqlitex.WithTransaction(r.db.Write, ctxWTO, func(ctx context.Context, tx *sql.Tx) (int64, error) {
+	return sqlitex.WithTransaction(r.DB.Write, ctxWTO, func(ctx context.Context, tx *sql.Tx) (int64, error) {
 		result, err := tx.ExecContext(ctx, userStmt, userName, hashedPassword, false)
 		if err != nil {
 			return -1, err
@@ -130,44 +132,44 @@ func (r *indexDBRepository) CreateUserAndDB(ctx context.Context, userName, passw
 	})
 }
 
-func (r *indexDBRepository) AuthenticateUser(ctx context.Context, username, password string) (models.User, error) {
+func (r *SQLite) AuthenticateUser(ctx context.Context, username, password string) (User, error) {
 	q := `SELECT id, name, hashed_password, is_admin, created_at_utc, last_login_utc FROM users WHERE name = ?;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	user := models.User{}
+	user := User{}
 	var hashedPassword []byte
 	var createdStr, lastLoginStr sql.NullString
-	row := r.db.Read.QueryRowContext(ctxWTO, q, username)
+	row := r.DB.Read.QueryRowContext(ctxWTO, q, username)
 	err := row.Scan(&user.ID, &user.Name, &hashedPassword, &user.IsAdmin, &createdStr, &lastLoginStr)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.User{}, models.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return models.User{}, err
+			return User{}, err
 		}
 	}
 
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return models.User{}, models.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return models.User{}, err
+			return User{}, err
 		}
 	}
 
 	if createdStr.Valid {
 		createdAt, err := time.ParseInLocation(sqliteTimeFmt, createdStr.String, time.UTC)
 		if err != nil {
-			return models.User{}, err
+			return User{}, err
 		}
 		user.CreatedAtUTC = createdAt
 	}
 	if lastLoginStr.Valid {
 		lastLogin, err := time.ParseInLocation(sqliteTimeFmt, lastLoginStr.String, time.UTC)
 		if err != nil {
-			return models.User{}, err
+			return User{}, err
 		}
 		user.LastLoginUTC = lastLogin
 	}
@@ -175,47 +177,47 @@ func (r *indexDBRepository) AuthenticateUser(ctx context.Context, username, pass
 	return user, nil
 }
 
-func (r *indexDBRepository) IsAdminUser(ctx context.Context, userID int64) (bool, error) {
+func (r *SQLite) IsAdminUser(ctx context.Context, userID int64) (bool, error) {
 	q := `SELECT is_admin FROM users WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
 	isAdmin := false
-	err := r.db.Read.QueryRowContext(ctxWTO, q, userID).Scan(&isAdmin)
+	err := r.DB.Read.QueryRowContext(ctxWTO, q, userID).Scan(&isAdmin)
 	if err != nil {
 		return false, err
 	}
 	return isAdmin, nil
 }
 
-func (r *indexDBRepository) GetUser(ctx context.Context, id int64) (models.User, error) {
+func (r *SQLite) GetUser(ctx context.Context, id int64) (User, error) {
 	q := `SELECT id, name, is_admin, created_at_utc, last_login_utc, theme FROM users WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
-	user := models.User{}
+	row := r.DB.Read.QueryRowContext(ctxWTO, q, id)
+	user := User{}
 	var createdStr, lastLoginStr sql.NullString
 	err := row.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.User{}, models.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return models.User{}, err
+			return User{}, err
 		}
 	}
 
 	if createdStr.Valid {
 		createdAt, err := time.ParseInLocation(sqliteTimeFmt, createdStr.String, time.UTC)
 		if err != nil {
-			return models.User{}, err
+			return User{}, err
 		}
 		user.CreatedAtUTC = createdAt
 	}
 	if lastLoginStr.Valid {
 		lastLogin, err := time.ParseInLocation(sqliteTimeFmt, lastLoginStr.String, time.UTC)
 		if err != nil {
-			return models.User{}, err
+			return User{}, err
 		}
 		user.LastLoginUTC = lastLogin
 	}
@@ -224,36 +226,36 @@ func (r *indexDBRepository) GetUser(ctx context.Context, id int64) (models.User,
 
 }
 
-func (r *indexDBRepository) UpdateUser(ctx context.Context, id int64, name string) (models.User, error) {
+func (r *SQLite) UpdateUser(ctx context.Context, id int64, name string) (User, error) {
 	stmt := `UPDATE users SET name = ? WHERE id = ?
 		RETURNING id, name, is_admin, created_at_utc, last_login_utc, theme;`
 
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	row := r.db.Write.QueryRowContext(ctxWTO, stmt, name, id)
-	user := models.User{}
+	row := r.DB.Write.QueryRowContext(ctxWTO, stmt, name, id)
+	user := User{}
 	var createdStr, lastLoginStr sql.NullString
 	err := row.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.User{}, models.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return models.User{}, err
+			return User{}, err
 		}
 	}
 
 	if createdStr.Valid {
 		createdAt, err := time.ParseInLocation(sqliteTimeFmt, createdStr.String, time.UTC)
 		if err != nil {
-			return models.User{}, err
+			return User{}, err
 		}
 		user.CreatedAtUTC = createdAt
 	}
 	if lastLoginStr.Valid {
 		lastLogin, err := time.ParseInLocation(sqliteTimeFmt, lastLoginStr.String, time.UTC)
 		if err != nil {
-			return models.User{}, err
+			return User{}, err
 		}
 		user.LastLoginUTC = lastLogin
 	}
@@ -261,44 +263,44 @@ func (r *indexDBRepository) UpdateUser(ctx context.Context, id int64, name strin
 	return user, nil
 }
 
-func (r *indexDBRepository) UpdateUserPassword(ctx context.Context, id int64, password string) error {
+func (r *SQLite) UpdateUserPassword(ctx context.Context, id int64, password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return err
 	}
 
 	stmt := `UPDATE users SET hashed_password = ? WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	_, err = r.db.Write.ExecContext(ctxWTO, stmt, hashedPassword, id)
+	_, err = r.DB.Write.ExecContext(ctxWTO, stmt, hashedPassword, id)
 	return err
 }
 
-func (r *indexDBRepository) UpdateUserLastLoginToNow(ctx context.Context, id int64) error {
+func (r *SQLite) UpdateUserLastLoginToNow(ctx context.Context, id int64) error {
 	stmt := `UPDATE users SET last_login_utc = datetime('now') WHERE id = ?;`
 
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	_, err := r.db.Write.ExecContext(ctxWTO, stmt, id)
+	_, err := r.DB.Write.ExecContext(ctxWTO, stmt, id)
 	return err
 }
 
-func (r *indexDBRepository) ListUsers(ctx context.Context) ([]models.User, error) {
+func (r *SQLite) ListUsers(ctx context.Context) ([]User, error) {
 	q := `SELECT id, name, is_admin, created_at_utc, last_login_utc FROM users`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	rows, err := r.db.Read.QueryContext(ctxWTO, q)
+	rows, err := r.DB.Read.QueryContext(ctxWTO, q)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	users := []models.User{}
+	users := []User{}
 	for rows.Next() {
-		user := models.User{}
+		user := User{}
 		var createdStr, lastLoginStr sql.NullString
 		err := rows.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr)
 		if err != nil {
@@ -330,31 +332,31 @@ func (r *indexDBRepository) ListUsers(ctx context.Context) ([]models.User, error
 	return users, nil
 }
 
-func (r *indexDBRepository) DeleteUser(ctx context.Context, id int64) error {
+func (r *SQLite) DeleteUser(ctx context.Context, id int64) error {
 	s := `DELETE FROM users WHERE id = ?;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	_, err := r.db.Write.ExecContext(ctxWTO, s, id)
+	_, err := r.DB.Write.ExecContext(ctxWTO, s, id)
 	return err
 }
 
-func (r *indexDBRepository) UpdateUserTheme(ctx context.Context, id int64, theme string) error {
+func (r *SQLite) UpdateUserTheme(ctx context.Context, id int64, theme string) error {
 	s := `UPDATE users SET theme = ? WHERE id =?;`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
-	_, err := r.db.Write.ExecContext(ctxWTO, s, theme, id)
+	_, err := r.DB.Write.ExecContext(ctxWTO, s, theme, id)
 	return err
 }
 
-func (r *indexDBRepository) NameExists(ctx context.Context, name string) (bool, error) {
+func (r *SQLite) NameExists(ctx context.Context, name string) (bool, error) {
 	q := `SELECT EXISTS(SELECT 1 FROM users WHERE name = ?);`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
 	var exists bool
-	row := r.db.Read.QueryRowContext(ctxWTO, q, name)
+	row := r.DB.Read.QueryRowContext(ctxWTO, q, name)
 	err := row.Scan(&exists)
 	if err != nil {
 		return false, err
@@ -363,13 +365,13 @@ func (r *indexDBRepository) NameExists(ctx context.Context, name string) (bool, 
 
 }
 
-func (r *indexDBRepository) InitialSetupNeeded(ctx context.Context) (bool, error) {
+func (r *SQLite) InitialSetupNeeded(ctx context.Context) (bool, error) {
 	q := `SELECT EXISTS(SELECT 1 FROM users WHERE is_admin = true)`
-	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
 	defer cancel()
 
 	var exists bool
-	row := r.db.Read.QueryRowContext(ctxWTO, q)
+	row := r.DB.Read.QueryRowContext(ctxWTO, q)
 	err := row.Scan(&exists)
 	if err != nil {
 		return false, err

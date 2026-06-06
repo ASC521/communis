@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/services"
+	datastore "github.com/ASC521/communis/data-store"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -46,7 +46,7 @@ func parseTagFormFromRequest(r *http.Request) (tagForm, error) {
 	return form, nil
 }
 
-func validateTagForm(ctx context.Context, tf *tagForm, nr models.NotesRepository) error {
+func validateTagForm(ctx context.Context, tf *tagForm, nr *datastore.SQLite) error {
 
 	if !validator.NotBlank(tf.Name) {
 		tf.FieldErrors["name"] = "Cannot be empty"
@@ -70,17 +70,17 @@ func validateTagForm(ctx context.Context, tf *tagForm, nr models.NotesRepository
 func TagGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
 	type td struct {
 		BaseData
-		Tags []models.Tag
+		Tags []datastore.Tag
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -103,13 +103,13 @@ func TagGet(
 func TagViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	type td struct {
 		BaseData
-		Tag         models.Tag
-		NoteDetails []models.NoteDetail
+		Tag         datastore.Tag
+		NoteDetails []datastore.NoteDetail
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		tagId, err := parseIDFromPath(r)
@@ -117,7 +117,7 @@ func TagViewGet(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -149,7 +149,7 @@ func TagViewGet(
 func TagEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
 	type td struct {
@@ -164,7 +164,7 @@ func TagEditGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -184,10 +184,10 @@ func TagEditGet(
 func TagPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -205,7 +205,7 @@ func TagPut(
 			return
 		}
 
-		err = notesRepo.UpdateTag(r.Context(), models.Tag{ID: form.Id, Name: form.Name})
+		err = notesRepo.UpdateTag(r.Context(), datastore.Tag{ID: form.Id, Name: form.Name})
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -220,21 +220,21 @@ func TagPut(
 func TagDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagId, err := parseIDFromPath(r)
+		tagID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
 		}
 
-		err = notesRepo.DeleteTag(r.Context(), tagId)
+		err = notesRepo.DeleteTag(r.Context(), tagID)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -248,13 +248,13 @@ func TagDelete(
 func TagPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
 	type td struct {
 		ErrMsg     string
 		SuccessMsg string
-		Tag        *models.Tag
+		Tag        *datastore.Tag
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -264,7 +264,7 @@ func TagPost(
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -285,7 +285,7 @@ func TagPost(
 			return
 		}
 
-		id, err := notesRepo.CreateTag(r.Context(), models.Tag{Name: form.Name})
+		id, err := notesRepo.CreateTag(r.Context(), datastore.Tag{Name: form.Name})
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -300,7 +300,7 @@ func TagPost(
 			"new-tag",
 			td{
 				SuccessMsg: fmt.Sprintf("Tag %s created", form.Name),
-				Tag:        &models.Tag{ID: id, Name: form.Name},
+				Tag:        &datastore.Tag{ID: id, Name: form.Name},
 			},
 		)
 

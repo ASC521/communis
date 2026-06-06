@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ASC521/communis/models"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -117,7 +117,7 @@ func RecoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 	}
 }
 
-func Authenticate(sessionManager *scs.SessionManager, userStore models.IndexRepository) func(http.Handler) http.Handler {
+func Authenticate(sessionManager *scs.SessionManager, userStore *userstore.SQLite) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authUserID := sessionManager.GetInt64(r.Context(), "authenticatedUserId")

@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/ASC521/communis/config"
-	"github.com/ASC521/communis/services"
 	"github.com/ASC521/communis/slogx"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web"
 )
 
@@ -49,11 +49,11 @@ func ServeCMD(conf *config.Config, args []string) error {
 	})
 
 	logger := slog.New(slogx.NewPipeHandler(os.Stderr, &slogx.HandlerOptions{Level: slog.LevelDebug, IncludeSource: false}))
-	dsmConf, err := services.ConfigToSQLiteDataStoreConfig(conf)
+	connMgrConfig, err := userstore.ConfigToSQLiteConnManagerConfig(conf)
 	if err != nil {
 		return err
 	}
-	dsm, err := services.NewSQLiteDataStoreActor(dsmConf, logger)
+	connMgr, err := userstore.NewSQLiteConnManager(connMgrConfig, logger)
 	if err != nil {
 		return err
 	}
@@ -63,6 +63,6 @@ func ServeCMD(conf *config.Config, args []string) error {
 		return err
 	}
 
-	return web.RunServer(svrConf, dsm, logger)
+	return web.RunServer(svrConf, connMgr, logger)
 
 }

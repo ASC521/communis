@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/services"
+	datastore "github.com/ASC521/communis/data-store"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -67,18 +67,18 @@ func validateSectionForm(form *sectionForm) {
 func SectionGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
 	type td struct {
 		BaseData
-		Sections []models.Section
+		Sections []datastore.Section
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -102,7 +102,7 @@ func SectionGet(
 func SectionPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -119,13 +119,13 @@ func SectionPost(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
 		}
 
-		_, err = notesRepo.CreateSection(r.Context(), models.Section{Name: form.Name})
+		_, err = notesRepo.CreateSection(r.Context(), datastore.Section{Name: form.Name})
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -146,7 +146,7 @@ func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.HandlerFunc {
 func SectionDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -156,7 +156,7 @@ func SectionDelete(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -176,7 +176,7 @@ func SectionDelete(
 func SectionPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		form, err := parseSectionFormFromRequest(r)
@@ -190,13 +190,13 @@ func SectionPut(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
 		}
 
-		err = notesRepo.UpdateSection(r.Context(), models.Section{ID: form.Id, Name: form.Name})
+		err = notesRepo.UpdateSection(r.Context(), datastore.Section{ID: form.Id, Name: form.Name})
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -210,7 +210,7 @@ func SectionPut(
 func SectionEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sectionId, err := parseIDFromPath(r)
@@ -219,7 +219,7 @@ func SectionEditGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -244,13 +244,13 @@ func SectionEditGet(
 func SectionViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss services.DataStoreService,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	type td struct {
 		BaseData
-		Section     models.Section
-		NoteDetails []models.NoteDetail
+		Section     datastore.Section
+		NoteDetails []datastore.NoteDetail
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		sid := r.PathValue("id")
@@ -265,7 +265,7 @@ func SectionViewGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return

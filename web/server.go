@@ -19,7 +19,7 @@ import (
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/hdx"
-	"github.com/ASC521/communis/services"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web/handlers"
 
 	"github.com/alexedwards/scs/v2"
@@ -84,7 +84,7 @@ func ConfigToServerConfig(conf *config.Config) (ServerConfig, error) {
 
 }
 
-func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Logger) error {
+func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog.Logger) error {
 	ctx := context.Background()
 	wg := &sync.WaitGroup{}
 
@@ -112,10 +112,10 @@ func RunServer(conf ServerConfig, dsm services.DataStoreService, logger *slog.Lo
 	}
 
 	sessionManager := scs.New()
-	sessionManager.Store = sqlitex.NewSessionStore(dsm.GetIndexDatabase())
+	sessionManager.Store = sqlitex.NewSessionStore(dsm.UserStore.DB)
 
 	// Check if initial setup needs to be run
-	initialSetupNeeded, err := dsm.GetUserStore().InitialSetupNeeded(ctx)
+	initialSetupNeeded, err := dsm.UserStore.InitialSetupNeeded(ctx)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package services
+package userstore
 
 import (
 	"context"
@@ -12,10 +12,9 @@ import (
 
 	"github.com/ASC521/communis/chanutil"
 	"github.com/ASC521/communis/config"
+	datastore "github.com/ASC521/communis/data-store"
 	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/repository/sqlite"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -38,7 +37,7 @@ type CacheState struct {
 	IndexDBFileName string
 }
 
-type SQLiteDataStoreConfig struct {
+type SQLiteConnManagerConfig struct {
 	DBDirectory       string
 	IndexDBFileName   string
 	NotesDBMigrations []migrations.Migration
@@ -46,23 +45,23 @@ type SQLiteDataStoreConfig struct {
 	SQLiteOptions     []sqlitex.SQLiteOption
 }
 
-func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, error) {
+func ConfigToSQLiteConnManagerConfig(conf *config.Config) (SQLiteConnManagerConfig, error) {
 
 	var dbd string
 	if conf.DataDirectory == "" {
-		return SQLiteDataStoreConfig{}, errors.New("data directory cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("data directory cannot be empty")
 	}
 
 	dbd, err := homedir.Expand(conf.DataDirectory)
 	if err != nil {
-		return SQLiteDataStoreConfig{}, err
+		return SQLiteConnManagerConfig{}, err
 	}
 
 	opts := []sqlitex.SQLiteOption{}
 	if conf.SQLite.JournalMode != "" {
 		_, err = sqlitex.JournalModeFromString(conf.SQLite.JournalMode)
 		if err != nil {
-			return SQLiteDataStoreConfig{}, err
+			return SQLiteConnManagerConfig{}, err
 		}
 		opts = append(opts, sqlitex.WithJournalMode(conf.SQLite.JournalMode))
 	}
@@ -70,7 +69,7 @@ func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, 
 	if conf.SQLite.Synchronous != "" {
 		_, err = sqlitex.SynchronousFromString(conf.SQLite.Synchronous)
 		if err != nil {
-			return SQLiteDataStoreConfig{}, err
+			return SQLiteConnManagerConfig{}, err
 		}
 		opts = append(opts, sqlitex.WithSynchronous(conf.SQLite.Synchronous))
 	}
@@ -78,7 +77,7 @@ func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, 
 	if conf.SQLite.TempStore != "" {
 		_, err = sqlitex.TempStoreFromString(conf.SQLite.TempStore)
 		if err != nil {
-			return SQLiteDataStoreConfig{}, err
+			return SQLiteConnManagerConfig{}, err
 		}
 		opts = append(opts, sqlitex.WithTempStore(conf.SQLite.TempStore))
 	}
@@ -89,28 +88,28 @@ func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, 
 		sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys))
 
 	if conf.SQLite.NotesDBMigrations == "" {
-		return SQLiteDataStoreConfig{}, errors.New("NotesDBMigrations cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("NotesDBMigrations cannot be empty")
 	}
 
 	noteDBMigrations, err := migrations.Load(conf.SQLite.NotesDBMigrations)
 	if err != nil {
-		return SQLiteDataStoreConfig{}, err
+		return SQLiteConnManagerConfig{}, err
 	}
 
 	if conf.SQLite.IndexDBMigrations == "" {
-		return SQLiteDataStoreConfig{}, errors.New("IndexDBMigrations cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("IndexDBMigrations cannot be empty")
 	}
 
 	indexDBMigrations, err := migrations.Load(conf.SQLite.IndexDBMigrations)
 	if err != nil {
-		return SQLiteDataStoreConfig{}, err
+		return SQLiteConnManagerConfig{}, err
 	}
 
 	if conf.SQLite.IndexDBFileName == "" {
-		return SQLiteDataStoreConfig{}, errors.New("IndexDBFileName cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("IndexDBFileName cannot be empty")
 	}
 
-	c := SQLiteDataStoreConfig{
+	c := SQLiteConnManagerConfig{
 		DBDirectory:       dbd,
 		SQLiteOptions:     opts,
 		NotesDBMigrations: noteDBMigrations,
@@ -166,17 +165,17 @@ func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteCon
 
 }
 
-// SQLiteDataStoreActor manages the creation of connections to individual notes sqlite databases.
-type SQLiteDataStoreActor struct {
+// SQLiteConnManager manages the creation of connections to individual notes sqlite databases.
+type SQLiteConnManager struct {
 	connections map[int64]*cachedConn
-	indexDB     *sqlitex.SQLiteDB
+	UserStore   *SQLite
 	commands    chan sqliteConnCmd
-	conf        SQLiteDataStoreConfig
+	conf        SQLiteConnManagerConfig
 	logger      *slog.Logger
 	ttl         time.Duration
 }
 
-func NewSQLiteDataStoreActor(conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteDataStoreActor, error) {
+func NewSQLiteConnManager(conf SQLiteConnManagerConfig, logger *slog.Logger) (*SQLiteConnManager, error) {
 
 	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
 	if err != nil {
@@ -184,19 +183,19 @@ func NewSQLiteDataStoreActor(conf SQLiteDataStoreConfig, logger *slog.Logger) (*
 	}
 
 	al := logger.WithGroup("DATA-STORE-CACHE")
-	svc := &SQLiteDataStoreActor{
+	svc := &SQLiteConnManager{
 		connections: map[int64]*cachedConn{},
 		ttl:         8 * time.Hour,
 		commands:    make(chan sqliteConnCmd),
 		conf:        conf,
-		indexDB:     indexDB,
+		UserStore:   NewSQLite(indexDB),
 		logger:      al,
 	}
 
 	return svc, nil
 }
 
-func (s *SQLiteDataStoreActor) Start(ctx context.Context, wg *sync.WaitGroup) {
+func (s *SQLiteConnManager) Start(ctx context.Context, wg *sync.WaitGroup) {
 
 	wg.Go(func() {
 		timerCtx, cancelTimer := context.WithCancel(ctx)
@@ -239,10 +238,9 @@ func (s *SQLiteDataStoreActor) Start(ctx context.Context, wg *sync.WaitGroup) {
 	})
 }
 
-func (s *SQLiteDataStoreActor) createNewConnection(ctx context.Context, key int64) (*sqlitex.SQLiteDB, error) {
+func (s *SQLiteConnManager) createNewConnection(ctx context.Context, key int64) (*sqlitex.SQLiteDB, error) {
 
-	us := sqlite.NewIndexDBRepository(s.indexDB)
-	userDB, err := us.GetUserDB(ctx, key)
+	userDB, err := s.UserStore.GetUserDB(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -251,17 +249,17 @@ func (s *SQLiteDataStoreActor) createNewConnection(ctx context.Context, key int6
 
 }
 
-func (s *SQLiteDataStoreActor) GetNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
+func (s *SQLiteConnManager) GetNotesStore(ctx context.Context, key int64) (*datastore.SQLite, error) {
 	cmd := sqliteConnCmd{
 		tag: cmdGetConn,
 		ctx: ctx,
 		key: key,
 	}
 
-	return chanutil.SendReceive[sqliteConnCmd, models.NotesRepository](s.commands, cmd)
+	return chanutil.SendReceive[sqliteConnCmd, *datastore.SQLite](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreActor) getNotesStore(ctx context.Context, key int64) (models.NotesRepository, error) {
+func (s *SQLiteConnManager) getNotesStore(ctx context.Context, key int64) (*datastore.SQLite, error) {
 	cc, ok := s.connections[key]
 	if !ok {
 		s.logger.Debug("cache miss -- create new connection")
@@ -274,10 +272,10 @@ func (s *SQLiteDataStoreActor) getNotesStore(ctx context.Context, key int64) (mo
 		s.connections[key] = cc
 	}
 	cc.expiry = time.Now().Add(s.ttl)
-	return sqlite.NewNotesRepository(cc.conn), nil
+	return datastore.NewSQLite(cc.conn), nil
 }
 
-func (s *SQLiteDataStoreActor) Remove(key int64) error {
+func (s *SQLiteConnManager) Remove(key int64) error {
 	cmd := sqliteConnCmd{
 		tag: cmdRemoveConn,
 		key: key,
@@ -286,7 +284,7 @@ func (s *SQLiteDataStoreActor) Remove(key int64) error {
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreActor) removeConnection(key int64) error {
+func (s *SQLiteConnManager) removeConnection(key int64) error {
 	cc, ok := s.connections[key]
 	if !ok {
 		return nil
@@ -299,7 +297,7 @@ func (s *SQLiteDataStoreActor) removeConnection(key int64) error {
 	return nil
 }
 
-func (s *SQLiteDataStoreActor) CreateDB(ctx context.Context, key int64) error {
+func (s *SQLiteConnManager) CreateDB(ctx context.Context, key int64) error {
 
 	cmd := sqliteConnCmd{
 		tag: cmdCreateDB,
@@ -310,7 +308,7 @@ func (s *SQLiteDataStoreActor) CreateDB(ctx context.Context, key int64) error {
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreActor) createDatabase(ctx context.Context, key int64) error {
+func (s *SQLiteConnManager) createDatabase(ctx context.Context, key int64) error {
 	conn, err := s.createNewConnection(ctx, key)
 	if err != nil {
 		return err
@@ -322,11 +320,10 @@ func (s *SQLiteDataStoreActor) createDatabase(ctx context.Context, key int64) er
 		return err
 	}
 
-	indexDB := sqlite.NewIndexDBRepository(s.indexDB)
-	return indexDB.UpdateDBVersion(ctx, key, ver)
+	return s.UserStore.UpdateDBVersion(ctx, key, ver)
 }
 
-func (s *SQLiteDataStoreActor) DeleteDB(ctx context.Context, key int64) error {
+func (s *SQLiteConnManager) DeleteDB(ctx context.Context, key int64) error {
 
 	err := s.Remove(key)
 	if err != nil {
@@ -342,9 +339,8 @@ func (s *SQLiteDataStoreActor) DeleteDB(ctx context.Context, key int64) error {
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, cmd)
 }
 
-func (s *SQLiteDataStoreActor) deleteDatabase(ctx context.Context, key int64) error {
-	indexDB := sqlite.NewIndexDBRepository(s.indexDB)
-	userDB, err := indexDB.GetUserDB(ctx, key)
+func (s *SQLiteConnManager) deleteDatabase(ctx context.Context, key int64) error {
+	userDB, err := s.UserStore.GetUserDB(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -353,20 +349,12 @@ func (s *SQLiteDataStoreActor) deleteDatabase(ctx context.Context, key int64) er
 
 }
 
-func (s *SQLiteDataStoreActor) GetUserStore() models.IndexRepository {
-	return sqlite.NewIndexDBRepository(s.indexDB)
-}
-
-func (s *SQLiteDataStoreActor) GetIndexDatabase() *sqlitex.SQLiteDB {
-	return s.indexDB
-}
-
-func (s *SQLiteDataStoreActor) RunMigrations(ctx context.Context) error {
+func (s *SQLiteConnManager) RunMigrations(ctx context.Context) error {
 	return chanutil.SendReceiveError[sqliteConnCmd](s.commands, sqliteConnCmd{tag: cmdCheckMigrations, ctx: ctx})
 }
 
-func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
-	indexDriver := sqlitex.NewMigrationDriver(s.indexDB)
+func (s *SQLiteConnManager) runMigrations(ctx context.Context) error {
+	indexDriver := sqlitex.NewMigrationDriver(s.UserStore.DB)
 
 	isEmpty, err := indexDriver.IsEmpty(ctx)
 	if err != nil {
@@ -399,13 +387,11 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 		return err
 	}
 
-	us := sqlite.NewIndexDBRepository(s.indexDB)
-	dbsToUpgrade, err := us.DBVersionBefore(ctx, int(latestNotesVer.Version))
+	dbsToUpgrade, err := s.UserStore.DBVersionBefore(ctx, int(latestNotesVer.Version))
 	if err != nil {
 		return err
 	}
 
-	userStore := sqlite.NewIndexDBRepository(s.indexDB)
 	for _, userDB := range dbsToUpgrade {
 		s.logger.Info(fmt.Sprintf("Notes database migration found for user %v - running up migration", userDB.UserID))
 		conn, err := sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
@@ -418,7 +404,7 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 			return err
 		}
 
-		err = userStore.UpdateDBVersion(ctx, userDB.UserID, ver)
+		err = s.UserStore.UpdateDBVersion(ctx, userDB.UserID, ver)
 		if err != nil {
 			return err
 		}
@@ -426,8 +412,8 @@ func (s *SQLiteDataStoreActor) runMigrations(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteDataStoreActor) Stop() error {
-	err := s.indexDB.Close()
+func (s *SQLiteConnManager) Stop() error {
+	err := s.UserStore.DB.Close()
 	if err != nil {
 		return err
 	}
@@ -443,7 +429,7 @@ func (s *SQLiteDataStoreActor) Stop() error {
 	return nil
 }
 
-func (s *SQLiteDataStoreActor) removeExpired() error {
+func (s *SQLiteConnManager) removeExpired() error {
 	s.logger.Debug("cleaning cache of expired connections")
 	for key, cc := range s.connections {
 		if !time.Now().After(cc.expiry) {
@@ -458,7 +444,7 @@ func (s *SQLiteDataStoreActor) removeExpired() error {
 	return nil
 }
 
-func (s *SQLiteDataStoreActor) GetState() CacheState {
+func (s *SQLiteConnManager) GetState() CacheState {
 	cmd := sqliteConnCmd{
 		tag: cmdGetState,
 	}
@@ -466,7 +452,7 @@ func (s *SQLiteDataStoreActor) GetState() CacheState {
 	return state
 }
 
-func (s *SQLiteDataStoreActor) getState() CacheState {
+func (s *SQLiteConnManager) getState() CacheState {
 
 	pubConns := make(map[int64]time.Time, len(s.connections))
 	for key, cc := range s.connections {

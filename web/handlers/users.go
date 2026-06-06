@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/ASC521/communis/models"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -18,7 +18,7 @@ type loginForm struct {
 func GetUserLogin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -41,7 +41,7 @@ func GetUserLogin(
 func PostUserLogin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -80,7 +80,7 @@ func PostUserLogin(
 
 		user, err := indexRepo.AuthenticateUser(r.Context(), lf.Name, lf.Password)
 		if err != nil {
-			if errors.Is(err, models.ErrInvalidCredentials) {
+			if errors.Is(err, userstore.ErrInvalidCredentials) {
 				lf.FieldErrors["error"] = "username or password is incorrect"
 				data := td{
 					BaseData: newBase(r),
@@ -138,7 +138,7 @@ func PostUserLogout(
 func PutUserTheme(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo models.IndexRepository,
+	indexRepo *userstore.SQLite,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
