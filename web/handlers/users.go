@@ -18,7 +18,7 @@ type loginForm struct {
 func GetUserLogin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -41,7 +41,7 @@ func GetUserLogin(
 func PostUserLogin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -138,7 +138,7 @@ func PostUserLogout(
 func PutUserTheme(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

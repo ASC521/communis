@@ -37,7 +37,7 @@ type CacheState struct {
 	IndexDBFileName string
 }
 
-type SQLiteDataStoreConfig struct {
+type SQLiteConnManagerConfig struct {
 	DBDirectory       string
 	IndexDBFileName   string
 	NotesDBMigrations []migrations.Migration
@@ -45,23 +45,23 @@ type SQLiteDataStoreConfig struct {
 	SQLiteOptions     []sqlitex.SQLiteOption
 }
 
-func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, error) {
+func ConfigToSQLiteConnManagerConfig(conf *config.Config) (SQLiteConnManagerConfig, error) {
 
 	var dbd string
 	if conf.DataDirectory == "" {
-		return SQLiteDataStoreConfig{}, errors.New("data directory cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("data directory cannot be empty")
 	}
 
 	dbd, err := homedir.Expand(conf.DataDirectory)
 	if err != nil {
-		return SQLiteDataStoreConfig{}, err
+		return SQLiteConnManagerConfig{}, err
 	}
 
 	opts := []sqlitex.SQLiteOption{}
 	if conf.SQLite.JournalMode != "" {
 		_, err = sqlitex.JournalModeFromString(conf.SQLite.JournalMode)
 		if err != nil {
-			return SQLiteDataStoreConfig{}, err
+			return SQLiteConnManagerConfig{}, err
 		}
 		opts = append(opts, sqlitex.WithJournalMode(conf.SQLite.JournalMode))
 	}
@@ -69,7 +69,7 @@ func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, 
 	if conf.SQLite.Synchronous != "" {
 		_, err = sqlitex.SynchronousFromString(conf.SQLite.Synchronous)
 		if err != nil {
-			return SQLiteDataStoreConfig{}, err
+			return SQLiteConnManagerConfig{}, err
 		}
 		opts = append(opts, sqlitex.WithSynchronous(conf.SQLite.Synchronous))
 	}
@@ -77,7 +77,7 @@ func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, 
 	if conf.SQLite.TempStore != "" {
 		_, err = sqlitex.TempStoreFromString(conf.SQLite.TempStore)
 		if err != nil {
-			return SQLiteDataStoreConfig{}, err
+			return SQLiteConnManagerConfig{}, err
 		}
 		opts = append(opts, sqlitex.WithTempStore(conf.SQLite.TempStore))
 	}
@@ -88,28 +88,28 @@ func ConfigToSQLiteDataStoreConfig(conf *config.Config) (SQLiteDataStoreConfig, 
 		sqlitex.WithForeignKeys(conf.SQLite.ForeignKeys))
 
 	if conf.SQLite.NotesDBMigrations == "" {
-		return SQLiteDataStoreConfig{}, errors.New("NotesDBMigrations cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("NotesDBMigrations cannot be empty")
 	}
 
 	noteDBMigrations, err := migrations.Load(conf.SQLite.NotesDBMigrations)
 	if err != nil {
-		return SQLiteDataStoreConfig{}, err
+		return SQLiteConnManagerConfig{}, err
 	}
 
 	if conf.SQLite.IndexDBMigrations == "" {
-		return SQLiteDataStoreConfig{}, errors.New("IndexDBMigrations cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("IndexDBMigrations cannot be empty")
 	}
 
 	indexDBMigrations, err := migrations.Load(conf.SQLite.IndexDBMigrations)
 	if err != nil {
-		return SQLiteDataStoreConfig{}, err
+		return SQLiteConnManagerConfig{}, err
 	}
 
 	if conf.SQLite.IndexDBFileName == "" {
-		return SQLiteDataStoreConfig{}, errors.New("IndexDBFileName cannot be empty")
+		return SQLiteConnManagerConfig{}, errors.New("IndexDBFileName cannot be empty")
 	}
 
-	c := SQLiteDataStoreConfig{
+	c := SQLiteConnManagerConfig{
 		DBDirectory:       dbd,
 		SQLiteOptions:     opts,
 		NotesDBMigrations: noteDBMigrations,
@@ -168,15 +168,14 @@ func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteCon
 // SQLiteConnManager manages the creation of connections to individual notes sqlite databases.
 type SQLiteConnManager struct {
 	connections map[int64]*cachedConn
-	IndexDB     *sqlitex.SQLiteDB
-	UserStore   *IndexDBRepository
+	UserStore   *SQLite
 	commands    chan sqliteConnCmd
-	conf        SQLiteDataStoreConfig
+	conf        SQLiteConnManagerConfig
 	logger      *slog.Logger
 	ttl         time.Duration
 }
 
-func NewSQLiteConnManager(conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQLiteConnManager, error) {
+func NewSQLiteConnManager(conf SQLiteConnManagerConfig, logger *slog.Logger) (*SQLiteConnManager, error) {
 
 	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
 	if err != nil {
@@ -189,8 +188,7 @@ func NewSQLiteConnManager(conf SQLiteDataStoreConfig, logger *slog.Logger) (*SQL
 		ttl:         8 * time.Hour,
 		commands:    make(chan sqliteConnCmd),
 		conf:        conf,
-		IndexDB:     indexDB,
-		UserStore:   NewIndexDBRepository(indexDB),
+		UserStore:   NewSQLite(indexDB),
 		logger:      al,
 	}
 
@@ -251,17 +249,17 @@ func (s *SQLiteConnManager) createNewConnection(ctx context.Context, key int64) 
 
 }
 
-func (s *SQLiteConnManager) GetNotesStore(ctx context.Context, key int64) (*datastore.NotesRepository, error) {
+func (s *SQLiteConnManager) GetNotesStore(ctx context.Context, key int64) (*datastore.SQLite, error) {
 	cmd := sqliteConnCmd{
 		tag: cmdGetConn,
 		ctx: ctx,
 		key: key,
 	}
 
-	return chanutil.SendReceive[sqliteConnCmd, *datastore.NotesRepository](s.commands, cmd)
+	return chanutil.SendReceive[sqliteConnCmd, *datastore.SQLite](s.commands, cmd)
 }
 
-func (s *SQLiteConnManager) getNotesStore(ctx context.Context, key int64) (*datastore.NotesRepository, error) {
+func (s *SQLiteConnManager) getNotesStore(ctx context.Context, key int64) (*datastore.SQLite, error) {
 	cc, ok := s.connections[key]
 	if !ok {
 		s.logger.Debug("cache miss -- create new connection")
@@ -274,7 +272,7 @@ func (s *SQLiteConnManager) getNotesStore(ctx context.Context, key int64) (*data
 		s.connections[key] = cc
 	}
 	cc.expiry = time.Now().Add(s.ttl)
-	return datastore.NewNotesRepository(cc.conn), nil
+	return datastore.NewSQLite(cc.conn), nil
 }
 
 func (s *SQLiteConnManager) Remove(key int64) error {
@@ -356,7 +354,7 @@ func (s *SQLiteConnManager) RunMigrations(ctx context.Context) error {
 }
 
 func (s *SQLiteConnManager) runMigrations(ctx context.Context) error {
-	indexDriver := sqlitex.NewMigrationDriver(s.IndexDB)
+	indexDriver := sqlitex.NewMigrationDriver(s.UserStore.DB)
 
 	isEmpty, err := indexDriver.IsEmpty(ctx)
 	if err != nil {
@@ -415,7 +413,7 @@ func (s *SQLiteConnManager) runMigrations(ctx context.Context) error {
 }
 
 func (s *SQLiteConnManager) Stop() error {
-	err := s.IndexDB.Close()
+	err := s.UserStore.DB.Close()
 	if err != nil {
 		return err
 	}

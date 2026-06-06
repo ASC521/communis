@@ -135,7 +135,7 @@ func parseNoteForm(r *http.Request) (noteForm, error) {
 	return nf, nil
 }
 
-func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastore.NotesRepository) (map[string]string, error) {
+func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastore.SQLite) (map[string]string, error) {
 	fe := map[string]string{}
 
 	// Note Id Validation
@@ -225,7 +225,7 @@ func NoteNewGet(
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -269,7 +269,7 @@ func NotePost(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -340,7 +340,7 @@ func NoteEditGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -408,7 +408,7 @@ func NotePut(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -491,7 +491,7 @@ func NotePreviewPost(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -572,7 +572,7 @@ func NoteViewGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -641,7 +641,7 @@ func NoteSearchGet(
 
 		if q != "" {
 
-			notesRepo, err := GetNotesRepo(r, dss)
+			notesRepo, err := GetNotesDataStore(r, dss)
 			if err != nil {
 				tc.RenderError(logger, w, r, err)
 				return
@@ -683,7 +683,7 @@ func NoteDelete(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return

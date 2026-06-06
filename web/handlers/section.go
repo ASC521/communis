@@ -78,7 +78,7 @@ func SectionGet(
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -119,7 +119,7 @@ func SectionPost(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -156,7 +156,7 @@ func SectionDelete(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -190,7 +190,7 @@ func SectionPut(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -219,7 +219,7 @@ func SectionEditGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -265,7 +265,7 @@ func SectionViewGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return

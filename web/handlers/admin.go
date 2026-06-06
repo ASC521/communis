@@ -57,7 +57,7 @@ func parseUserEditFormFromRequest(r *http.Request) (userEditForm, error) {
 func DeleteUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +102,7 @@ func DeleteUser(
 func GetUserCreate(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +114,7 @@ func GetUserCreate(
 func PostUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
@@ -189,7 +189,7 @@ func PostUser(
 func GetAdmin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -218,7 +218,7 @@ func GetAdmin(
 func PutUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 ) http.HandlerFunc {
 
 	type td struct {
@@ -297,7 +297,7 @@ type changePasswordForm struct {
 func PutUserPassword(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -357,7 +357,7 @@ func PutUserPassword(
 func GetUserEdit(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -401,7 +401,7 @@ func GetUserEdit(
 func GetUser(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -458,7 +458,7 @@ func PostSetup(
 	tc *TemplateCache,
 	logger *slog.Logger,
 	setupRequired *bool,
-	indexRepo *userstore.IndexDBRepository,
+	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 

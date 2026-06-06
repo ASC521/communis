@@ -46,7 +46,7 @@ func parseTagFormFromRequest(r *http.Request) (tagForm, error) {
 	return form, nil
 }
 
-func validateTagForm(ctx context.Context, tf *tagForm, nr *datastore.NotesRepository) error {
+func validateTagForm(ctx context.Context, tf *tagForm, nr *datastore.SQLite) error {
 
 	if !validator.NotBlank(tf.Name) {
 		tf.FieldErrors["name"] = "Cannot be empty"
@@ -80,7 +80,7 @@ func TagGet(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -117,7 +117,7 @@ func TagViewGet(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -164,7 +164,7 @@ func TagEditGet(
 			return
 		}
 
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -187,7 +187,7 @@ func TagPut(
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -228,7 +228,7 @@ func TagDelete(
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
@@ -264,7 +264,7 @@ func TagPost(
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return

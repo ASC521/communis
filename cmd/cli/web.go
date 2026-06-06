@@ -49,11 +49,11 @@ func ServeCMD(conf *config.Config, args []string) error {
 	})
 
 	logger := slog.New(slogx.NewPipeHandler(os.Stderr, &slogx.HandlerOptions{Level: slog.LevelDebug, IncludeSource: false}))
-	dsmConf, err := userstore.ConfigToSQLiteDataStoreConfig(conf)
+	connMgrConfig, err := userstore.ConfigToSQLiteConnManagerConfig(conf)
 	if err != nil {
 		return err
 	}
-	dsm, err := userstore.NewSQLiteConnManager(dsmConf, logger)
+	connMgr, err := userstore.NewSQLiteConnManager(connMgrConfig, logger)
 	if err != nil {
 		return err
 	}
@@ -63,6 +63,6 @@ func ServeCMD(conf *config.Config, args []string) error {
 		return err
 	}
 
-	return web.RunServer(svrConf, dsm, logger)
+	return web.RunServer(svrConf, connMgr, logger)
 
 }

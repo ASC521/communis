@@ -112,7 +112,7 @@ func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog
 	}
 
 	sessionManager := scs.New()
-	sessionManager.Store = sqlitex.NewSessionStore(dsm.IndexDB)
+	sessionManager.Store = sqlitex.NewSessionStore(dsm.UserStore.DB)
 
 	// Check if initial setup needs to be run
 	initialSetupNeeded, err := dsm.UserStore.InitialSetupNeeded(ctx)

@@ -117,7 +117,7 @@ func RecoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 	}
 }
 
-func Authenticate(sessionManager *scs.SessionManager, userStore *userstore.IndexDBRepository) func(http.Handler) http.Handler {
+func Authenticate(sessionManager *scs.SessionManager, userStore *userstore.SQLite) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authUserID := sessionManager.GetInt64(r.Context(), "authenticatedUserId")

@@ -22,7 +22,7 @@ func HomeGet(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		notesRepo, err := GetNotesRepo(r, dss)
+		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
 			tc.RenderError(logger, w, r, err)
 			return
