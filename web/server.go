@@ -19,7 +19,7 @@ import (
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/hdx"
-	userstore "github.com/ASC521/communis/user-store/sqlite"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web/handlers"
 
 	"github.com/alexedwards/scs/v2"
@@ -84,7 +84,7 @@ func ConfigToServerConfig(conf *config.Config) (ServerConfig, error) {
 
 }
 
-func RunServer(conf ServerConfig, dsm *userstore.SQLiteDataStoreActor, logger *slog.Logger) error {
+func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog.Logger) error {
 	ctx := context.Background()
 	wg := &sync.WaitGroup{}
 

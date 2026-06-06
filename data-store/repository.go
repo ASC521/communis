@@ -1,4 +1,4 @@
-package sqlite
+package datastore
 
 import "github.com/ASC521/communis/dbx/sqlitex"
 

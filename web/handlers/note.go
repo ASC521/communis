@@ -13,8 +13,7 @@ import (
 	"strconv"
 
 	datastore "github.com/ASC521/communis/data-store"
-	datastoredb "github.com/ASC521/communis/data-store/sqlite"
-	userstoredb "github.com/ASC521/communis/user-store/sqlite"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web/handlers/validator"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alexedwards/scs/v2"
@@ -136,7 +135,7 @@ func parseNoteForm(r *http.Request) (noteForm, error) {
 	return nf, nil
 }
 
-func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastoredb.NotesRepository) (map[string]string, error) {
+func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastore.NotesRepository) (map[string]string, error) {
 	fe := map[string]string{}
 
 	// Note Id Validation
@@ -220,7 +219,7 @@ type noteCreateData struct {
 func NoteNewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -259,7 +258,7 @@ func NoteNewGet(
 func NotePost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -329,7 +328,7 @@ func NotePost(
 func NoteEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -399,7 +398,7 @@ func NoteEditGet(
 func NotePut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -483,7 +482,7 @@ type renderedNotePageData struct {
 func NotePreviewPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -557,7 +556,7 @@ func NotePreviewPost(
 func NoteViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -624,7 +623,7 @@ func NoteViewGet(
 func NoteSearchGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -675,7 +674,7 @@ func NoteSearchGet(
 func NoteDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)

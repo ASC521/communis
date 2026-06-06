@@ -1,4 +1,4 @@
-package sqlite
+package datastore
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	datastore "github.com/ASC521/communis/data-store"
 	"github.com/ASC521/communis/dbx/sqlitex"
 )
 
@@ -23,10 +22,10 @@ const delNoteFTSSql = `INSERT INTO notes_details_fts(notes_details_fts, rowid, t
 		       FROM notes_details
 		       WHERE notes_details.id = ?;`
 
-func parseNoteDetailsFromRows(rows *sql.Rows) ([]datastore.NoteDetail, error) {
-	nds := []datastore.NoteDetail{}
+func parseNoteDetailsFromRows(rows *sql.Rows) ([]NoteDetail, error) {
+	nds := []NoteDetail{}
 	for rows.Next() {
-		nd := datastore.NoteDetail{}
+		nd := NoteDetail{}
 		err := rows.Scan(&nd.ID, &nd.Title)
 		if err != nil {
 			return nil, err
@@ -125,7 +124,7 @@ func (r *NotesRepository) NoteExists(ctx context.Context, title string) (int64, 
 	return id, nil
 }
 
-func (r *NotesRepository) FindNoteByID(ctx context.Context, id int64) (datastore.Note, error) {
+func (r *NotesRepository) FindNoteByID(ctx context.Context, id int64) (Note, error) {
 	q := `
      SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags_json, reference_notes_json, reference_by_notes_json
      FROM notes_details
@@ -133,47 +132,47 @@ func (r *NotesRepository) FindNoteByID(ctx context.Context, id int64) (datastore
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	var n datastore.Note
+	var n Note
 	var tagJSON, createdStr, updatedStr, refNotesJSON, refByNotesJSON string
 	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
 	err := row.Scan(&n.ID, &n.Section.ID, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON, &refNotesJSON, &refByNotesJSON)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return datastore.Note{}, err
+			return Note{}, err
 		}
-		return datastore.Note{}, fmt.Errorf("failed to scan row for note: %w", err)
+		return Note{}, fmt.Errorf("failed to scan row for note: %w", err)
 	}
 
 	err = json.Unmarshal([]byte(tagJSON), &n.Tags)
 	if err != nil {
-		return datastore.Note{}, fmt.Errorf("failed to parse tags json: %w", err)
+		return Note{}, fmt.Errorf("failed to parse tags json: %w", err)
 	}
 
 	created, err := time.ParseInLocation(sqliteTimeFmt, createdStr, time.UTC)
 	if err != nil {
-		return datastore.Note{}, fmt.Errorf("failed to parse created at time: %w", err)
+		return Note{}, fmt.Errorf("failed to parse created at time: %w", err)
 	}
 	n.CreatedAt = created
 
 	updated, err := time.ParseInLocation(sqliteTimeFmt, updatedStr, time.UTC)
 	if err != nil {
-		return datastore.Note{}, fmt.Errorf("failed to parse updated at time: %w", err)
+		return Note{}, fmt.Errorf("failed to parse updated at time: %w", err)
 	}
 	n.LastUpdatedAt = updated
 
 	err = json.Unmarshal([]byte(refNotesJSON), &n.ReferenceNotes)
 	if err != nil {
-		return datastore.Note{}, fmt.Errorf("failed to parse reference notes: %w", err)
+		return Note{}, fmt.Errorf("failed to parse reference notes: %w", err)
 	}
 	err = json.Unmarshal([]byte(refByNotesJSON), &n.ReferenceByNotes)
 	if err != nil {
-		return datastore.Note{}, fmt.Errorf("failed to parse reference by notes: %w", err)
+		return Note{}, fmt.Errorf("failed to parse reference by notes: %w", err)
 	}
 
 	return n, nil
 }
 
-func (r *NotesRepository) GetNoteDetailByIds(ctx context.Context, ids []int64) ([]datastore.NoteDetail, error) {
+func (r *NotesRepository) GetNoteDetailByIds(ctx context.Context, ids []int64) ([]NoteDetail, error) {
 
 	args := make([]any, len(ids))
 	placeholders := make([]string, len(ids))
@@ -189,9 +188,9 @@ func (r *NotesRepository) GetNoteDetailByIds(ctx context.Context, ids []int64) (
 		return nil, err
 	}
 
-	noteDetails := []datastore.NoteDetail{}
+	noteDetails := []NoteDetail{}
 	for rows.Next() {
-		nd := datastore.NoteDetail{}
+		nd := NoteDetail{}
 		err := rows.Scan(&nd.ID, &nd.Title)
 		if err != nil {
 			return nil, err
@@ -313,7 +312,7 @@ func (r *NotesRepository) DeleteNote(ctx context.Context, id int64) error {
 	return err
 }
 
-func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (datastore.PaginatedNotes, error) {
+func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (PaginatedNotes, error) {
 
 	if limit <= 0 {
 		limit = 10
@@ -332,23 +331,23 @@ func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (dat
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
-		return datastore.PaginatedNotes{}, fmt.Errorf("failed to query notes: %w", err)
+		return PaginatedNotes{}, fmt.Errorf("failed to query notes: %w", err)
 	}
 	defer rows.Close()
 
-	ns := make([]*datastore.NoteDetail, 0, limit)
+	ns := make([]*NoteDetail, 0, limit)
 	for rows.Next() {
-		n := &datastore.NoteDetail{}
+		n := &NoteDetail{}
 		err = rows.Scan(&n.ID, &n.Title)
 		if err != nil {
-			return datastore.PaginatedNotes{}, fmt.Errorf("failed to scan rows for note: %w", err)
+			return PaginatedNotes{}, fmt.Errorf("failed to scan rows for note: %w", err)
 		}
 
 		ns = append(ns, n)
 	}
 
 	if err = rows.Err(); err != nil {
-		return datastore.PaginatedNotes{}, fmt.Errorf("error iterating notes: %w", err)
+		return PaginatedNotes{}, fmt.Errorf("error iterating notes: %w", err)
 	}
 
 	var nextOffset *int
@@ -359,7 +358,7 @@ func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (dat
 		nextOffset = &next
 	}
 
-	return datastore.PaginatedNotes{
+	return PaginatedNotes{
 		Notes:      ns,
 		Limit:      limit,
 		Offset:     offset,
@@ -369,7 +368,7 @@ func (r *NotesRepository) ListNotes(ctx context.Context, limit, offset int) (dat
 
 }
 
-func (r *NotesRepository) SearchNotes(ctx context.Context, q string) ([]datastore.NoteSearchResult, error) {
+func (r *NotesRepository) SearchNotes(ctx context.Context, q string) ([]NoteSearchResult, error) {
 
 	sql := `SELECT DISTINCT
 		  nd.id,
@@ -391,9 +390,9 @@ func (r *NotesRepository) SearchNotes(ctx context.Context, q string) ([]datastor
 		return nil, err
 	}
 
-	srs := []datastore.NoteSearchResult{}
+	srs := []NoteSearchResult{}
 	for rows.Next() {
-		sr := datastore.NoteSearchResult{}
+		sr := NoteSearchResult{}
 		err = rows.Scan(&sr.ID, &sr.Title, &sr.TitleHighlight, &sr.ContentSnippet, &sr.TagNames)
 		if err != nil {
 			return nil, err
@@ -409,7 +408,7 @@ func (r *NotesRepository) SearchNotes(ctx context.Context, q string) ([]datastor
 
 }
 
-func (r *NotesRepository) RecentlyUpdatedNotes(ctx context.Context, limit int) ([]datastore.NoteDetail, error) {
+func (r *NotesRepository) RecentlyUpdatedNotes(ctx context.Context, limit int) ([]NoteDetail, error) {
 
 	sql := `SELECT n.id, n.title
 		FROM notes as n
@@ -427,7 +426,7 @@ func (r *NotesRepository) RecentlyUpdatedNotes(ctx context.Context, limit int) (
 	return parseNoteDetailsFromRows(rows)
 }
 
-func (r *NotesRepository) NotesInSection(ctx context.Context, secID int64) ([]datastore.NoteDetail, error) {
+func (r *NotesRepository) NotesInSection(ctx context.Context, secID int64) ([]NoteDetail, error) {
 	sql := `SELECT n.id, n.title
 		FROM notes as n
 		WHERE n.section = ?
@@ -445,7 +444,7 @@ func (r *NotesRepository) NotesInSection(ctx context.Context, secID int64) ([]da
 	return parseNoteDetailsFromRows(rows)
 }
 
-func (r *NotesRepository) NotesWithTag(ctx context.Context, tagID int64) ([]datastore.NoteDetail, error) {
+func (r *NotesRepository) NotesWithTag(ctx context.Context, tagID int64) ([]NoteDetail, error) {
 	sql := `SELECT n.id, n.title
 		FROM notes as n
 		INNER JOIN notes_tags as nt

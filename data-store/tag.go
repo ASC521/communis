@@ -1,4 +1,4 @@
-package sqlite
+package datastore
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	datastore "github.com/ASC521/communis/data-store"
 	"github.com/ASC521/communis/dbx/sqlitex"
 )
 
@@ -20,7 +19,7 @@ const insTagFTSSql = `INSERT INTO notes_details_fts(rowid, title, content, tags_
 		   FROM notes_details, json_each(notes_details.tags_json)
 		   WHERE json_extract(value, '$.id') = ?;`
 
-func (r *NotesRepository) CreateTag(ctx context.Context, t datastore.Tag) (int64, error) {
+func (r *NotesRepository) CreateTag(ctx context.Context, t Tag) (int64, error) {
 
 	sql := "INSERT INTO tags (name) VALUES (?);"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
@@ -34,33 +33,33 @@ func (r *NotesRepository) CreateTag(ctx context.Context, t datastore.Tag) (int64
 
 }
 
-func (r *NotesRepository) FindTagById(ctx context.Context, id int64) (datastore.Tag, error) {
+func (r *NotesRepository) FindTagById(ctx context.Context, id int64) (Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	t := datastore.Tag{}
+	t := Tag{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, id).Scan(&t.ID, &t.Name)
 	if err != nil {
-		return datastore.Tag{}, err
+		return Tag{}, err
 	}
 	return t, nil
 }
 
-func (r *NotesRepository) FindTagByName(ctx context.Context, name string) (datastore.Tag, error) {
+func (r *NotesRepository) FindTagByName(ctx context.Context, name string) (Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE name = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	t := datastore.Tag{}
+	t := Tag{}
 	err := r.db.Read.QueryRowContext(ctxWTO, sql, name).Scan(&t.ID, &t.Name)
 	if err != nil {
-		return datastore.Tag{}, err
+		return Tag{}, err
 	}
 	return t, nil
 }
 
-func (r *NotesRepository) UpdateTag(ctx context.Context, t datastore.Tag) error {
+func (r *NotesRepository) UpdateTag(ctx context.Context, t Tag) error {
 
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
 
@@ -107,7 +106,7 @@ func (r *NotesRepository) DeleteTag(ctx context.Context, id int64) error {
 
 }
 
-func (r *NotesRepository) ListAllTags(ctx context.Context) ([]datastore.Tag, error) {
+func (r *NotesRepository) ListAllTags(ctx context.Context) ([]Tag, error) {
 	query := "SELECT id, name FROM tags ORDER BY name ASC"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -118,9 +117,9 @@ func (r *NotesRepository) ListAllTags(ctx context.Context) ([]datastore.Tag, err
 	}
 	defer rows.Close()
 
-	ts := []datastore.Tag{}
+	ts := []Tag{}
 	for rows.Next() {
-		t := datastore.Tag{}
+		t := Tag{}
 		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return nil, err
@@ -137,7 +136,7 @@ func (r *NotesRepository) ListAllTags(ctx context.Context) ([]datastore.Tag, err
 
 }
 
-func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (datastore.PaginatedTags, error) {
+func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (PaginatedTags, error) {
 
 	if limit <= 0 {
 		limit = 10
@@ -153,23 +152,23 @@ func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (data
 
 	rows, err := r.db.Read.QueryContext(ctxWTO, query, limit+1, offset)
 	if err != nil {
-		return datastore.PaginatedTags{}, fmt.Errorf("failed to query tags: %w", err)
+		return PaginatedTags{}, fmt.Errorf("failed to query tags: %w", err)
 	}
 	defer rows.Close()
 
-	ts := make([]datastore.Tag, 0, limit)
+	ts := make([]Tag, 0, limit)
 	for rows.Next() {
-		t := datastore.Tag{}
+		t := Tag{}
 		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
-			return datastore.PaginatedTags{}, err
+			return PaginatedTags{}, err
 		}
 
 		ts = append(ts, t)
 	}
 
 	if err = rows.Err(); err != nil {
-		return datastore.PaginatedTags{}, fmt.Errorf("error iterating tags: %w", err)
+		return PaginatedTags{}, fmt.Errorf("error iterating tags: %w", err)
 	}
 
 	var nextOffset *int
@@ -180,11 +179,11 @@ func (r *NotesRepository) ListTags(ctx context.Context, limit, offset int) (data
 		nextOffset = &next
 	}
 
-	return datastore.PaginatedTags{Tags: ts, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
+	return PaginatedTags{Tags: ts, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
 
 }
 
-func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]datastore.Tag, error) {
+func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]Tag, error) {
 	placeholders := make([]string, len(ids))
 	args := make([]any, len(ids))
 
@@ -210,9 +209,9 @@ func (r *NotesRepository) QueryTags(ctx context.Context, ids []int64) ([]datasto
 	}
 	defer rows.Close()
 
-	tags := []datastore.Tag{}
+	tags := []Tag{}
 	for rows.Next() {
-		var t datastore.Tag
+		var t Tag
 		err = rows.Scan(&t.ID, &t.Name)
 		if err != nil {
 			return nil, err

@@ -5,14 +5,14 @@ import (
 	"net/http"
 
 	datastore "github.com/ASC521/communis/data-store"
-	userstoredb "github.com/ASC521/communis/user-store/sqlite"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/alexedwards/scs/v2"
 )
 
 func HomeGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 

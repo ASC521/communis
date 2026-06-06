@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	userstore "github.com/ASC521/communis/user-store/sqlite"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/alexedwards/scs/v2"
 )
 

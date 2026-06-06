@@ -9,8 +9,7 @@ import (
 	"net/http"
 
 	datastore "github.com/ASC521/communis/data-store"
-	datastoredb "github.com/ASC521/communis/data-store/sqlite"
-	userstoredb "github.com/ASC521/communis/user-store/sqlite"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -47,7 +46,7 @@ func parseTagFormFromRequest(r *http.Request) (tagForm, error) {
 	return form, nil
 }
 
-func validateTagForm(ctx context.Context, tf *tagForm, nr *datastoredb.NotesRepository) error {
+func validateTagForm(ctx context.Context, tf *tagForm, nr *datastore.NotesRepository) error {
 
 	if !validator.NotBlank(tf.Name) {
 		tf.FieldErrors["name"] = "Cannot be empty"
@@ -71,7 +70,7 @@ func validateTagForm(ctx context.Context, tf *tagForm, nr *datastoredb.NotesRepo
 func TagGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 
@@ -104,7 +103,7 @@ func TagGet(
 func TagViewGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	type td struct {
@@ -150,7 +149,7 @@ func TagViewGet(
 func TagEditGet(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
 	type td struct {
@@ -185,7 +184,7 @@ func TagEditGet(
 func TagPut(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesRepo(r, dss)
@@ -221,7 +220,7 @@ func TagPut(
 func TagDelete(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tagID, err := parseIDFromPath(r)
@@ -249,7 +248,7 @@ func TagDelete(
 func TagPost(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	dss *userstoredb.SQLiteDataStoreActor,
+	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 
 	type td struct {

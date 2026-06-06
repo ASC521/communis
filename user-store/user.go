@@ -1,4 +1,4 @@
-package sqlite
+package userstore
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ASC521/communis/dbx/sqlitex"
-	userstore "github.com/ASC521/communis/user-store"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,7 +25,7 @@ func NewIndexDBRepository(db *sqlitex.SQLiteDB) *IndexDBRepository {
 	return &IndexDBRepository{db: db}
 }
 
-func (r *IndexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) ([]userstore.UserDatabase, error) {
+func (r *IndexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) ([]UserDatabase, error) {
 	sql := `SELECT user_databases.id, user_databases.user_id, user_databases.db_path, user_databases.db_version
 		FROM user_databases
 		INNER JOIN users ON user_databases.user_id = users.id
@@ -39,9 +38,9 @@ func (r *IndexDBRepository) DBVersionBefore(ctx context.Context, latestVer int) 
 	}
 	defer rows.Close()
 
-	userDBs := []userstore.UserDatabase{}
+	userDBs := []UserDatabase{}
 	for rows.Next() {
-		userDB := userstore.UserDatabase{}
+		userDB := UserDatabase{}
 		err = rows.Scan(&userDB.ID, &userDB.UserID, &userDB.Path, &userDB.Version)
 		if err != nil {
 			return nil, err
@@ -71,16 +70,16 @@ func (r *IndexDBRepository) UpdateDBVersion(ctx context.Context, userID int64, v
 	return err
 }
 
-func (r *IndexDBRepository) GetUserDB(ctx context.Context, userID int64) (userstore.UserDatabase, error) {
+func (r *IndexDBRepository) GetUserDB(ctx context.Context, userID int64) (UserDatabase, error) {
 	q := `SELECT id, db_path, db_version FROM user_databases WHERE user_id = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	userDB := userstore.UserDatabase{UserID: userID}
+	userDB := UserDatabase{UserID: userID}
 	row := r.db.Read.QueryRowContext(ctxWTO, q, userID)
 	err := row.Scan(&userDB.ID, &userDB.Path, &userDB.Version)
 	if err != nil {
-		return userstore.UserDatabase{}, err
+		return UserDatabase{}, err
 	}
 	return userDB, nil
 }
@@ -133,44 +132,44 @@ func (r *IndexDBRepository) CreateUserAndDB(ctx context.Context, userName, passw
 	})
 }
 
-func (r *IndexDBRepository) AuthenticateUser(ctx context.Context, username, password string) (userstore.User, error) {
+func (r *IndexDBRepository) AuthenticateUser(ctx context.Context, username, password string) (User, error) {
 	q := `SELECT id, name, hashed_password, is_admin, created_at_utc, last_login_utc FROM users WHERE name = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
-	user := userstore.User{}
+	user := User{}
 	var hashedPassword []byte
 	var createdStr, lastLoginStr sql.NullString
 	row := r.db.Read.QueryRowContext(ctxWTO, q, username)
 	err := row.Scan(&user.ID, &user.Name, &hashedPassword, &user.IsAdmin, &createdStr, &lastLoginStr)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return userstore.User{}, userstore.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return userstore.User{}, err
+			return User{}, err
 		}
 	}
 
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			return userstore.User{}, userstore.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return userstore.User{}, err
+			return User{}, err
 		}
 	}
 
 	if createdStr.Valid {
 		createdAt, err := time.ParseInLocation(sqliteTimeFmt, createdStr.String, time.UTC)
 		if err != nil {
-			return userstore.User{}, err
+			return User{}, err
 		}
 		user.CreatedAtUTC = createdAt
 	}
 	if lastLoginStr.Valid {
 		lastLogin, err := time.ParseInLocation(sqliteTimeFmt, lastLoginStr.String, time.UTC)
 		if err != nil {
-			return userstore.User{}, err
+			return User{}, err
 		}
 		user.LastLoginUTC = lastLogin
 	}
@@ -191,34 +190,34 @@ func (r *IndexDBRepository) IsAdminUser(ctx context.Context, userID int64) (bool
 	return isAdmin, nil
 }
 
-func (r *IndexDBRepository) GetUser(ctx context.Context, id int64) (userstore.User, error) {
+func (r *IndexDBRepository) GetUser(ctx context.Context, id int64) (User, error) {
 	q := `SELECT id, name, is_admin, created_at_utc, last_login_utc, theme FROM users WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 
 	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
-	user := userstore.User{}
+	user := User{}
 	var createdStr, lastLoginStr sql.NullString
 	err := row.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return userstore.User{}, userstore.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return userstore.User{}, err
+			return User{}, err
 		}
 	}
 
 	if createdStr.Valid {
 		createdAt, err := time.ParseInLocation(sqliteTimeFmt, createdStr.String, time.UTC)
 		if err != nil {
-			return userstore.User{}, err
+			return User{}, err
 		}
 		user.CreatedAtUTC = createdAt
 	}
 	if lastLoginStr.Valid {
 		lastLogin, err := time.ParseInLocation(sqliteTimeFmt, lastLoginStr.String, time.UTC)
 		if err != nil {
-			return userstore.User{}, err
+			return User{}, err
 		}
 		user.LastLoginUTC = lastLogin
 	}
@@ -227,7 +226,7 @@ func (r *IndexDBRepository) GetUser(ctx context.Context, id int64) (userstore.Us
 
 }
 
-func (r *IndexDBRepository) UpdateUser(ctx context.Context, id int64, name string) (userstore.User, error) {
+func (r *IndexDBRepository) UpdateUser(ctx context.Context, id int64, name string) (User, error) {
 	stmt := `UPDATE users SET name = ? WHERE id = ?
 		RETURNING id, name, is_admin, created_at_utc, last_login_utc, theme;`
 
@@ -235,28 +234,28 @@ func (r *IndexDBRepository) UpdateUser(ctx context.Context, id int64, name strin
 	defer cancel()
 
 	row := r.db.Write.QueryRowContext(ctxWTO, stmt, name, id)
-	user := userstore.User{}
+	user := User{}
 	var createdStr, lastLoginStr sql.NullString
 	err := row.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr, &user.Theme)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return userstore.User{}, userstore.ErrInvalidCredentials
+			return User{}, ErrInvalidCredentials
 		} else {
-			return userstore.User{}, err
+			return User{}, err
 		}
 	}
 
 	if createdStr.Valid {
 		createdAt, err := time.ParseInLocation(sqliteTimeFmt, createdStr.String, time.UTC)
 		if err != nil {
-			return userstore.User{}, err
+			return User{}, err
 		}
 		user.CreatedAtUTC = createdAt
 	}
 	if lastLoginStr.Valid {
 		lastLogin, err := time.ParseInLocation(sqliteTimeFmt, lastLoginStr.String, time.UTC)
 		if err != nil {
-			return userstore.User{}, err
+			return User{}, err
 		}
 		user.LastLoginUTC = lastLogin
 	}
@@ -288,7 +287,7 @@ func (r *IndexDBRepository) UpdateUserLastLoginToNow(ctx context.Context, id int
 	return err
 }
 
-func (r *IndexDBRepository) ListUsers(ctx context.Context) ([]userstore.User, error) {
+func (r *IndexDBRepository) ListUsers(ctx context.Context) ([]User, error) {
 	q := `SELECT id, name, is_admin, created_at_utc, last_login_utc FROM users`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -299,9 +298,9 @@ func (r *IndexDBRepository) ListUsers(ctx context.Context) ([]userstore.User, er
 	}
 	defer rows.Close()
 
-	users := []userstore.User{}
+	users := []User{}
 	for rows.Next() {
-		user := userstore.User{}
+		user := User{}
 		var createdStr, lastLoginStr sql.NullString
 		err := rows.Scan(&user.ID, &user.Name, &user.IsAdmin, &createdStr, &lastLoginStr)
 		if err != nil {

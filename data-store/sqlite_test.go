@@ -1,4 +1,4 @@
-package sqlite_test
+package datastore_test
 
 import (
 	"context"
@@ -10,10 +10,9 @@ import (
 	"testing"
 	"time"
 
+	datastore "github.com/ASC521/communis/data-store"
 	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
-	"github.com/ASC521/communis/models"
-	"github.com/ASC521/communis/repository/sqlite"
 )
 
 func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, func() error, error) {
@@ -58,9 +57,9 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, func() error, 
 
 func TestSQLiteSectionMethods(t *testing.T) {
 
-	nbs := make([]*models.Section, 0, 20)
+	nbs := make([]*datastore.Section, 0, 20)
 	for i := range 20 {
-		nbs = append(nbs, &models.Section{Name: fmt.Sprintf("section-%v", i+1)})
+		nbs = append(nbs, &datastore.Section{Name: fmt.Sprintf("section-%v", i+1)})
 	}
 
 	ctx := context.Background()
@@ -71,15 +70,15 @@ func TestSQLiteSectionMethods(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	sRepo := sqlite.NewNotesRepository(db)
+	sRepo := datastore.NewNotesRepository(db)
 
 	tcs := []struct {
 		Name  string
-		TFunc func(models.NotesRepository) error
+		TFunc func(*datastore.NotesRepository) error
 	}{
 		{
 			Name: "Create",
-			TFunc: func(sr models.NotesRepository) error {
+			TFunc: func(sr *datastore.NotesRepository) error {
 				for _, nb := range nbs {
 					id, err := sr.CreateSection(ctx, *nb)
 					if err != nil {
@@ -96,7 +95,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 		},
 		{
 			Name: "FindById",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				nb := nbs[2]
 				nbQ, err := nr.FindSectionById(ctx, nb.ID)
 				if err != nil {
@@ -111,9 +110,9 @@ func TestSQLiteSectionMethods(t *testing.T) {
 		},
 		{
 			Name: "Update",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				onb := nbs[10]
-				nnb := models.Section{ID: onb.ID, Name: onb.Name}
+				nnb := datastore.Section{ID: onb.ID, Name: onb.Name}
 				nnb.Name = "section-55"
 				err := nr.UpdateSection(ctx, nnb)
 				if err != nil {
@@ -131,7 +130,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 		},
 		{
 			Name: "Delete",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				nb := nbs[12]
 				err := nr.DeleteSection(ctx, nb.ID)
 				if err != nil {
@@ -151,7 +150,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 		},
 		{
 			Name: "ListAll",
-			TFunc: func(sr models.NotesRepository) error {
+			TFunc: func(sr *datastore.NotesRepository) error {
 				secs, err := sr.ListAllSections(ctx)
 				if err != nil {
 					return fmt.Errorf("failed to query database: %w", err)
@@ -180,9 +179,9 @@ func TestSQLiteSectionMethods(t *testing.T) {
 
 func TestSQLiteTagMethods(t *testing.T) {
 
-	ts := make([]*models.Tag, 0, 19)
+	ts := make([]*datastore.Tag, 0, 19)
 	for i := range 20 {
-		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag-%v", i+1)})
+		ts = append(ts, &datastore.Tag{Name: fmt.Sprintf("tag-%v", i+1)})
 	}
 
 	ctx := context.Background()
@@ -193,15 +192,15 @@ func TestSQLiteTagMethods(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	nbRepo := sqlite.NewNotesRepository(db)
+	nbRepo := datastore.NewNotesRepository(db)
 
 	tcs := []struct {
 		Name  string
-		TFunc func(models.NotesRepository) error
+		TFunc func(*datastore.NotesRepository) error
 	}{
 		{
 			Name: "Create",
-			TFunc: func(tr models.NotesRepository) error {
+			TFunc: func(tr *datastore.NotesRepository) error {
 				for _, t := range ts {
 					id, err := tr.CreateTag(ctx, *t)
 					if err != nil {
@@ -218,7 +217,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 		},
 		{
 			Name: "FindById",
-			TFunc: func(tr models.NotesRepository) error {
+			TFunc: func(tr *datastore.NotesRepository) error {
 				t := ts[2]
 				tq, err := tr.FindTagById(ctx, t.ID)
 				if err != nil {
@@ -233,9 +232,9 @@ func TestSQLiteTagMethods(t *testing.T) {
 		},
 		{
 			Name: "Update",
-			TFunc: func(tr models.NotesRepository) error {
+			TFunc: func(tr *datastore.NotesRepository) error {
 				ot := ts[10]
-				nt := models.Tag{ID: ot.ID, Name: ot.Name}
+				nt := datastore.Tag{ID: ot.ID, Name: ot.Name}
 				nt.Name = "updatedtag"
 				err := tr.UpdateTag(ctx, nt)
 				if err != nil {
@@ -254,7 +253,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 		},
 		{
 			Name: "Delete",
-			TFunc: func(tr models.NotesRepository) error {
+			TFunc: func(tr *datastore.NotesRepository) error {
 				t := ts[12]
 				err := tr.DeleteTag(ctx, t.ID)
 				if err != nil {
@@ -274,7 +273,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 		},
 		{
 			Name: "List",
-			TFunc: func(tr models.NotesRepository) error {
+			TFunc: func(tr *datastore.NotesRepository) error {
 				set1, err := tr.ListTags(ctx, 10, 0)
 				if err != nil {
 					return fmt.Errorf("failed to list tags: %w", err)
@@ -303,7 +302,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 		},
 		{
 			Name: "Query",
-			TFunc: func(tr models.NotesRepository) error {
+			TFunc: func(tr *datastore.NotesRepository) error {
 				missing1 := int64(120)
 				missing2 := int64(340)
 				tags, err := tr.QueryTags(ctx, []int64{ts[3].ID, ts[14].ID, ts[17].ID, missing1, missing2})
@@ -332,14 +331,14 @@ func TestSQLiteTagMethods(t *testing.T) {
 }
 
 func TestSQLiteNoteMethods(t *testing.T) {
-	ts := make([]*models.Tag, 0, 19)
+	ts := make([]*datastore.Tag, 0, 19)
 	for i := range 20 {
-		ts = append(ts, &models.Tag{Name: fmt.Sprintf("tag%v", i+1)})
+		ts = append(ts, &datastore.Tag{Name: fmt.Sprintf("tag%v", i+1)})
 	}
 
-	secs := make([]*models.Section, 0, 19)
+	secs := make([]*datastore.Section, 0, 19)
 	for i := range 20 {
-		secs = append(secs, &models.Section{Name: fmt.Sprintf("section-%v", i+1)})
+		secs = append(secs, &datastore.Section{Name: fmt.Sprintf("section-%v", i+1)})
 	}
 
 	ctx := context.Background()
@@ -350,7 +349,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 	defer db.Close()
 	defer cleanUp()
 
-	notesRepo := sqlite.NewNotesRepository(db)
+	notesRepo := datastore.NewNotesRepository(db)
 
 	for _, tag := range ts {
 		tid, err := notesRepo.CreateTag(ctx, *tag)
@@ -369,25 +368,25 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		nb.ID = nid
 	}
 
-	ns := make([]*models.Note, 0, 20)
+	ns := make([]*datastore.Note, 0, 20)
 	for i := range 20 {
 
-		n := models.Note{
+		n := datastore.Note{
 			Title:   fmt.Sprintf("title-%v", i+1),
 			Content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
 			Section: *secs[8],
-			Tags:    []models.Tag{*ts[2], *ts[4], *ts[12], *ts[17]},
+			Tags:    []datastore.Tag{*ts[2], *ts[4], *ts[12], *ts[17]},
 		}
 		ns = append(ns, &n)
 	}
 
 	tcs := []struct {
 		Name  string
-		TFunc func(models.NotesRepository) error
+		TFunc func(*datastore.NotesRepository) error
 	}{
 		{
 			Name: "Create",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				for _, n := range ns {
 					tids := make([]int64, len(n.Tags))
 					for i, t := range n.Tags {
@@ -434,7 +433,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		},
 		{
 			Name: "Exists",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 
 				ide, err := nr.NoteExists(ctx, "title-3")
 				if err != nil {
@@ -459,7 +458,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		},
 		{
 			Name: "Update",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				n := ns[16]
 				n.Tags = append(n.Tags[:2], n.Tags[3:]...)
 
@@ -504,7 +503,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		},
 		{
 			Name: "Delete",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				n := ns[11]
 				err := nr.DeleteNote(ctx, n.ID)
 				if err != nil {
@@ -524,7 +523,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		},
 		{
 			Name: "List",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				set1, err := nr.ListNotes(ctx, 10, 0)
 				if err != nil {
 					return fmt.Errorf("failed to list notes: %w", err)
@@ -556,7 +555,7 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		},
 		{
 			Name: "Search",
-			TFunc: func(nr models.NotesRepository) error {
+			TFunc: func(nr *datastore.NotesRepository) error {
 				on := ns[12]
 				on.Content = on.Content + "FTS FIND ME"
 				tids := make([]int64, len(on.Tags))

@@ -8,7 +8,7 @@ import (
 
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/slogx"
-	userstore "github.com/ASC521/communis/user-store/sqlite"
+	userstore "github.com/ASC521/communis/user-store"
 	"github.com/ASC521/communis/web"
 )
 
@@ -53,7 +53,7 @@ func ServeCMD(conf *config.Config, args []string) error {
 	if err != nil {
 		return err
 	}
-	dsm, err := userstore.NewSQLiteDataStoreActor(dsmConf, logger)
+	dsm, err := userstore.NewSQLiteConnManager(dsmConf, logger)
 	if err != nil {
 		return err
 	}

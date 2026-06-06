@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	userstore "github.com/ASC521/communis/user-store"
-	userstoredb "github.com/ASC521/communis/user-store/sqlite"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -19,7 +18,7 @@ type loginForm struct {
 func GetUserLogin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstoredb.IndexDBRepository,
+	indexRepo *userstore.IndexDBRepository,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -42,7 +41,7 @@ func GetUserLogin(
 func PostUserLogin(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstoredb.IndexDBRepository,
+	indexRepo *userstore.IndexDBRepository,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 
@@ -139,7 +138,7 @@ func PostUserLogout(
 func PutUserTheme(
 	tc *TemplateCache,
 	logger *slog.Logger,
-	indexRepo *userstoredb.IndexDBRepository,
+	indexRepo *userstore.IndexDBRepository,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
