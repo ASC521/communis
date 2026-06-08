@@ -10,16 +10,30 @@
     <input class="field" id="search-home" type="search" name="q" aria-label="search" placeholder="Search..." autofocus>
   </form>
 
-  <div class="note-links">
-    <p><strong>RECENTLY MODIFIED</strong></p>
-    <ul class="list-of-links -center">
-  {{ range .NoteDetails }}
-  <li>
-    <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
-  </li>
-  {{ end }}
-  </ul>
-  </div>
+  <section class="quick-links">
+    <div class="note-links">
+      <p><strong>RECENTLY MODIFIED</strong></p>
+      <ul class="list-of-links -center">
+	{{ range .RecentNotes }}
+	<li>
+	  <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+	</li>
+	{{ end }}
+      </ul>
+      
+    </div>
+    <div class="note-links">
+      <p><strong>BOOKMARKS</strong></p>
+      <ul class="list-of-links -center">
+	{{ range .BookmarkedNotes }}
+	<li>
+	  <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+	</li>
+	{{ end }}
+      </ul>
+      
+    </div>
+  </section>
 </main>
 {{end}}
 
