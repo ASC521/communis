@@ -12,7 +12,7 @@ Bug Fix: Entering search from home screen results in querying the server twice o
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Security is blocking external images being loaded in markdown
 Error Screens +v1
-Feature: Bookmark a note and list bookmarked notes on homescreen
+x Feature: Bookmark a note and list bookmarked notes on homescreen
 Fix note preview page -  buttons don't line up
 Redo UI to be mobile friendly
 Refactor organization of html templates to better fit htmx

@@ -1,5 +1,3 @@
-ALTER TABLE notes DROP COLUMN bookmark;
-
 DROP VIEW IF EXISTS "main"."notes_details";
 CREATE VIEW notes_details AS
 SELECT 
@@ -41,4 +39,6 @@ LEFT JOIN (
 	FROM reference_notes AS rn
 	JOIN notes AS n ON n.id = rn.note_id
 	GROUP BY rn.ref_note_id
-) AS ref_by_notes ON ref_by_notes.note_id = n.id
+) AS ref_by_notes ON ref_by_notes.note_id = n.id;
+
+ALTER TABLE notes DROP COLUMN bookmark;
