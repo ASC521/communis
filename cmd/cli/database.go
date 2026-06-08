@@ -100,7 +100,7 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 
 	dbFlags := flag.NewFlagSet("database", flag.ExitOnError)
 	dbType := dbFlags.String("db-type", "", "database type to migrate - options: INDEX | NOTES")
-	notesDBName := dbFlags.String("notes-db-name", "", "file name of notes database to operate on")
+	notesUserNumber := dbFlags.String("notes-user-number", "", "user number of notes database to operate on")
 
 	dbFlags.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage: communis [global options] database [database options] <subcommand> [command options]\n\n")
@@ -132,11 +132,11 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 		migrationsDir = conf.SQLite.IndexDBMigrations
 	case "notes":
 
-		if *notesDBName == "" {
+		if *notesUserNumber == "" {
 			return fmt.Errorf("notes-db-name is required")
 		}
 
-		dbPath = filepath.Join(conf.DataDirectory, "notes", *notesDBName)
+		dbPath = filepath.Join(conf.DataDirectory, "user-databases", fmt.Sprintf("%s.db", *notesUserNumber))
 		migrationsDir = conf.SQLite.NotesDBMigrations
 	default:
 		return fmt.Errorf("database type %s is not valid.  Valid options index or notes", *dbType)

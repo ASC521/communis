@@ -40,6 +40,7 @@ type Note struct {
 	LastUpdatedAt    time.Time
 	ReferenceNotes   []NoteDetail
 	ReferenceByNotes []NoteDetail
+	Bookmark         bool
 }
 
 type NoteDetail struct {

@@ -41,6 +41,8 @@ func routes(
 	mux.Handle("PUT /note/{id}/{slug}", authReq.Then(handlers.NotePut(tc, logger, dss, sessionManager)))
 	mux.Handle("DELETE /note/{id}/{slug}", authReq.Then(handlers.NoteDelete(tc, logger, dss)))
 	mux.Handle("GET /edit/{id}/{slug}", authReq.Then(handlers.NoteEditGet(tc, logger, dss, sessionManager)))
+	mux.Handle("PUT /note/bookmark/{id}", authReq.Then(handlers.NoteBookmarkPutDelete(tc, logger, dss, true)))
+	mux.Handle("DELETE /note/bookmark/{id}", authReq.Then(handlers.NoteBookmarkPutDelete(tc, logger, dss, false)))
 
 	mux.Handle("POST /ref-notes/select/{id}", authReq.Then(handlers.ReferenceNoteSelectPost(tc, logger)))
 	mux.Handle("DELETE /ref-notes/select/{id}", authReq.Then(handlers.ReferenceNoteSelectDelete()))

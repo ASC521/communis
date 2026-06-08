@@ -527,6 +527,7 @@ func NotePreviewPost(
 			ReferenceNotes:   refNotes,
 			ReferenceByNotes: refByNotes,
 			Tags:             ts,
+			Bookmark:         false,
 		}
 
 		sec, err := notesRepo.FindSectionById(r.Context(), n.Section.ID)
@@ -733,5 +734,33 @@ func ReferenceNoteSelectPost(
 func ReferenceNoteSelectDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func NoteBookmarkPutDelete(
+	tc *TemplateCache,
+	logger *slog.Logger,
+	connMgr *userstore.SQLiteConnManager,
+	setBookmark bool,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if err != nil || id < 1 {
+			http.NotFound(w, r)
+			return
+		}
+		dataStore, err := GetNotesDataStore(r, connMgr)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+		err = dataStore.SetNoteBookmark(r.Context(), id, setBookmark)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
+
+		tc.RenderPartial(logger, w, r, http.StatusOK, "bookmarked-button", datastore.Note{ID: id, Bookmark: setBookmark})
+
 	}
 }

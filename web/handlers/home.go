@@ -18,7 +18,8 @@ func HomeGet(
 
 	type td struct {
 		BaseData
-		NoteDetails []datastore.NoteDetail
+		RecentNotes     []datastore.NoteDetail
+		BookmarkedNotes []datastore.NoteDetail
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -33,9 +34,15 @@ func HomeGet(
 			tc.RenderError(logger, w, r, err)
 			return
 		}
+		bn, err := notesRepo.BookmarkedNotes(r.Context(), 5)
+		if err != nil {
+			tc.RenderError(logger, w, r, err)
+			return
+		}
 		data := td{
-			NoteDetails: mn,
-			BaseData:    newBase(r),
+			RecentNotes:     mn,
+			BookmarkedNotes: bn,
+			BaseData:        newBase(r),
 		}
 
 		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", data)

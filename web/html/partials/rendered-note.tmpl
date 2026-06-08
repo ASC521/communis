@@ -27,9 +27,10 @@
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#save"/>
 	</svg>
       </button>
-      {{ else }}
-      <a class="svg-button" href="/edit/{{ .Note.ID }}/{{ slugify .Note.Title }}">
-	<svg>
+	{{ else }}
+	{{ template "bookmarked-button" .Note }}
+	<a class="svg-button" href="/edit/{{ .Note.ID }}/{{ slugify .Note.Title }}">
+	<svg class="icon">
 	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line"/>
 	</svg>
       </a>
@@ -76,4 +77,17 @@
   </section>
 </div>
 
+{{ end }}
+
+
+{{ define "bookmarked-button" }}
+{{ if .Bookmark }}
+      <button type="button" class="svg-button -active" hx-delete="/note/bookmark/{{ .ID }}" hx-swap="outerHTML">
+	{{ else }}
+      <button type="button" class="svg-button" hx-put="/note/bookmark/{{ .ID }}" hx-swap="outerHTML">
+	{{ end }}
+	<svg class="icon">
+	  <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-marked"/>
+	</svg>
+      </button>
 {{ end }}

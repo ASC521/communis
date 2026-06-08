@@ -146,7 +146,7 @@ func (r *SQLite) NoteExists(ctx context.Context, title string) (int64, error) {
 
 func (r *SQLite) FindNoteByID(ctx context.Context, id int64) (Note, error) {
 	q := `
-     SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, tags_json, reference_notes_json, reference_by_notes_json
+     SELECT id, section_id, section_name, title, content, created_at_utc, last_updated_at_utc, bookmark, tags_json, reference_notes_json, reference_by_notes_json
      FROM notes_details
      WHERE id = ?;`
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
@@ -155,7 +155,7 @@ func (r *SQLite) FindNoteByID(ctx context.Context, id int64) (Note, error) {
 	var n Note
 	var tagJSON, createdStr, updatedStr, refNotesJSON, refByNotesJSON string
 	row := r.db.Read.QueryRowContext(ctxWTO, q, id)
-	err := row.Scan(&n.ID, &n.Section.ID, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &tagJSON, &refNotesJSON, &refByNotesJSON)
+	err := row.Scan(&n.ID, &n.Section.ID, &n.Section.Name, &n.Title, &n.Content, &createdStr, &updatedStr, &n.Bookmark, &tagJSON, &refNotesJSON, &refByNotesJSON)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Note{}, err
@@ -480,6 +480,36 @@ func (r *SQLite) NotesWithTag(ctx context.Context, tagID int64) ([]NoteDetail, e
 	}
 	defer rows.Close()
 
+	return parseNoteDetailsFromRows(rows)
+}
+
+func (r *SQLite) SetNoteBookmark(ctx context.Context, noteID int64, bookmark bool) error {
+	sql := "UPDATE notes SET bookmark = ? WHERE id = ?;"
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	_, err := r.db.Write.ExecContext(ctxWTO, sql, bookmark, noteID)
+	return err
+}
+
+func (r *SQLite) BookmarkedNotes(ctx context.Context, limit int) ([]NoteDetail, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+
+	sql := `SELECT n.id, n.title
+		FROM notes as n
+		WHERE n.bookmark = 1
+		LIMIT ?;`
+
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 	return parseNoteDetailsFromRows(rows)
 }
 
