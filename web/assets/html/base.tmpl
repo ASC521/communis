@@ -1,4 +1,4 @@
-{{define "layout"}}
+{{define "base"}}
 <!doctype html>
 <html lang='en' data-theme="{{ .Theme }}">
   <head>
@@ -9,7 +9,7 @@
     <script src="/static/js/markdown-editor.js?ver=1"></script>
     <link rel="stylesheet" href="/static/css/style.css?v=1">
     <link rel="stylesheet" href="/static/vendor/css/highlighting-{{.Theme}}.css?v=1">
-    <title>{{template "title" . }}</title>
+    <title>{{template "page:title" . }}</title>
   </head>
   <body>
 
@@ -17,22 +17,22 @@
 
 	{{ if .IsAdmin }}
     
-    		{{ template "navbar-admin" . }}
+    		{{ template "partial:navbar:admin" . }}
 
 	{{ else }}
     
-	    {{ template "navbar-authenticated" . }}
+	    {{ template "partial:navbar:authenticated" . }}
     
 	{{ end }}
     
     {{ else }}
     
-    	{{ template "navbar-unauthenticated" . }}
+    	{{ template "partial:navbar:unauthenticated" . }}
     
     {{ end }}
 
 
-    {{ template "main" . }}
+    {{ template "page:content" . }}
 
   </body>
 

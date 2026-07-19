@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -55,7 +56,7 @@ func parseUserEditFormFromRequest(r *http.Request) (userEditForm, error) {
 }
 
 func DeleteUser(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	dss *userstore.SQLiteConnManager,
@@ -63,33 +64,38 @@ func DeleteUser(
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, err := parseIDFromPath(r)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		user, err := indexRepo.GetUser(r.Context(), userID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		if user.IsAdmin {
 			err = dss.Remove(user.ID)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 		} else {
 			err = dss.DeleteDB(r.Context(), userID)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 		}
 
 		err = indexRepo.DeleteUser(r.Context(), userID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -98,26 +104,29 @@ func DeleteUser(
 	}
 }
 
-// GetUserCreate writes an html partial template containing a form to create a new user form.
+// GetUserCreate writes an HTML partial template containing a form to create a new user form.
 func GetUserCreate(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tc.RenderPartial(logger, w, r, http.StatusOK, "user-new", nil)
+		err := htmlRenderer.Render(w, http.StatusOK, nil, "partial:user:new")
+		if err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 // PostUser creates a new user in the index database and bootstraps a new user database.
 func PostUser(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
-
 	type newUserForm struct {
 		Name        string
 		Password    string
@@ -128,7 +137,8 @@ func PostUser(
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -141,43 +151,47 @@ func PostUser(
 		if nuf.Password == "" {
 			nuf.FieldErrors["password"] = "password cannot be blank"
 		} else if !validator.MinChars(nuf.Password, 8) {
-			nuf.FieldErrors["password"] = "password must be atleast 8 characters"
+			nuf.FieldErrors["password"] = "password must be at least 8 characters"
 		} // TODO: Add function with basic complexity text for passwords
 
 		nuf.IsAdmin = r.PostForm.Get("is-admin") == "on"
 
 		if len(nuf.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "user-new", nuf)
+			htmlRenderer.Render(w, http.StatusUnprocessableEntity, nuf, "partial:user:new")
 			return
 		}
 
 		exists, err := indexRepo.NameExists(r.Context(), nuf.Name)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		if exists {
 			nuf.FieldErrors["name"] = "username already exists"
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "user-new", nuf)
+			htmlRenderer.Render(w, http.StatusUnprocessableEntity, nuf, "partial:user:new")
 			return
 		}
 
 		if nuf.IsAdmin {
 			_, err = indexRepo.CreateAdminUser(r.Context(), nuf.Name, nuf.Password)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 		} else {
 			userID, err := indexRepo.CreateUserAndDB(r.Context(), nuf.Name, nuf.Password)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 
 			err = dss.CreateDB(r.Context(), userID)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 		}
@@ -187,62 +201,66 @@ func PostUser(
 }
 
 func GetAdmin(
-	tc *TemplateCache,
+	tc *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		Users []userstore.User
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		users, err := indexRepo.ListUsers(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			tc.RenderError(w, err)
 			return
 		}
 
 		data := td{
-			BaseData: newBase(r),
+			BaseData: extractBaseDataFromRequest(r),
 			Users:    users,
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "admin.tmpl", data)
+		if err = tc.Render(w, http.StatusOK, data, "base", "pages/admin.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			tc.RenderError(w, err)
+		}
 	}
 }
 
 func PutUser(
-	tc *TemplateCache,
+	tc *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		Form userEditForm
 		User userstore.User
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		pathUserID, err := parseIDFromPath(r)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			tc.RenderError(w, err)
 			return
 		}
 
 		userEditForm, err := parseUserEditFormFromRequest(r)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			tc.RenderError(w, err)
 			return
 		}
 
 		if userEditForm.ID != pathUserID {
-			tc.RenderError(logger, w, r, errors.New("form id does not match path id"))
+			err = errors.New("form id does not match path id")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			tc.RenderError(w, err)
 			return
 		}
 
@@ -251,38 +269,43 @@ func PutUser(
 		} else {
 			exists, err := indexRepo.NameExists(r.Context(), userEditForm.UserName)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				tc.RenderError(w, err)
 				return
 			}
 			if exists {
 				userEditForm.FieldErrors["username"] = "name already exists"
-
 			}
 		}
 
 		if len(userEditForm.FieldErrors) > 0 {
 			user, err := indexRepo.GetUser(r.Context(), userEditForm.ID)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				tc.RenderError(w, err)
 				return
 			}
 			data := td{
-				BaseData: newBase(r),
+				BaseData: extractBaseDataFromRequest(r),
 				Form:     userEditForm,
 				User:     user,
 			}
 
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "user-edit", data)
+			tc.Render(w, http.StatusUnprocessableEntity, data, "partial:user:edit")
 			return
 		}
 
 		user, err := indexRepo.UpdateUser(r.Context(), userEditForm.ID, userEditForm.UserName)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			tc.RenderError(w, err)
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "user-updated", user)
+		if err = tc.Render(w, http.StatusOK, user, "partial:user:updated"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			tc.RenderError(w, err)
+		}
 	}
 }
 
@@ -295,16 +318,15 @@ type changePasswordForm struct {
 }
 
 func PutUserPassword(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		err := r.ParseForm()
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -317,13 +339,15 @@ func PutUserPassword(
 
 		idStr := r.PostForm.Get("id")
 		if idStr == "" {
-			passChgForm.ID = 0
-			tc.RenderError(logger, w, r, errors.New("id missing from form"))
+			err = errors.New("id missing from form")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		} else {
 			passChgForm.ID, err = strconv.ParseInt(idStr, 10, 64)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 		}
@@ -333,19 +357,20 @@ func PutUserPassword(
 		} else if passChgForm.ConfirmedPassword == "" {
 			passChgForm.FieldErrors["error"] = "confirmed password cannot be empty"
 		} else if !validator.MinChars(passChgForm.Password, 8) {
-			passChgForm.FieldErrors["error"] = "password must be at lesat 8 characters"
+			passChgForm.FieldErrors["error"] = "password must be at least 8 characters"
 		} else if passChgForm.Password != passChgForm.ConfirmedPassword {
 			passChgForm.FieldErrors["error"] = "passwords do not match"
 		}
 
 		if len(passChgForm.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "change-password-form", passChgForm)
+			htmlRenderer.Render(w, http.StatusUnprocessableEntity, passChgForm, "partial:user:change-password-form")
 			return
 		}
 
 		err = indexRepo.UpdateUserPassword(r.Context(), passChgForm.ID, passChgForm.Password)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -355,14 +380,13 @@ func PutUserPassword(
 }
 
 func GetUserEdit(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		User               userstore.User
 		EditUserForm       userEditForm
 		ChangePasswordForm changePasswordForm
@@ -377,11 +401,12 @@ func GetUserEdit(
 
 		user, err := indexRepo.GetUser(r.Context(), userID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		data := td{
-			BaseData: newBase(r),
+			BaseData: extractBaseDataFromRequest(r),
 			EditUserForm: userEditForm{
 				ID:          userID,
 				UserName:    user.Name,
@@ -395,11 +420,15 @@ func GetUserEdit(
 			},
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "user-edit", data)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "partial:user:edit"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
+
 func GetUser(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
@@ -412,12 +441,15 @@ func GetUser(
 		}
 		user, err := indexRepo.GetUser(r.Context(), userID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "replace-edit-form", user)
-
+		if err = htmlRenderer.Render(w, http.StatusOK, user, "partial:user:replace-edit-form"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
@@ -429,16 +461,15 @@ type setupUserForm struct {
 }
 
 type setupData struct {
-	BaseData
+	assets.BaseData
 	SetupUserForm setupUserForm
 }
 
 func GetSetup(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	setupRequired *bool,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !*setupRequired {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -446,24 +477,25 @@ func GetSetup(
 		}
 
 		data := setupData{
-			BaseData:      newBase(r),
+			BaseData:      extractBaseDataFromRequest(r),
 			SetupUserForm: setupUserForm{FieldErrors: map[string]string{}},
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "setup.tmpl", data)
+		if err := htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/setup.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func PostSetup(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	setupRequired *bool,
 	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		if !*setupRequired {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
@@ -471,7 +503,8 @@ func PostSetup(
 
 		err := r.ParseForm()
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -490,28 +523,31 @@ func PostSetup(
 
 		if len(suf.FieldErrors) > 0 {
 			data := setupData{
-				BaseData:      newBase(r),
+				BaseData:      extractBaseDataFromRequest(r),
 				SetupUserForm: suf,
 			}
-			tc.RenderPage(logger, w, r, http.StatusOK, "setup.tmpl", data)
+			htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/setup.tmpl")
 			return
 		}
 
 		userID, err := indexRepo.CreateAdminUser(r.Context(), suf.Username, suf.Password)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = indexRepo.UpdateUserLastLoginToNow(r.Context(), userID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = sessionManager.RenewToken(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 

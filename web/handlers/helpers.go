@@ -3,49 +3,15 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
-	"regexp"
 	"strconv"
-	"strings"
 
 	datastore "github.com/ASC521/communis/data-store"
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 )
 
 var ErrUserIDNotFound = errors.New("user id not found in request context")
-
-func slugify(s string) string {
-
-	s = strings.ToLower(s)
-
-	s = strings.ReplaceAll(s, " ", "-")
-	s = strings.ReplaceAll(s, "_", "-")
-
-	reg := regexp.MustCompile("[^a-z0-9-]+")
-	s = reg.ReplaceAllString(s, "")
-
-	reg = regexp.MustCompile("-+")
-	s = reg.ReplaceAllString(s, "-")
-
-	s = strings.Trim(s, "-")
-
-	maxLen := 100
-	if len(s) > maxLen {
-		s = s[:maxLen]
-		s = strings.TrimRight(s, "-")
-	}
-
-	if s == "" {
-		return "untitled"
-	}
-
-	return s
-}
-
-func safeHTML(s string) template.HTML {
-	return template.HTML(s)
-}
 
 func parseIDFromPath(r *http.Request) (int64, error) {
 	pathID := r.PathValue("id")
@@ -64,7 +30,6 @@ func parseIDFromPath(r *http.Request) (int64, error) {
 var ErrNotesRepoNotFound = errors.New("notes repository not found in context")
 
 func GetNotesDataStore(r *http.Request, dss *userstore.SQLiteConnManager) (*datastore.SQLite, error) {
-
 	userID, ok := r.Context().Value(userIDContextKey).(int64)
 	if !ok {
 		return nil, ErrUserIDNotFound
@@ -109,4 +74,13 @@ func getUserThemeFromRequest(r *http.Request) string {
 	}
 
 	return userTheme
+}
+
+func extractBaseDataFromRequest(r *http.Request) assets.BaseData {
+	return assets.BaseData{
+		IsAuthenticated: isAuthenticated(r),
+		IsAdmin:         isAdmin(r),
+		UserId:          getUserIDFromRequest(r),
+		Theme:           getUserThemeFromRequest(r),
+	}
 }

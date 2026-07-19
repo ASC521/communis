@@ -1,0 +1,3 @@
+{{ define "partial:util:local-datetime" }}
+<time class="local-time" datetime="{{ .Format "2006-01-02T15:04:05Z07:00" }}">{{ .Format "Jan 2, 2006 3:04 PM" }} UTC</time>
+{{ end }}

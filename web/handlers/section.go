@@ -9,7 +9,9 @@ import (
 	"strconv"
 
 	datastore "github.com/ASC521/communis/data-store"
+	"github.com/ASC521/communis/slug"
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -37,19 +39,17 @@ func parseSectionFormFromRequest(r *http.Request) (sectionForm, error) {
 	}
 
 	if r.Method == "PUT" {
-		sectionId, err := parseIDFromPath(r)
+		sectionID, err := parseIDFromPath(r)
 		if err != nil {
 			return sectionForm{}, err
 		}
-		form.Id = sectionId
+		form.Id = sectionID
 	}
 
 	return form, nil
-
 }
 
 func validateSectionForm(form *sectionForm) {
-
 	if form.Name == "" {
 		form.FieldErrors["name"] = "Cannot be empty"
 	}
@@ -61,52 +61,52 @@ func validateSectionForm(form *sectionForm) {
 	if form.Method == "PUT" && form.Id == 0 {
 		form.FieldErrors["id"] = "Id cannot be empty"
 	}
-
 }
 
 func SectionGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		Sections []datastore.Section
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		sections, err := notesRepo.ListAllSections(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		data := td{
-			BaseData: newBase(r),
+			BaseData: extractBaseDataFromRequest(r),
 			Sections: sections,
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "section-list.tmpl", data)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/section-list.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func SectionPost(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		form, err := parseSectionFormFromRequest(r)
 		if err != nil {
 			http.Error(w, "failed to parse form", http.StatusUnprocessableEntity)
@@ -115,19 +115,25 @@ func SectionPost(
 
 		validateSectionForm(&form)
 		if len(form.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "new-section-form", form)
+			err = htmlRenderer.Render(w, http.StatusUnprocessableEntity, form, "partial:section:new")
+			if err != nil {
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
+			}
 			return
 		}
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		_, err = notesRepo.CreateSection(r.Context(), datastore.Section{Name: form.Name})
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -136,21 +142,22 @@ func SectionPost(
 	}
 }
 
-func SectionNewGet(tc *TemplateCache, logger *slog.Logger) http.HandlerFunc {
-
+func SectionNewGet(htmlRenderer *assets.HTMLRenderer, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tc.RenderPartial(logger, w, r, http.StatusOK, "new-section-form", sectionForm{FieldErrors: map[string]string{}})
+		if err := htmlRenderer.Render(w, http.StatusOK, sectionForm{FieldErrors: map[string]string{}}, "partial:section:new"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func SectionDelete(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		sectionId, err := parseIDFromPath(r)
+		sectionID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -158,23 +165,24 @@ func SectionDelete(
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		err = notesRepo.DeleteSection(r.Context(), sectionId)
+		err = notesRepo.DeleteSection(r.Context(), sectionID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		w.Header().Add("HX-Redirect", "/section")
 		w.WriteHeader(http.StatusSeeOther)
 	}
-
 }
 
 func SectionPut(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
@@ -186,34 +194,36 @@ func SectionPut(
 		}
 		validateSectionForm(&form)
 		if len(form.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusOK, "update-section", form)
+			htmlRenderer.Render(w, http.StatusOK, form, "partial:section:update")
 			return
 		}
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = notesRepo.UpdateSection(r.Context(), datastore.Section{ID: form.Id, Name: form.Name})
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		w.Header().Add("HX-Redirect", fmt.Sprintf("/section/%v/%v", form.Id, slugify(form.Name)))
+		w.Header().Add("HX-Redirect", fmt.Sprintf("/section/%v/%v", form.Id, slug.Slugify(form.Name)))
 		w.WriteHeader(http.StatusSeeOther)
 	}
 }
 
 func SectionEditGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sectionId, err := parseIDFromPath(r)
+		sectionID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -221,34 +231,39 @@ func SectionEditGet(
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		section, err := notesRepo.FindSectionById(r.Context(), sectionId)
+		section, err := notesRepo.FindSectionById(r.Context(), sectionID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				http.Error(w, fmt.Sprintf("section %v not found", sectionId), http.StatusNotFound)
+				http.Error(w, fmt.Sprintf("section %v not found", sectionID), http.StatusNotFound)
 				return
 			}
 
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		sectionForm := sectionForm{Id: section.ID, Name: section.Name, FieldErrors: map[string]string{}}
-		tc.RenderPartial(logger, w, r, http.StatusOK, "update-section", sectionForm)
+		if err = htmlRenderer.Render(w, http.StatusOK, sectionForm, "partial:section:update"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func SectionViewGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	type td struct {
-		BaseData
+		assets.BaseData
 		Section     datastore.Section
 		NoteDetails []datastore.NoteDetail
 	}
@@ -267,7 +282,8 @@ func SectionViewGet(
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -277,29 +293,27 @@ func SectionViewGet(
 				http.Error(w, "section not found", http.StatusNotFound)
 				return
 			}
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		nds, err := notesRepo.NotesInSection(r.Context(), id)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		data := td{
-			BaseData:    newBase(r),
+			BaseData:    extractBaseDataFromRequest(r),
 			Section:     sec,
 			NoteDetails: nds,
 		}
 
-		tc.RenderPage(
-			logger,
-			w,
-			r,
-			http.StatusOK,
-			"section-view.tmpl",
-			data,
-		)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/section-view.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }

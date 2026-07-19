@@ -1,6 +1,6 @@
-{{ define "title"}}Search{{end}}
+{{ define "page:title"}}Search{{end}}
 
-{{ define "main" }}
+{{ define "page:content" }}
 
 <main class="search-page">
   <form action="/search" method="GET" role="search" autocomplete="off" class="search-form">
@@ -18,7 +18,7 @@
   <br>
 
   <div id="search-results" class="search-results">
-    {{ template "note-table" .SearchResults }}
+    {{ template "partial:note:table" .SearchResults }}
   </div>
 </main>
 {{ end }}

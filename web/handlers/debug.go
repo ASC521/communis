@@ -7,10 +7,11 @@ import (
 	"runtime/debug"
 
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 )
 
 func ConnCacheStateGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
@@ -18,14 +19,16 @@ func ConnCacheStateGet(
 		state := dss.GetState()
 		bytes, err := json.Marshal(state)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(bytes)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 	}

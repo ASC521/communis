@@ -151,7 +151,7 @@ fi
 
 if [ "$run" = true ]; then
     echo "Running communis web application"
-    go run ./cmd/cli web run -debug
+    go run ./cmd/cli serve
     exit 0
 fi
 

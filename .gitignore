@@ -32,6 +32,7 @@ go.work.sum
 .vscode/
 *.sublime-project
 *.sublime-workspace
+TAGS
 
 communis.toml
 config.toml

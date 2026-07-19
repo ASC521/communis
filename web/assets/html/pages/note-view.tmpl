@@ -1,0 +1,9 @@
+{{define "page:title"}} {{ .RenderedNote.Note.Title }} {{ end }}
+
+
+{{ define "page:content" }}
+
+<main class="note-view-page">
+  {{ template "partial:note:rendered" .RenderedNote }}
+</div>
+{{ end }}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -16,45 +17,44 @@ type loginForm struct {
 }
 
 func GetUserLogin(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		Form loginForm
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		data := td{
 			Form:     loginForm{},
-			BaseData: newBase(r),
+			BaseData: extractBaseDataFromRequest(r),
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "login.tmpl", data)
-
+		if err := htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/login.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	})
 }
 
 func PostUserLogin(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		Form loginForm
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		err := r.ParseForm()
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -71,10 +71,13 @@ func PostUserLogin(
 
 		if len(lf.FieldErrors) > 0 {
 			data := td{
-				BaseData: newBase(r),
+				BaseData: extractBaseDataFromRequest(r),
 				Form:     lf,
 			}
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "login.tmpl", data)
+			if err = htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/login.tmpl"); err != nil {
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
+			}
 			return
 		}
 
@@ -83,26 +86,32 @@ func PostUserLogin(
 			if errors.Is(err, userstore.ErrInvalidCredentials) {
 				lf.FieldErrors["error"] = "username or password is incorrect"
 				data := td{
-					BaseData: newBase(r),
+					BaseData: extractBaseDataFromRequest(r),
 					Form:     lf,
 				}
-				tc.RenderPage(logger, w, r, http.StatusForbidden, "login.tmpl", data)
+				if err = htmlRenderer.Render(w, http.StatusForbidden, data, "base", "pages/login.tmpl"); err != nil {
+					logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+					htmlRenderer.RenderError(w, err)
+				}
 				return
 			}
 
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = indexRepo.UpdateUserLastLoginToNow(r.Context(), user.ID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = sessionManager.RenewToken(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -112,20 +121,19 @@ func PostUserLogin(
 		} else {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 		}
-
 	})
 }
 
 func PostUserLogout(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	sessionManager *scs.SessionManager,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		err := sessionManager.RenewToken(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -136,32 +144,38 @@ func PostUserLogout(
 }
 
 func PutUserTheme(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	indexRepo *userstore.SQLite,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-		userId, err := parseIDFromPath(r)
+		userID, err := parseIDFromPath(r)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		ctxUserId := getUserIDFromRequest(r)
-		if ctxUserId == 0 {
-			tc.RenderError(logger, w, r, errors.New("user id missing from request context"))
+		ctxUserID := getUserIDFromRequest(r)
+		if ctxUserID == 0 {
+			err = errors.New("user id missing from request context")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		if userId != ctxUserId {
-			tc.RenderError(logger, w, r, errors.New("authenticated user id does not match path user id"))
+		if userID != ctxUserID {
+			err = errors.New("authenticated user id does not match path user id")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		userTheme := getUserThemeFromRequest(r)
 		if userTheme == "" {
-			tc.RenderError(logger, w, r, errors.New("user theme not set in request"))
+			err = errors.New("user theme not set in request")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -170,19 +184,22 @@ func PutUserTheme(
 		} else {
 			userTheme = "dark"
 		}
-		err = indexRepo.UpdateUserTheme(r.Context(), ctxUserId, userTheme)
+		err = indexRepo.UpdateUserTheme(r.Context(), ctxUserID, userTheme)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		currentUrl := r.Header.Get("HX-Current-URL")
-		if currentUrl == "" {
-			tc.RenderError(logger, w, r, errors.New("HX-Current-URL request header not set"))
+		currentURL := r.Header.Get("HX-Current-URL")
+		if currentURL == "" {
+			err = errors.New("HX-Current-URL request header not set")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		w.Header().Set("HX-Redirect", currentUrl)
+		w.Header().Set("HX-Redirect", currentURL)
 		w.WriteHeader(http.StatusOK)
 	}
 }

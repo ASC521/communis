@@ -1,0 +1,150 @@
+{{ define "partial:note:table" }}
+{{ range . }}
+
+<article class="search-result">
+  <header>
+    <h2>
+      <a href="/note/{{.ID}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
+    </h2>
+  </header>
+  {{ safeHTML .ContentSnippet }}
+  <footer>
+    <p>Tags: {{safeHTML .TagNames }}</p>
+  </footer>
+</article>
+
+{{ end }}
+{{ end }}
+
+
+{{ define "partial:note:reference-search-results" }}
+{{ if not . }}
+<ul id="search-results" class="search-dropdown" role="listbox"></ul>
+{{ else }}
+<ul id="search-results" class="search-dropdown" role="listbox">
+  {{ range . }}
+  <li
+    class="result"
+    type="button"
+    id="ref-note-btn"
+    role="option"
+    hx-post="/ref-notes/select/{{ .ID }}"
+    hx-vals='{"title": "{{ .Title }}"}'
+    hx-target="#selected-notes"
+    hx-swap="append">
+    <span>{{ .Title }}</span>
+  </li>
+  {{ end }}
+</ul>
+{{ end }}
+{{ end }}
+
+
+{{ define "partial:note:selected-reference" }}
+<li for="ref-note-{{ .ID }}" class="item">
+  <input type="text" value="{{ .Title }}" class="text-input -readonly text" readonly>
+  <input type="hidden" name="reference-notes" value="{{ .ID }}">
+  <button hx-delete="/ref-notes/select/{{ .ID }}" hx-target="closest li" hx-swap="outerHTML" arial-label="Remove {{ .Title }}">X</button>
+</li>
+
+<ul id="search-results" class="search-dropdown" role="listbox" hx-swap-oob="true"></ul>
+{{ end }}
+
+
+
+{{ define "partial:note:rendered" }}
+
+<div class="rendered-note">
+  <div class="title-row">
+    <h1> {{ .Note.Title }}</h1>
+
+    <div class="buttons">
+      {{ if .IsPreview }}
+      {{ if ne .Note.ID 0 }}
+      <button type="button" command="show-modal" commandFor="delete-note" class="svg-button" id="mde-delete-btn">
+  <svg>
+    <use href="/static/vendor/svg/lucide-icons-sprite.svg#trash-2"/>
+  </svg>
+      </button>
+      {{ end }}
+      <button id="mde-preview-btn" type="button" class="svg-button">
+  <svg class="icon">
+    <use href="/static/vendor/svg/lucide-icons-sprite.svg#eye-off"/>
+  </svg>
+      </button>
+      {{ if eq .Note.ID 0 }}
+      <button hx-post="/note" form="note-editor" class="svg-button" id="mde-save-btn">
+  {{ else }}
+  <button hx-put="/note/{{ .Note.ID }}/{{ slugify .Note.Title }}" form="note-editor" class="svg-button" id="mde-save-btn">
+  {{ end }}
+  <svg>
+    <use href="/static/vendor/svg/lucide-icons-sprite.svg#save"/>
+  </svg>
+      </button>
+  {{ else }}
+
+  {{ template "partial:note:bookmark-button" .Note }}
+
+  <a class="svg-button" href="/edit/{{ .Note.ID }}/{{ slugify .Note.Title }}">
+  <svg class="icon">
+    <use href="/static/vendor/svg/lucide-icons-sprite.svg#file-pen-line"/>
+  </svg>
+      </a>
+      {{ end}}
+    </div>
+  </div>
+  
+  <details class="note-details">
+    <summary>Details</summary>
+    <dl class="details -compact">
+      <dt><strong>Section:</strong></dt>
+      <dd><a href="/section/{{ .Note.Section.ID }}/{{ .Note.Section.Name }}">{{ .Note.Section.Name }}</a></dd>
+
+      <dt><strong>Tags:</strong></dt>
+      <dd>
+  {{ range .Note.Tags }}
+  <a href="/tag/{{ .ID }}/{{ .Name }}">{{ .Name }}</a>
+  {{ end }}
+      </dd>
+
+      <dt><strong>References:</strong></dt>
+      <dd>
+  {{ range .Note.ReferenceNotes }}
+  <a href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+  {{ end }}
+      </dd>
+
+      <dt><strong>Referenced By:</strong></dt>
+      <dd>
+  {{ range .Note.ReferenceByNotes }}
+  <a href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+  {{ end }}
+      </dd>
+
+      <dt><strong>Last Updated:</strong></dt>
+      <dd><time class="local-time" datetime="{{ .Note.LastUpdatedAt }}"></time></dd>
+
+      <dt><strong>Created:</strong></dt>
+      <dd><time class="local-time" datetime="{{ .Note.CreatedAt }}"></time></dd>
+    </dl>
+  </details>
+  <section class="rendered-markdown">
+  {{ .RenderedHTML }}
+  </section>
+</div>
+
+{{ end }}
+
+
+{{ define "partial:note:bookmark-button" }}
+{{ if .Bookmark }}
+      <button type="button" class="svg-button -active" hx-delete="/note/bookmark/{{ .ID }}" hx-swap="outerHTML">
+  {{ else }}
+      <button type="button" class="svg-button" hx-put="/note/bookmark/{{ .ID }}" hx-swap="outerHTML">
+  {{ end }}
+    <svg class="icon">
+      <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-marked"/>
+    </svg>
+        </button>
+
+{{ end }}

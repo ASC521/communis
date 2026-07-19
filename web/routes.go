@@ -5,20 +5,20 @@ import (
 	"net/http"
 
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 	"github.com/ASC521/communis/web/handlers"
 	"github.com/alexedwards/scs/v2"
 )
 
 func routes(
 	logger *slog.Logger,
-	tc *handlers.TemplateCache,
+	tc *assets.HTMLRenderer,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 	ignoredLoggingPaths []string,
 	debugEnabled bool,
 	setupRequired *bool,
 ) http.Handler {
-
 	mux := http.NewServeMux()
 
 	baseChain := handlers.Chain{
@@ -32,7 +32,7 @@ func routes(
 	authReq := handlers.Chain{handlers.RequireAuth, handlers.RedirectAdmin}
 	adminReq := handlers.Chain{handlers.RequireAdmin}
 
-	mux.Handle("GET /static/", http.FileServerFS(staticFiles))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(assets.StaticFiles)))
 
 	mux.Handle("GET /note/{id}/{slug}", authReq.Then(handlers.NoteViewGet(tc, logger, dss, sessionManager)))
 	mux.Handle("GET /note/new", authReq.Then(handlers.NoteNewGet(tc, logger, dss, sessionManager)))
@@ -45,7 +45,6 @@ func routes(
 	mux.Handle("DELETE /note/bookmark/{id}", authReq.Then(handlers.NoteBookmarkPutDelete(tc, logger, dss, false)))
 
 	mux.Handle("POST /ref-notes/select/{id}", authReq.Then(handlers.ReferenceNoteSelectPost(tc, logger)))
-	mux.Handle("DELETE /ref-notes/select/{id}", authReq.Then(handlers.ReferenceNoteSelectDelete()))
 
 	mux.Handle("GET /section", authReq.Then(handlers.SectionGet(tc, logger, dss, sessionManager)))
 	mux.Handle("POST /section", authReq.Then(handlers.SectionPost(tc, logger, dss)))

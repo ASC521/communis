@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	datastore "github.com/ASC521/communis/data-store"
+	"github.com/ASC521/communis/slug"
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 	"github.com/ASC521/communis/web/handlers/validator"
 	"github.com/alexedwards/scs/v2"
 )
@@ -36,18 +39,17 @@ func parseTagFormFromRequest(r *http.Request) (tagForm, error) {
 	}
 
 	if r.Method == "PUT" {
-		tagId, err := parseIDFromPath(r)
+		tagID, err := parseIDFromPath(r)
 		if err != nil {
 			return tagForm{}, err
 		}
-		form.Id = tagId
+		form.Id = tagID
 	}
 
 	return form, nil
 }
 
 func validateTagForm(ctx context.Context, tf *tagForm, nr *datastore.SQLite) error {
-
 	if !validator.NotBlank(tf.Name) {
 		tf.FieldErrors["name"] = "Cannot be empty"
 	}
@@ -68,97 +70,105 @@ func validateTagForm(ctx context.Context, tf *tagForm, nr *datastore.SQLite) err
 }
 
 func TagGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		Tags []datastore.Tag
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		allTags, err := notesRepo.ListAllTags(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		data := td{
-			BaseData: newBase(r),
+			BaseData: extractBaseDataFromRequest(r),
 			Tags:     allTags,
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "tags-list.tmpl", data)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/tags-list.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func TagViewGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	type td struct {
-		BaseData
+		assets.BaseData
 		Tag         datastore.Tag
 		NoteDetails []datastore.NoteDetail
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagId, err := parseIDFromPath(r)
+		tagID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		tag, err := notesRepo.FindTagById(r.Context(), tagId)
+		tag, err := notesRepo.FindTagById(r.Context(), tagID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		noteDetails, err := notesRepo.NotesWithTag(r.Context(), tagId)
+		noteDetails, err := notesRepo.NotesWithTag(r.Context(), tagID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		data := td{
-			BaseData:    newBase(r),
+			BaseData:    extractBaseDataFromRequest(r),
 			NoteDetails: noteDetails,
 			Tag:         tag,
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "tag-view.tmpl", data)
-
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/tag-view.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func TagEditGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
-
 	type td struct {
 		Id          int64
 		Name        string
 		FieldErrors map[string]string
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		tagId, err := parseIDFromPath(r)
+		tagID, err := parseIDFromPath(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -166,30 +176,35 @@ func TagEditGet(
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		tag, err := notesRepo.FindTagById(r.Context(), tagId)
+		tag, err := notesRepo.FindTagById(r.Context(), tagID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag", td{Id: tag.ID, Name: tag.Name, FieldErrors: map[string]string{}})
-
+		if err = htmlRenderer.Render(w, http.StatusOK, td{Id: tag.ID, Name: tag.Name, FieldErrors: map[string]string{}}, "partial:tag:put"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func TagPut(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -201,24 +216,27 @@ func TagPut(
 		validateTagForm(r.Context(), &form, notesRepo)
 
 		if len(form.FieldErrors) > 0 {
-			tc.RenderPartial(logger, w, r, http.StatusOK, "put-tag", form)
+			if err = htmlRenderer.Render(w, http.StatusOK, form, "partial:tag:put"); err != nil {
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
+			}
 			return
 		}
 
 		err = notesRepo.UpdateTag(r.Context(), datastore.Tag{ID: form.Id, Name: form.Name})
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		w.Header().Add("HX-Redirect", fmt.Sprintf("/tag/%v/%v", form.Id, slugify(form.Name)))
+		w.Header().Add("HX-Redirect", fmt.Sprintf("/tag/%v/%v", form.Id, slug.Slugify(form.Name)))
 		w.WriteHeader(http.StatusSeeOther)
-
 	}
 }
 
 func TagDelete(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
@@ -230,13 +248,15 @@ func TagDelete(
 		}
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = notesRepo.DeleteTag(r.Context(), tagID)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -246,11 +266,10 @@ func TagDelete(
 }
 
 func TagPost(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
-
 	type td struct {
 		ErrMsg     string
 		SuccessMsg string
@@ -258,7 +277,6 @@ func TagPost(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		form, err := parseTagFormFromRequest(r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
@@ -266,43 +284,45 @@ func TagPost(
 		}
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = validateTagForm(r.Context(), &form, notesRepo)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		if len(form.FieldErrors) > 0 {
-			msg := ""
+			var msg strings.Builder
 			for _, e := range form.FieldErrors {
-				msg += fmt.Sprintf("<p>%s</p>\n", e)
+				fmt.Fprintf(&msg, "<p>%s</p>\n", e)
 			}
-			tc.RenderPartial(logger, w, r, http.StatusUnprocessableEntity, "new-tag", td{ErrMsg: msg})
+			if err = htmlRenderer.Render(w, http.StatusUnprocessableEntity, td{ErrMsg: msg.String()}, "partial:tag:new"); err != nil {
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
+			}
 			return
 		}
 
 		id, err := notesRepo.CreateTag(r.Context(), datastore.Tag{Name: form.Name})
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
+		data := td{
+			SuccessMsg: fmt.Sprintf("Tag %s created", form.Name),
+			Tag:        &datastore.Tag{ID: id, Name: form.Name},
+		}
 		slog.Info(fmt.Sprintf("tag %d successfully created", id), "tagId", id)
-		tc.RenderPartial(
-			logger,
-			w,
-			r,
-			http.StatusCreated,
-			"new-tag",
-			td{
-				SuccessMsg: fmt.Sprintf("Tag %s created", form.Name),
-				Tag:        &datastore.Tag{ID: id, Name: form.Name},
-			},
-		)
-
+		if err = htmlRenderer.Render(w, http.StatusCreated, data, "partial:tag:new"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }

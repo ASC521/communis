@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"crypto/tls"
-	"embed"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -20,16 +19,10 @@ import (
 	"github.com/ASC521/communis/dbx/sqlitex"
 	"github.com/ASC521/communis/hdx"
 	userstore "github.com/ASC521/communis/user-store"
-	"github.com/ASC521/communis/web/handlers"
+	"github.com/ASC521/communis/web/assets"
 
 	"github.com/alexedwards/scs/v2"
 )
-
-//go:embed "static"
-var staticFiles embed.FS
-
-//go:embed "html"
-var htmlFiles embed.FS
 
 type ServerConfig struct {
 	Host                string
@@ -42,7 +35,6 @@ type ServerConfig struct {
 }
 
 func ConfigToServerConfig(conf *config.Config) (ServerConfig, error) {
-
 	svrConf := ServerConfig{
 		Debug: conf.Debug,
 	}
@@ -81,7 +73,6 @@ func ConfigToServerConfig(conf *config.Config) (ServerConfig, error) {
 	}
 
 	return svrConf, nil
-
 }
 
 func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog.Logger) error {
@@ -100,7 +91,7 @@ func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog
 `)
 	serverLogger := logger.WithGroup("SERVER")
 
-	tc, err := handlers.NewTemplateCache(htmlFiles, conf.Debug)
+	htmlRenderer, err := assets.NewHTMLRenderer(assets.HTMLFiles, conf.Debug, "base.tmpl", "partials/*.tmpl")
 	if err != nil {
 		return err
 	}
@@ -121,7 +112,7 @@ func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog
 	}
 	serverLogger.Info(fmt.Sprintf("initial setup = %v", initialSetupNeeded))
 
-	handler := routes(serverLogger, tc, dsm, sessionManager, conf.IgnoredLoggingPaths, conf.Debug, &initialSetupNeeded)
+	handler := routes(serverLogger, htmlRenderer, dsm, sessionManager, conf.IgnoredLoggingPaths, conf.Debug, &initialSetupNeeded)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Host, strconv.Itoa(int(conf.Port))),

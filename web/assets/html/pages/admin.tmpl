@@ -1,7 +1,7 @@
-{{ define "title" }}Admin{{ end }}
+{{ define "page:title" }}Admin{{ end }}
 
 
-{{ define "main" }}
+{{ define "page:content" }}
 <main>
   <table id="users-table" class="users-table">
     <caption>Users</caption>
@@ -18,7 +18,7 @@
     </thead>
     <tbody id="user-rows">
     {{ range .Users }}
-    {{ template "user-row" . }}
+    {{ template "partial:user:row" . }}
     {{ end }}
     </tbody>
   </table>
@@ -26,7 +26,9 @@
 </main>
 
 {{ range .Users }}
-{{ template "user-delete-dialog" . }}
+{{ template "partial:user:delete-dialog" . }}
 {{ end }}
 
 {{ end }}
+
+

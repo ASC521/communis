@@ -6,18 +6,18 @@ import (
 
 	datastore "github.com/ASC521/communis/data-store"
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 	"github.com/alexedwards/scs/v2"
 )
 
 func HomeGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		RecentNotes     []datastore.NoteDetail
 		BookmarkedNotes []datastore.NoteDetail
 	}
@@ -25,26 +25,32 @@ func HomeGet(
 	return func(w http.ResponseWriter, r *http.Request) {
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		mn, err := notesRepo.RecentlyUpdatedNotes(r.Context(), 5)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		bn, err := notesRepo.BookmarkedNotes(r.Context(), 5)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		data := td{
 			RecentNotes:     mn,
 			BookmarkedNotes: bn,
-			BaseData:        newBase(r),
+			BaseData:        extractBaseDataFromRequest(r),
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "home.tmpl", data)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/home.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }

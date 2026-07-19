@@ -13,7 +13,9 @@ import (
 	"strconv"
 
 	datastore "github.com/ASC521/communis/data-store"
+	"github.com/ASC521/communis/slug"
 	userstore "github.com/ASC521/communis/user-store"
+	"github.com/ASC521/communis/web/assets"
 	"github.com/ASC521/communis/web/handlers/validator"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alexedwards/scs/v2"
@@ -38,7 +40,6 @@ type searchForm struct {
 }
 
 func renderNote(markdownContent, theme string) (template.HTML, error) {
-
 	var style highlighting.Option
 	if theme == "dark" {
 		style = highlighting.WithStyle("dracula")
@@ -152,7 +153,6 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastore.SQL
 	// Title Validation
 	if !validator.NotBlank(nf.Title) {
 		fe["title"] = "title cannot be empty"
-
 	}
 	if !validator.MaxChars(nf.Title, 100) {
 		fe["title"] = "title cannot be more than 100 characters"
@@ -203,11 +203,10 @@ func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastore.SQL
 	}
 
 	return fe, nil
-
 }
 
 type noteCreateData struct {
-	BaseData
+	assets.BaseData
 	Form                   noteForm
 	Tags                   []datastore.Tag
 	Sections               []datastore.Section
@@ -217,67 +216,72 @@ type noteCreateData struct {
 }
 
 func NoteNewGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		sec, err := notesRepo.ListAllSections(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		tags, err := notesRepo.ListAllTags(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		data := noteCreateData{
-			BaseData:               newBase(r),
+			BaseData:               extractBaseDataFromRequest(r),
 			Form:                   noteForm{SectionID: 1},
 			Tags:                   tags,
 			Sections:               sec,
 			RenderedNote:           renderedNotePageData{IsPreview: true},
 			SelectedReferenceNotes: []datastore.NoteDetail{},
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-create.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func NotePost(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		nf, err := parseNoteForm(r)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		fe, err := validateNoteForm(r.Context(), nf, notesRepo)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -287,23 +291,25 @@ func NotePost(
 			nf.Errors = fe
 			allTags, err := notesRepo.ListAllTags(r.Context())
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 
 			secs, err := notesRepo.ListAllSections(r.Context())
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 
 			data := noteCreateData{
-				BaseData: newBase(r),
+				BaseData: extractBaseDataFromRequest(r),
 				Sections: secs,
 				Tags:     allTags,
 				Form:     nf,
 			}
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", data)
+			htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/note-create.tmpl")
 			return
 		}
 		id, err := notesRepo.CreateNote(
@@ -315,25 +321,24 @@ func NotePost(
 			nf.ReferenceNoteIds,
 		)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		ru := fmt.Sprintf("/note/%v/%s", id, slugify(nf.Title))
+		ru := fmt.Sprintf("/note/%v/%s", id, slug.Slugify(nf.Title))
 		w.Header().Set("HX-Redirect", ru)
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func NoteEditGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		if err != nil || id < 1 {
 			http.NotFound(w, r)
@@ -342,7 +347,8 @@ func NoteEditGet(
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -353,19 +359,22 @@ func NoteEditGet(
 				return
 			}
 
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		sec, err := notesRepo.ListAllSections(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		tags, err := notesRepo.ListAllTags(r.Context())
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -383,7 +392,7 @@ func NoteEditGet(
 		}
 
 		data := noteCreateData{
-			BaseData:               newBase(r),
+			BaseData:               extractBaseDataFromRequest(r),
 			RenderedNote:           renderedNotePageData{IsPreview: true},
 			Sections:               sec,
 			Tags:                   tags,
@@ -391,32 +400,37 @@ func NoteEditGet(
 			SelectedReferenceNotes: n.ReferenceNotes,
 			ReferencedByNotes:      n.ReferenceByNotes,
 		}
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-create.tmpl", data)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-create.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func NotePut(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		nf, err := parseNoteForm(r)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		fe, err := validateNoteForm(r.Context(), nf, notesRepo)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -431,24 +445,26 @@ func NotePut(
 
 			allTags, err := notesRepo.ListAllTags(r.Context())
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 
 			secs, err := notesRepo.ListAllSections(r.Context())
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 
 			data := noteCreateData{
-				BaseData: newBase(r),
+				BaseData: extractBaseDataFromRequest(r),
 				Sections: secs,
 				Tags:     allTags,
 				Form:     nf,
 			}
 
-			tc.RenderPage(logger, w, r, http.StatusUnprocessableEntity, "note-create.tmpl", data)
+			htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/note-create.tmpl")
 			return
 
 		}
@@ -463,11 +479,12 @@ func NotePut(
 			nf.ReferenceNoteIds,
 		)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		ru := fmt.Sprintf("/note/%v/%s", nf.ID, slugify(nf.Title))
+		ru := fmt.Sprintf("/note/%v/%s", nf.ID, slug.Slugify(nf.Title))
 		w.Header().Set("HX-Redirect", ru)
 		w.WriteHeader(http.StatusOK)
 	}
@@ -480,27 +497,28 @@ type renderedNotePageData struct {
 }
 
 func NotePreviewPost(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		nf, err := parseNoteForm(r)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		ts := make([]datastore.Tag, len(nf.TagIds))
 		for i, tid := range nf.TagIds {
 			et, err := notesRepo.FindTagById(r.Context(), tid)
 			if err != nil {
-				slog.Error(fmt.Sprintf("failed to enrich tag %v from database", tid), "errMsg", err.Error())
+				logger.Error(fmt.Sprintf("failed to enrich tag %v from database", tid), "errMsg", err.Error())
 				continue
 			}
 
@@ -509,13 +527,15 @@ func NotePreviewPost(
 
 		refNotes, err := notesRepo.GetNoteDetailByIds(r.Context(), nf.ReferenceNoteIds)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		refByNotes, err := notesRepo.GetNoteDetailByIds(r.Context(), nf.ReferencedByNoteIds)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -532,37 +552,41 @@ func NotePreviewPost(
 
 		sec, err := notesRepo.FindSectionById(r.Context(), n.Section.ID)
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to enrich section %v from database", n.Section.ID), "errMsg", err.Error())
+			logger.Error(fmt.Sprintf("failed to enrich section %v from database", n.Section.ID), "errMsg", err.Error())
 		} else {
 			n.Section.Name = sec.Name
 		}
 
 		userTheme := getUserThemeFromRequest(r)
 		if userTheme == "" {
-			tc.RenderError(logger, w, r, errors.New("user theme not set in request"))
+			err = errors.New("user theme not set in request")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		rHTML, err := renderNote(n.Content, userTheme)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "rendered-note", renderedNotePageData{Note: n, RenderedHTML: rHTML, IsPreview: true})
+		if err = htmlRenderer.Render(w, http.StatusOK, renderedNotePageData{Note: n, RenderedHTML: rHTML, IsPreview: true}, "partial:note:rendered"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
-
 }
 
 func NoteViewGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		RenderedNote renderedNotePageData
 	}
 
@@ -575,7 +599,8 @@ func NoteViewGet(
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -586,11 +611,12 @@ func NoteViewGet(
 				return
 			}
 
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		expSlug := slugify(n.Title)
+		expSlug := slug.Slugify(n.Title)
 		actualSlug := r.PathValue("slug")
 		if expSlug != actualSlug {
 			http.Redirect(w, r, fmt.Sprintf("/note/%v/%s", id, expSlug), http.StatusMovedPermanently)
@@ -599,17 +625,20 @@ func NoteViewGet(
 
 		userTheme := getUserThemeFromRequest(r)
 		if userTheme == "" {
-			tc.RenderError(logger, w, r, errors.New("user theme not set in request"))
+			err = errors.New("user theme not set in request")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		rHTML, err := renderNote(n.Content, userTheme)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		data := td{
-			BaseData: newBase(r),
+			BaseData: extractBaseDataFromRequest(r),
 			RenderedNote: renderedNotePageData{
 				Note:         n,
 				RenderedHTML: rHTML,
@@ -617,26 +646,27 @@ func NoteViewGet(
 			},
 		}
 
-		tc.RenderPage(logger, w, r, http.StatusOK, "note-view.tmpl", data)
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-view.tmpl"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func NoteSearchGet(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 	sessionManager *scs.SessionManager,
 ) http.HandlerFunc {
-
 	type td struct {
-		BaseData
+		assets.BaseData
 		SearchResults []datastore.NoteSearchResult
 		Form          searchForm
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		data := td{
-			BaseData: newBase(r),
+			BaseData: extractBaseDataFromRequest(r),
 		}
 		q := r.URL.Query().Get("q")
 
@@ -644,13 +674,15 @@ func NoteSearchGet(
 
 			notesRepo, err := GetNotesDataStore(r, dss)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 
 			srs, err := notesRepo.SearchNotes(r.Context(), `"`+q+`"`)
 			if err != nil {
-				tc.RenderError(logger, w, r, err)
+				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+				htmlRenderer.RenderError(w, err)
 				return
 			}
 			data.SearchResults = srs
@@ -660,20 +692,24 @@ func NoteSearchGet(
 			data.Form = searchForm{Query: ""}
 		}
 
+		var renderErr error
 		switch r.Header.Get("Hx-Source") {
 		case "input#search":
-			tc.RenderPartial(logger, w, r, http.StatusOK, "note-table", data.SearchResults)
+			renderErr = htmlRenderer.Render(w, http.StatusOK, data.SearchResults, "partial:note:table")
 		case "input#ref-notes-search":
-			tc.RenderPartial(logger, w, r, http.StatusOK, "ref-notes-search-results", data.SearchResults)
+			renderErr = htmlRenderer.Render(w, http.StatusOK, data.SearchResults, "partial:note:reference-search-results")
 		default:
-			tc.RenderPage(logger, w, r, http.StatusOK, "search.tmpl", data)
+			renderErr = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/search.tmpl")
 		}
-
+		if renderErr != nil {
+			logger.Error(renderErr.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, renderErr)
+		}
 	}
 }
 
 func NoteDelete(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	dss *userstore.SQLiteConnManager,
 ) http.HandlerFunc {
@@ -686,13 +722,15 @@ func NoteDelete(
 
 		notesRepo, err := GetNotesDataStore(r, dss)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = notesRepo.DeleteNote(r.Context(), id)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
@@ -702,7 +740,7 @@ func NoteDelete(
 }
 
 func ReferenceNoteSelectPost(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 ) http.HandlerFunc {
 	type td struct {
@@ -712,33 +750,34 @@ func ReferenceNoteSelectPost(
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := parseIDFromPath(r)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
 		err = r.ParseForm()
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		title := r.PostForm.Get("title")
 		if title == "" {
-			tc.RenderError(logger, w, r, errors.New("hx-vals title is an empty string"))
+			err = errors.New("hx-vals title is an empty string")
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "selected-ref-note", td{ID: id, Title: title})
-	}
-}
-
-func ReferenceNoteSelectDelete() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		if err = htmlRenderer.Render(w, http.StatusOK, td{ID: id, Title: title}, "partial:note:selected-reference"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }
 
 func NoteBookmarkPutDelete(
-	tc *TemplateCache,
+	htmlRenderer *assets.HTMLRenderer,
 	logger *slog.Logger,
 	connMgr *userstore.SQLiteConnManager,
 	setBookmark bool,
@@ -751,16 +790,20 @@ func NoteBookmarkPutDelete(
 		}
 		dataStore, err := GetNotesDataStore(r, connMgr)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 		err = dataStore.SetNoteBookmark(r.Context(), id, setBookmark)
 		if err != nil {
-			tc.RenderError(logger, w, r, err)
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		tc.RenderPartial(logger, w, r, http.StatusOK, "bookmarked-button", datastore.Note{ID: id, Bookmark: setBookmark})
-
+		if err = htmlRenderer.Render(w, http.StatusOK, datastore.Note{ID: id, Bookmark: setBookmark}, "partial:note:bookmark-button"); err != nil {
+			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
+			htmlRenderer.RenderError(w, err)
+		}
 	}
 }

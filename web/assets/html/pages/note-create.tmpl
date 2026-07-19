@@ -1,6 +1,6 @@
-{{define "title"}} New Note {{end}}
+{{define "page:title"}} New Note {{end}}
 
-{{define "main"}}
+{{define "page:content"}}
 
 <main id="mde-container">
   {{ if eq .Form.ID 0 }}
@@ -155,7 +155,7 @@
 	    <label>References</label>
 	    <ul id="selected-notes" class="delete-list selected-notes list">
 	      {{ range .SelectedReferenceNotes }}
-	      {{ template "selected-ref-note" . }}
+	      {{ template "partial:note:selected-reference" . }}
 	      {{ end }}
 	    </ul>
 	    <input type="search" class="text-input" id="ref-notes-search" name="q"
@@ -183,7 +183,7 @@
 
 
     <div id="mde-preview" hidden>
-      {{ template "rendered-note" .RenderedNote }}
+      {{ template "partial:note:rendered" .RenderedNote }}
     </div>
 
 
