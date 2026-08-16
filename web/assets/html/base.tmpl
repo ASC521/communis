@@ -38,4 +38,10 @@
 
 </html>
 
+{{ if .IsAuthenticated}}
+{{ if not .IsAdmin}}
+{{ template "partial:search:dialog" }}
+{{ end }}
+{{ end }}
+
 {{end}}

@@ -1,3 +1,4 @@
+(A) ctrl+k search modal
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
@@ -10,7 +11,6 @@ Add advanced query support to search screen +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Security is blocking external images being loaded in markdown
-ctrl+k search modal
 Error Screens +v1
 Fix note preview page -  buttons don't line up
 kindle highlight and note parser

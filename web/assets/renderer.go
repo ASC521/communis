@@ -90,8 +90,8 @@ func (r *HTMLRenderer) Render(
 	return nil
 }
 
-func (t *HTMLRenderer) RenderError(w http.ResponseWriter, err error) {
-	if t.debug {
+func (r *HTMLRenderer) RenderError(w http.ResponseWriter, err error) {
+	if r.debug {
 		trace := string(debug.Stack())
 		body := fmt.Sprintf("%s\n%s", err, trace)
 		http.Error(w, body, http.StatusInternalServerError)

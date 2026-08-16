@@ -166,3 +166,18 @@ document.addEventListener("click", (e) => {
 });
 
 // SELECT REFERENCE NOTES
+
+// SEARCH
+
+document.addEventListener("keydown", (e) => {
+	if (e.key == "/" && !(e.target.matches("input, textarea, select, [contenteditable]"))) {
+		e.preventDefault();
+		dialog = document.getElementById("search-dialog")
+		if (dialog.open) {
+			return;
+		}
+		dialog.showModal();
+	}
+})
+
+// SEARCH

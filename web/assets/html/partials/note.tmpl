@@ -1,22 +1,3 @@
-{{ define "partial:note:table" }}
-{{ range . }}
-
-<article class="search-result">
-  <header>
-    <h2>
-      <a href="/note/{{.ID}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
-    </h2>
-  </header>
-  {{ safeHTML .ContentSnippet }}
-  <footer>
-    <p>Tags: {{safeHTML .TagNames }}</p>
-  </footer>
-</article>
-
-{{ end }}
-{{ end }}
-
-
 {{ define "partial:note:reference-search-results" }}
 {{ if not . }}
 <ul id="search-results" class="search-dropdown" role="listbox"></ul>

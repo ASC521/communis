@@ -1,0 +1,35 @@
+{{ define "partial:search:dialog" }}
+
+<dialog id="search-dialog" class="dialog-search">
+	<form id="search-dialog" role="search" autocomplete="off" class="search-box" hx-get="/search" hx-target="#search-results" hx-push-url="false">
+		<svg class="icon">
+			<use href="/static/vendor/svg/lucide-icons-sprite.svg#book-search"/>
+		</svg>
+		<input class="field" id="search" type="search" name="q" placeholder="Search..." autofocus>
+	</form>
+
+	<div id="search-results" class="search-results content"></div>
+
+</dialog>
+
+{{ end }}
+
+{{ define "partial:search:results-table" }}
+
+{{ range . }}
+
+<article class="search-result">
+  <header>
+    <h2>
+      <a href="/note/{{.ID}}/{{ slugify .Title }}">{{ safeHTML .TitleHighlight }}</a>
+    </h2>
+  </header>
+  {{ safeHTML .ContentSnippet }}
+  <footer>
+    <p>Tags: {{safeHTML .TagNames }}</p>
+  </footer>
+</article>
+
+{{ end }}
+
+{{ end }}

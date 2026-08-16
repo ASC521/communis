@@ -515,7 +515,7 @@ main {
 }
 
 .header-with-buttons {
-        display: flex;
+    display: flex;
 	align-items: center;
 	justify-content: space-between;
 	margin: .67em;
@@ -532,29 +532,65 @@ main {
 
 .dialog-modal {
     > .header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	border-bottom: solid;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: solid;
     }
 
     > .header > .svg-button {
-	align-self: flex-start;
+		align-self: flex-start;
     }
 
     > .content {
-	padding: 10px;
+		padding: 10px;
 
-	> output {
-	    min-height: 3rem;
-	}
+		> output {
+		    min-height: 3rem;
+		}
     }
 
     > .footer {
-	display: flex;
-	justify-content: flex-end;
-	align-items: center;
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
     }
+}
+
+.dialog-search {
+	margin-top: 10%;
+	width: 40%;
+
+	> .search-box {
+	    display: flex;
+	    align-items: center;
+	    padding: 0.75rem 1.125rem; /* scales with user font prefs */
+	    border-radius: 0.875rem;
+	    font-size: 0.9375rem;
+	    border: solid;
+	    background-color: var(--color-surface);
+	    color: var(--color-text);
+	    
+
+	    /* TODO: Icon will float if resized to thin */
+	    > .icon {
+			display: flex;
+			align-items: center;
+			flex-shrink: 0;
+			height: 1.5em;
+			width: 1.5em;
+			/* position: absolute; */
+			/* left: 10px; */
+			pointer-events: none;
+	    }
+	    > .field {
+			flex: 1;
+			border: none;
+			outline: none;
+			background-color: inherit;
+			color: inherit;
+	    }
+	}
 }
 
 .rendered-note {

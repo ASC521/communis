@@ -694,8 +694,8 @@ func NoteSearchGet(
 
 		var renderErr error
 		switch r.Header.Get("Hx-Source") {
-		case "input#search":
-			renderErr = htmlRenderer.Render(w, http.StatusOK, data.SearchResults, "partial:note:table")
+		case "input#search", "form#search-dialog":
+			renderErr = htmlRenderer.Render(w, http.StatusOK, data.SearchResults, "partial:search:results-table")
 		case "input#ref-notes-search":
 			renderErr = htmlRenderer.Render(w, http.StatusOK, data.SearchResults, "partial:note:reference-search-results")
 		default:
