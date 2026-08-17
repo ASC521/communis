@@ -18,7 +18,7 @@ import (
 
 type sectionForm struct {
 	Method      string
-	Id          int64
+	ID          int64
 	Name        string
 	FieldErrors map[string]string
 }
@@ -33,7 +33,7 @@ func parseSectionFormFromRequest(r *http.Request) (sectionForm, error) {
 
 	form := sectionForm{
 		Method:      r.Method,
-		Id:          0,
+		ID:          0,
 		Name:        sectionName,
 		FieldErrors: map[string]string{},
 	}
@@ -43,7 +43,7 @@ func parseSectionFormFromRequest(r *http.Request) (sectionForm, error) {
 		if err != nil {
 			return sectionForm{}, err
 		}
-		form.Id = sectionID
+		form.ID = sectionID
 	}
 
 	return form, nil
@@ -58,7 +58,7 @@ func validateSectionForm(form *sectionForm) {
 		form.FieldErrors["name"] = "Cannot be more than 25 characters"
 	}
 
-	if form.Method == "PUT" && form.Id == 0 {
+	if form.Method == "PUT" && form.ID == 0 {
 		form.FieldErrors["id"] = "Id cannot be empty"
 	}
 }
@@ -205,14 +205,14 @@ func SectionPut(
 			return
 		}
 
-		err = notesRepo.UpdateSection(r.Context(), datastore.Section{ID: form.Id, Name: form.Name})
+		err = notesRepo.UpdateSection(r.Context(), datastore.Section{ID: form.ID, Name: form.Name})
 		if err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		w.Header().Add("HX-Redirect", fmt.Sprintf("/section/%v/%v", form.Id, slug.Slugify(form.Name)))
+		w.Header().Add("HX-Redirect", fmt.Sprintf("/section/%v/%v", form.ID, slug.Slugify(form.Name)))
 		w.WriteHeader(http.StatusSeeOther)
 	}
 }
@@ -248,7 +248,7 @@ func SectionEditGet(
 			return
 		}
 
-		sectionForm := sectionForm{Id: section.ID, Name: section.Name, FieldErrors: map[string]string{}}
+		sectionForm := sectionForm{ID: section.ID, Name: section.Name, FieldErrors: map[string]string{}}
 		if err = htmlRenderer.Render(w, http.StatusOK, sectionForm, "partial:section:update"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)

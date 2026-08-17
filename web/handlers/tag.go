@@ -19,7 +19,7 @@ import (
 
 type tagForm struct {
 	Method      string
-	Id          int64
+	ID          int64
 	Name        string
 	FieldErrors map[string]string
 }
@@ -33,7 +33,7 @@ func parseTagFormFromRequest(r *http.Request) (tagForm, error) {
 	name := r.PostForm.Get("tag-name")
 	form := tagForm{
 		Method:      r.Method,
-		Id:          0,
+		ID:          0,
 		Name:        name,
 		FieldErrors: map[string]string{},
 	}
@@ -43,7 +43,7 @@ func parseTagFormFromRequest(r *http.Request) (tagForm, error) {
 		if err != nil {
 			return tagForm{}, err
 		}
-		form.Id = tagID
+		form.ID = tagID
 	}
 
 	return form, nil
@@ -223,14 +223,14 @@ func TagPut(
 			return
 		}
 
-		err = notesRepo.UpdateTag(r.Context(), datastore.Tag{ID: form.Id, Name: form.Name})
+		err = notesRepo.UpdateTag(r.Context(), datastore.Tag{ID: form.ID, Name: form.Name})
 		if err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 			return
 		}
 
-		w.Header().Add("HX-Redirect", fmt.Sprintf("/tag/%v/%v", form.Id, slug.Slugify(form.Name)))
+		w.Header().Add("HX-Redirect", fmt.Sprintf("/tag/%v/%v", form.ID, slug.Slugify(form.Name)))
 		w.WriteHeader(http.StatusSeeOther)
 	}
 }

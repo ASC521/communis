@@ -13,7 +13,7 @@
 
 
 {{ define "partial:tag:put" }}
-<form id="inline-section-form" autocomplete="off" class="header-edit-form" hx-put="/tag/{{ .Id }}" hx-swap="outerHTML">
+<form id="inline-section-form" autocomplete="off" class="header-edit-form" hx-put="/tag/{{ .ID }}" hx-swap="outerHTML">
   {{ with .FieldErrors.name }}
   <input type="text" name="tag-name" autofocus="true" value="{{ $.Name }}" aria-invalid="true" aria-describedby="invalid-helper" class="text-input">
   <small id="invalid-helper">{{ . }}</small>
@@ -21,7 +21,7 @@
   <input type="text" name="tag-name" autofocus="true" value="{{ $.Name }}" class="text-input">
   {{ end }}
   <div class="buttons">
-  <button hx-get="/tag/{{ .Id }}/{{ slugify .Name }}" hx-target="body" type="button" class="text-button">Cancel</button>
+  <button hx-get="/tag/{{ .ID }}/{{ slugify .Name }}" hx-target="body" type="button" class="text-button">Cancel</button>
   <button type="submit" class="text-button -alt">Save</button>
   </group>
 </form>
