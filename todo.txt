@@ -1,4 +1,4 @@
-(A) ctrl+k search modal
+(A) Add ability to copy code blocks from rendered note
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
@@ -6,7 +6,6 @@
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (F) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) PostUser should be happening within a transaction
-Add ability to copy code blocks from rendered note
 Add advanced query support to search screen +v1
 Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
@@ -32,6 +31,7 @@ x (A) Build tag index +v1
 x (A) Change password needs to be implemented
 x (A) Common response headers middleware
 x (A) Containerization support
+x (A) ctrl+k search modal
 x (A) Debug mode which prints server error on screen
 x (A) Feature: Reference notes - add ability to link a note to other notes which it leveraged to create
 x (A) Feature: toast message - App throws error on receiving invalid credentials when logging in

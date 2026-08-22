@@ -136,7 +136,11 @@ func parseNoteForm(r *http.Request) (noteForm, error) {
 	return nf, nil
 }
 
-func validateNoteForm(ctx context.Context, nf noteForm, notesRepo *datastore.SQLite) (map[string]string, error) {
+func validateNoteForm(
+	ctx context.Context,
+	nf noteForm,
+	notesRepo *datastore.SQLite,
+) (map[string]string, error) {
 	fe := map[string]string{}
 
 	// Note Id Validation

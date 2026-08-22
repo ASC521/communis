@@ -24,7 +24,7 @@ type Config struct {
 	TableName string
 }
 
-// New returns a new SQLite3Store instance, with a background cleanup goroutine
+// NewSessionStore returns a new SQLite3Store instance, with a background cleanup goroutine
 // that runs every 5 minutes to remove expired session data.
 func NewSessionStore(db *SQLiteDB) *SessionStore {
 	return NewSessionStoreWithConfig(db, Config{
@@ -32,7 +32,7 @@ func NewSessionStore(db *SQLiteDB) *SessionStore {
 	})
 }
 
-// NewWithCleanupInterval returns a new SQLite3Store instance. The cleanupInterval
+// NewSessionStoreWithCleanupInterval returns a new SQLite3Store instance. The cleanupInterval
 // parameter controls how frequently expired session data is removed by the
 // background cleanup goroutine. Setting it to 0 prevents the cleanup goroutine
 // from running (i.e. expired sessions will not be removed).
@@ -42,7 +42,7 @@ func NewSessionStoreWithCleanupInterval(db *SQLiteDB, cleanupInterval time.Durat
 	})
 }
 
-// NewWithConfig returns a new SQLite3Store instance with the given configuration.
+// NewSessionStoreWithConfig returns a new SQLite3Store instance with the given configuration.
 // If the TableName field is empty, it will be set to "sessions".
 // If the CleanUpInterval field is 0, the cleanup goroutine will not be started.
 func NewSessionStoreWithConfig(db *SQLiteDB, config Config) *SessionStore {

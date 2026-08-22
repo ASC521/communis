@@ -15,9 +15,11 @@ import (
 	"modernc.org/sqlite"
 )
 
-type journalMode string
-type synchronous string
-type tempStore string
+type (
+	journalMode string
+	synchronous string
+	tempStore   string
+)
 
 const (
 	JournalModeDelete   journalMode = "DELETE"
@@ -173,7 +175,6 @@ type SQLiteDB struct {
 }
 
 func NewSQLiteDB(dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
-
 	sopts := sqliteOptions{
 		journalMode:    JournalModeWAL,
 		synchronous:    SynchronousNormal,
@@ -199,7 +200,7 @@ func NewSQLiteDB(dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
 	fi, err := os.Stat(dbp)
 	if errors.Is(err, os.ErrNotExist) {
 		dir := filepath.Dir(dbp)
-		err = os.MkdirAll(dir, 0755)
+		err = os.MkdirAll(dir, 0o755)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create directory to create sqlite database file: %w", err)
 		}
@@ -269,8 +270,11 @@ func (d *SQLiteDB) Close() error {
 	}
 }
 
-func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.Context, *sql.Tx) (result R, err error)) (result R, err error) {
-
+func WithTransaction[R any](
+	db *sql.DB,
+	ctx context.Context,
+	txIn func(context.Context, *sql.Tx) (result R, err error),
+) (result R, err error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return result, err
@@ -305,7 +309,6 @@ func WithTransaction[R any](db *sql.DB, ctx context.Context, txIn func(context.C
 	}
 
 	return result, nil
-
 }
 
 type SQLiteMigrationDriver struct {
@@ -342,7 +345,6 @@ func (s *SQLiteMigrationDriver) RunMigration(ctx context.Context, sqlMig string,
 		}
 
 		_, err = tx.Exec(fmt.Sprintf("PRAGMA user_version = %d;", version))
-
 		if err != nil {
 			return nil, err
 		}
@@ -350,7 +352,6 @@ func (s *SQLiteMigrationDriver) RunMigration(ctx context.Context, sqlMig string,
 	})
 
 	return err
-
 }
 
 func (s *SQLiteMigrationDriver) Version(ctx context.Context) (uint, error) {
@@ -361,11 +362,9 @@ func (s *SQLiteMigrationDriver) Version(ctx context.Context) (uint, error) {
 
 	var ver uint
 	err := s.db.Read.QueryRowContext(ctxWTO, sql).Scan(&ver)
-
 	if err != nil {
 		return 0, err
 	}
 
 	return ver, err
-
 }
