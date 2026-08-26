@@ -47,7 +47,7 @@ func ServeCMD(conf *config.Config, args []string) error {
 		}
 	})
 
-	fmt.Fprint(os.Stdout, `
+	fmt.Fprintf(os.Stdout, `
 ------------------------------------------
  ____ ____ ____ ____ ____ ____ ____ ____
 ||c |||o |||m |||m |||u |||n |||i |||s ||
@@ -55,8 +55,8 @@ func ServeCMD(conf *config.Config, args []string) error {
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 
 ------------------------------------------
-
-`)
+version: %v
+`, version)
 
 	logger := slog.New(slogx.NewPipeHandler(os.Stderr, &slogx.HandlerOptions{Level: slog.LevelDebug, IncludeSource: false}))
 	connMgrConfig, err := userstore.ConfigToSQLiteConnManagerConfig(conf)
