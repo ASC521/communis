@@ -1,4 +1,4 @@
-FROM docker.io/library/alpine:3.23.4
+FROM docker.io/library/debian:trixie-slim
 
 RUN mkdir -p /opt/communis/bin
 RUN mkdir -p /etc/opt/communis
