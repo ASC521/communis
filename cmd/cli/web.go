@@ -13,7 +13,6 @@ import (
 )
 
 func ServeCMD(conf *config.Config, args []string) error {
-
 	serveFlags := flag.NewFlagSet("serve", flag.ExitOnError)
 
 	hostF := serveFlags.String("host", "localhost", "web host to run server")
@@ -48,6 +47,17 @@ func ServeCMD(conf *config.Config, args []string) error {
 		}
 	})
 
+	fmt.Fprint(os.Stdout, `
+------------------------------------------
+ ____ ____ ____ ____ ____ ____ ____ ____
+||c |||o |||m |||m |||u |||n |||i |||s ||
+||__|||__|||__|||__|||__|||__|||__|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+
+------------------------------------------
+
+`)
+
 	logger := slog.New(slogx.NewPipeHandler(os.Stderr, &slogx.HandlerOptions{Level: slog.LevelDebug, IncludeSource: false}))
 	connMgrConfig, err := userstore.ConfigToSQLiteConnManagerConfig(conf)
 	if err != nil {
@@ -64,5 +74,4 @@ func ServeCMD(conf *config.Config, args []string) error {
 	}
 
 	return web.RunServer(svrConf, connMgr, logger)
-
 }

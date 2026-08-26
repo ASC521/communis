@@ -21,7 +21,6 @@ var (
 )
 
 func main() {
-
 	defaultConfLoc := config.DefaultFileLocation()
 
 	defaultDataDir := config.DefaultDataDirectory()
@@ -134,7 +133,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-
 }
 
 func VersionCMD(args []string) error {

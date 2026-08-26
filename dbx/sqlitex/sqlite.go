@@ -2,17 +2,20 @@ package sqlitex
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
+	sqlite "github.com/mattn/go-sqlite3"
 	"github.com/mitchellh/go-homedir"
-	"modernc.org/sqlite"
 )
 
 type (
@@ -166,6 +169,39 @@ func (o sqliteOptions) pragmaStatements() []string {
 	}
 }
 
+var (
+	registerMutex     sync.Mutex
+	registeredDrivers = map[string]bool{}
+)
+
+// ensureDriver registers a custom sqlite3 driver to the sql package.  The custom driver contains
+// a ConnectHook function to set the provided pragma options each time a new connection is created.
+func ensureDriver(sopts sqliteOptions) string {
+	sum := sha256.Sum256([]byte(strings.Join(sopts.pragmaStatements(), "\n")))
+	optsHash := hex.EncodeToString(sum[:5])
+	name := fmt.Sprintf("sqlite3-%s", optsHash)
+	registerMutex.Lock()
+	defer registerMutex.Unlock()
+	if registeredDrivers[optsHash] {
+		return name
+	}
+
+	sql.Register(name, &sqlite.SQLiteDriver{
+		ConnectHook: func(sc *sqlite.SQLiteConn) error {
+			for _, p := range sopts.pragmaStatements() {
+				_, err := sc.Exec(p, nil)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	})
+
+	registeredDrivers[optsHash] = true
+	return name
+}
+
 type SQLiteDB struct {
 	DBPath       string
 	Read         *sql.DB
@@ -210,39 +246,62 @@ func NewSQLiteDB(dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
 		return nil, fmt.Errorf("%s references to a directory not a database file", dbPath)
 	}
 
+	driverName := ensureDriver(sopts)
+
 	db := &SQLiteDB{DBPath: dbp, QueryTimeout: sopts.queryTimeout, opts: &sopts}
-
-	sqlite.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
-		for _, p := range sopts.pragmaStatements() {
-			_, err := conn.ExecContext(context.Background(), p, nil)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	write, err := sql.Open("sqlite", "file:"+db.DBPath)
+	write, err := sql.Open(driverName, "file:"+db.DBPath)
 	if err != nil {
 		return nil, err
 	}
-
 	write.SetMaxOpenConns(1)
 	write.SetConnMaxIdleTime(time.Minute)
+	db.Write = write
 
-	read, err := sql.Open("sqlite", "file:"+db.DBPath)
+	read, err := sql.Open(driverName, "file:"+db.DBPath)
 	if err != nil {
+		db.Close()
 		return nil, err
 	}
 	read.SetMaxOpenConns(sopts.maxReaderConns)
 	read.SetConnMaxIdleTime(time.Minute)
-
 	db.Read = read
-	db.Write = write
+
+	// ensure connection to sqlite database
+	ctxWTO, cancelWP := context.WithTimeout(context.Background(), db.QueryTimeout)
+	defer cancelWP()
+	if err = write.PingContext(ctxWTO); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("write connection failed: %w", err)
+	}
+
+	ctxWTO, cancelRP := context.WithTimeout(context.Background(), db.QueryTimeout)
+	defer cancelRP()
+	if err = read.PingContext(ctxWTO); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("read connection failed: %w", err)
+	}
+
+	// ensure journal_mode pragma is correctly set.  SQLite can silently refuse to set journal mode
+	// if the filesystem can't support it.
+	actualJournalMode := ""
+	ctxWTO, cancel := context.WithTimeout(context.Background(), db.QueryTimeout)
+	defer cancel()
+	err = db.Read.QueryRowContext(ctxWTO, "PRAGMA journal_mode;").Scan(&actualJournalMode)
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("journal_mode check failed: %w", err)
+	}
+
+	if !strings.EqualFold(actualJournalMode, string(db.opts.journalMode)) {
+		db.Close()
+		return nil, fmt.Errorf("journal_mode mismatch: requested %s, engine reports %s",
+			db.opts.journalMode, actualJournalMode)
+	}
+
 	return db, nil
 }
 
-func (d *SQLiteDB) LogDBConfig() slog.Value {
+func (d *SQLiteDB) SlogDBConfig() slog.Value {
 	return slog.GroupValue(
 		slog.String("file-location", d.DBPath),
 		slog.String("journal_mode", string(d.opts.journalMode)),

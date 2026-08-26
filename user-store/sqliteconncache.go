@@ -46,7 +46,6 @@ type SQLiteConnManagerConfig struct {
 }
 
 func ConfigToSQLiteConnManagerConfig(conf *config.Config) (SQLiteConnManagerConfig, error) {
-
 	var dbd string
 	if conf.DataDirectory == "" {
 		return SQLiteConnManagerConfig{}, errors.New("data directory cannot be empty")
@@ -138,7 +137,6 @@ func (c sqliteConnCmd) WithResult(ch chan any) sqliteConnCmd {
 }
 
 func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteConnCmd, logger *slog.Logger) {
-
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 	logger.Debug("starting cache poller")
@@ -162,7 +160,6 @@ func runPoller(ctx context.Context, interval time.Duration, cmdCh chan sqliteCon
 
 		}
 	}
-
 }
 
 // SQLiteConnManager manages the creation of connections to individual notes sqlite databases.
@@ -176,11 +173,11 @@ type SQLiteConnManager struct {
 }
 
 func NewSQLiteConnManager(conf SQLiteConnManagerConfig, logger *slog.Logger) (*SQLiteConnManager, error) {
-
 	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug("new connection to user database", "connection_parameters", indexDB.SlogDBConfig())
 
 	al := logger.WithGroup("DATA-STORE-CACHE")
 	svc := &SQLiteConnManager{
@@ -196,7 +193,6 @@ func NewSQLiteConnManager(conf SQLiteConnManagerConfig, logger *slog.Logger) (*S
 }
 
 func (s *SQLiteConnManager) Start(ctx context.Context, wg *sync.WaitGroup) {
-
 	wg.Go(func() {
 		timerCtx, cancelTimer := context.WithCancel(ctx)
 		defer cancelTimer()
@@ -239,14 +235,12 @@ func (s *SQLiteConnManager) Start(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (s *SQLiteConnManager) createNewConnection(ctx context.Context, key int64) (*sqlitex.SQLiteDB, error) {
-
 	userDB, err := s.UserStore.GetUserDB(ctx, key)
 	if err != nil {
 		return nil, err
 	}
 
 	return sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
-
 }
 
 func (s *SQLiteConnManager) GetNotesStore(ctx context.Context, key int64) (*datastore.SQLite, error) {
@@ -262,11 +256,15 @@ func (s *SQLiteConnManager) GetNotesStore(ctx context.Context, key int64) (*data
 func (s *SQLiteConnManager) getNotesStore(ctx context.Context, key int64) (*datastore.SQLite, error) {
 	cc, ok := s.connections[key]
 	if !ok {
-		s.logger.Debug("cache miss -- create new connection")
+		s.logger.Debug(fmt.Sprintf("cache miss -- creating new connection for user %v", key))
 		conn, err := s.createNewConnection(ctx, key)
 		if err != nil {
 			return nil, err
 		}
+		s.logger.Debug(
+			fmt.Sprintf("notes connection created for user %v", key),
+			"connection_parameters", conn.SlogDBConfig(),
+		)
 
 		cc = &cachedConn{conn: conn}
 		s.connections[key] = cc
@@ -298,7 +296,6 @@ func (s *SQLiteConnManager) removeConnection(key int64) error {
 }
 
 func (s *SQLiteConnManager) CreateDB(ctx context.Context, key int64) error {
-
 	cmd := sqliteConnCmd{
 		tag: cmdCreateDB,
 		ctx: ctx,
@@ -324,7 +321,6 @@ func (s *SQLiteConnManager) createDatabase(ctx context.Context, key int64) error
 }
 
 func (s *SQLiteConnManager) DeleteDB(ctx context.Context, key int64) error {
-
 	err := s.Remove(key)
 	if err != nil {
 		return err
@@ -346,7 +342,6 @@ func (s *SQLiteConnManager) deleteDatabase(ctx context.Context, key int64) error
 	}
 
 	return os.Remove(filepath.Join(s.conf.DBDirectory, userDB.Path))
-
 }
 
 func (s *SQLiteConnManager) RunMigrations(ctx context.Context) error {
@@ -453,7 +448,6 @@ func (s *SQLiteConnManager) GetState() CacheState {
 }
 
 func (s *SQLiteConnManager) getState() CacheState {
-
 	pubConns := make(map[int64]time.Time, len(s.connections))
 	for key, cc := range s.connections {
 		pubConns[key] = cc.expiry

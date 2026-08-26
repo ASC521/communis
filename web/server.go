@@ -79,16 +79,6 @@ func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog
 	ctx := context.Background()
 	wg := &sync.WaitGroup{}
 
-	fmt.Fprint(os.Stdout, `
-------------------------------------------
- ____ ____ ____ ____ ____ ____ ____ ____
-||c |||o |||m |||m |||u |||n |||i |||s ||
-||__|||__|||__|||__|||__|||__|||__|||__||
-|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
-
-------------------------------------------
-
-`)
 	serverLogger := logger.WithGroup("SERVER")
 
 	htmlRenderer, err := assets.NewHTMLRenderer(assets.HTMLFiles, conf.Debug, "base.tmpl", "partials/*.tmpl")
