@@ -166,12 +166,12 @@ if [ "$container" = true ]; then
     conatiner_program=""
     which podman > /dev/null
     if [ $? -ne 0 ]; then
-	which docker > /dev/null
-	if [$? -ne 0]; then
-	    echo "**** ERROR need podman or docker installed"
-	    exit 1
-	fi
-	container_program=docker
+    	which docker > /dev/null
+    	if [$? -ne 0]; then
+    	    echo "**** ERROR need podman or docker installed"
+    	    exit 1
+    	fi
+	     container_program=docker
     fi
     container_program=podman
 
