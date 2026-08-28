@@ -130,7 +130,7 @@ func TagViewGet(
 			return
 		}
 
-		tag, err := notesRepo.FindTagById(r.Context(), tagID)
+		tag, err := notesRepo.FindTagByID(r.Context(), tagID)
 		if err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
@@ -181,7 +181,7 @@ func TagEditGet(
 			return
 		}
 
-		tag, err := notesRepo.FindTagById(r.Context(), tagID)
+		tag, err := notesRepo.FindTagByID(r.Context(), tagID)
 		if err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)

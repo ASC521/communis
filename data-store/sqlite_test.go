@@ -97,7 +97,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 			Name: "FindById",
 			TFunc: func(nr *datastore.SQLite) error {
 				nb := nbs[2]
-				nbQ, err := nr.FindSectionById(ctx, nb.ID)
+				nbQ, err := nr.FindSectionByID(ctx, nb.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find section by id: %w", err)
 				}
@@ -118,7 +118,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("failed to update section: %w", err)
 				}
-				qnb, err := nr.FindSectionById(ctx, onb.ID)
+				qnb, err := nr.FindSectionByID(ctx, onb.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find updated section by id: %w", err)
 				}
@@ -137,7 +137,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 					return fmt.Errorf("section delete failed: %w", err)
 				}
 
-				_, err = nr.FindSectionById(ctx, nb.ID)
+				_, err = nr.FindSectionByID(ctx, nb.ID)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")
@@ -219,7 +219,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 			Name: "FindById",
 			TFunc: func(tr *datastore.SQLite) error {
 				t := ts[2]
-				tq, err := tr.FindTagById(ctx, t.ID)
+				tq, err := tr.FindTagByID(ctx, t.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find tag by id: %w", err)
 				}
@@ -240,7 +240,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("failed to update tag: %w", err)
 				}
-				qt, err := tr.FindTagById(ctx, ot.ID)
+				qt, err := tr.FindTagByID(ctx, ot.ID)
 				if err != nil {
 					return fmt.Errorf("failed to find updated tag by id: %w", err)
 				}
@@ -260,7 +260,7 @@ func TestSQLiteTagMethods(t *testing.T) {
 					return fmt.Errorf("tag delete failed: %w", err)
 				}
 
-				_, err = tr.FindTagById(ctx, t.ID)
+				_, err = tr.FindTagByID(ctx, t.ID)
 				if !errors.Is(err, sql.ErrNoRows) {
 					if err == nil {
 						return fmt.Errorf("deleted section id was returned")

@@ -236,7 +236,7 @@ func SectionEditGet(
 			return
 		}
 
-		section, err := notesRepo.FindSectionById(r.Context(), sectionID)
+		section, err := notesRepo.FindSectionByID(r.Context(), sectionID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.Error(w, fmt.Sprintf("section %v not found", sectionID), http.StatusNotFound)
@@ -287,7 +287,7 @@ func SectionViewGet(
 			return
 		}
 
-		sec, err := notesRepo.FindSectionById(r.Context(), id)
+		sec, err := notesRepo.FindSectionByID(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.Error(w, "section not found", http.StatusNotFound)

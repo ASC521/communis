@@ -1,23 +1,34 @@
 {{ define "partial:navbar:authenticated" }}
 <header>
   <nav class="nav-bar">
+
     <ul class="links">
       <li><strong><a href="/">Home</a></strong></li>
       <li><strong><a href="/note/new">New Note</a></strong></li>
       <li><strong><a href="/section">Sections</a></strong></li>
       <li><strong><a href="/index">Index</a></strong></li>
     </ul>
+
     <ul class="links right">
       <li>
-	<button type="button" class="svg-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">
-	  <svg>
-	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#sun-moon"/>
-	  </svg>
-	</button>
+        <button type="button" class="search-form -transparent -button" id="navbar-search">
+          <svg class="icon">
+            <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-search"/>
+          </svg>
+          <span><kbd class="keycap">/</kbd> to search</span>
+        </button>
       </li>
-      <li><strong><a class="link" hx-delete="/session">Log Out</a></strong></li>
-    </ul>
-  </nav>
+      <li>
+       <button type="button" class="svg-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">
+         <svg>
+           <use href="/static/vendor/svg/lucide-icons-sprite.svg#sun-moon"/>
+         </svg>
+       </button>
+     </li>
+     <li><strong><a class="link" hx-delete="/session">Log Out</a></strong></li>
+   </ul>
+
+ </nav>
 </header>
 {{ end }}
 
@@ -27,18 +38,16 @@
   <nav class="nav-bar">
     <ul class="links right">
       <li>
-	<button type="button" class="svg-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">
-	  <svg>
-	    <use href="/static/vendor/svg/lucide-icons-sprite.svg#sun-moon"/>
-	  </svg>
-	</button>
-      </li>
-      <li><strong><a class="link" hx-delete="/session">Log Out</a></strong></li>
-    </ul>
-  </nav>
+       <button type="button" class="svg-button" id="theme-toggle-btn" hx-put="/user/{{ .UserId }}/theme">
+         <svg>
+           <use href="/static/vendor/svg/lucide-icons-sprite.svg#sun-moon"/>
+         </svg>
+       </button>
+     </li>
+     <li><strong><a class="link" hx-delete="/session">Log Out</a></strong></li>
+   </ul>
+ </nav>
 </header>
-
-
 {{ end }}
 
 

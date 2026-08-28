@@ -175,7 +175,7 @@ func validateNoteForm(
 	if nf.SectionID <= 0 {
 		fe["section"] = "section does not exist"
 	} else {
-		_, err = notesRepo.FindSectionById(ctx, nf.SectionID)
+		_, err = notesRepo.FindSectionByID(ctx, nf.SectionID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return nil, err
@@ -520,7 +520,7 @@ func NotePreviewPost(
 		}
 		ts := make([]datastore.Tag, len(nf.TagIds))
 		for i, tid := range nf.TagIds {
-			et, err := notesRepo.FindTagById(r.Context(), tid)
+			et, err := notesRepo.FindTagByID(r.Context(), tid)
 			if err != nil {
 				logger.Error(fmt.Sprintf("failed to enrich tag %v from database", tid), "errMsg", err.Error())
 				continue
@@ -554,7 +554,7 @@ func NotePreviewPost(
 			Bookmark:         false,
 		}
 
-		sec, err := notesRepo.FindSectionById(r.Context(), n.Section.ID)
+		sec, err := notesRepo.FindSectionByID(r.Context(), n.Section.ID)
 		if err != nil {
 			logger.Error(fmt.Sprintf("failed to enrich section %v from database", n.Section.ID), "errMsg", err.Error())
 		} else {

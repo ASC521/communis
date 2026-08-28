@@ -3,37 +3,78 @@
 {{define "page:content"}}
 
 <main class="home-page">
-  <form class="search-form" action="/search" method="GET" role="search" autocomplete="off">
-    <svg class="icon">
-      <use href="/static/vendor/svg/lucide-icons-sprite.svg#book-search"/>
-    </svg>
-    <input class="field" id="search-home" type="search" name="q" aria-label="search" placeholder="Search..." autofocus>
-  </form>
-
+  <h1 class="title"><i>Communis</i></h1>
   <section class="quick-links">
+
     <div class="note-links">
-      <p><strong>RECENTLY MODIFIED</strong></p>
+      <h3>Bookmarks</h3>
       <ul class="list-of-links -center">
-	{{ range .RecentNotes }}
-	<li>
-	  <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
-	</li>
-	{{ end }}
-      </ul>
-      
-    </div>
-    <div class="note-links">
-      <p><strong>BOOKMARKS</strong></p>
-      <ul class="list-of-links -center">
-	{{ range .BookmarkedNotes }}
-	<li>
-	  <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
-	</li>
-	{{ end }}
-      </ul>
-      
-    </div>
-  </section>
+       {{ range .BookmarkedNotes }}
+       <li>
+         <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+       </li>
+       {{ end }}
+     </ul>
+   </div>
+
+   <div class="note-links">
+    <h3>Recently Modified</h3>
+    <ul class="list-of-links -center">
+      {{ range .RecentNotes }}
+      <li>
+        <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+
+  <div class="note-links">
+    <h3>Needs Care</h3>
+    <ul class="list-of-links -center">
+      {{ range .CareNotes }}
+      <li>
+        <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+
+
+</section>
+<section class="quick-links">
+  <div class="note-links">
+    <h3>Active Sections</h3>
+    <ul class="list-of-links -center">
+      {{ range .Sections }}
+      <li>
+        <a class="flex-1" href="/section/{{ .ID }}/{{ .Name }}">{{ .Name }}</a>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+
+  <div class="note-links">
+    <h3>Hub Notes</h3>
+    <ul class="list-of-links -center">
+      {{ range .HubNotes }}
+      <li>
+        <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+
+  <div class="note-links">
+    <h3>Most Cited</h3>
+    <ul class="list-of-links -center">
+      {{ range .ReferencedNotes }}
+      <li>
+        <a class="flex-1" href="/note/{{ .ID }}/{{ slugify .Title }}">{{ .Title }}</a>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</section>
 </main>
 {{end}}
 

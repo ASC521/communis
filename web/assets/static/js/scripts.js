@@ -180,4 +180,19 @@ document.addEventListener("keydown", (e) => {
 	}
 })
 
+
+document.addEventListener("click", (e) => {
+	buttonID = e.target.closest("button")?.id;
+	if (buttonID === null) {
+		return
+	}
+	if (buttonID === "navbar-search") {
+		dialog = document.getElementById("search-dialog")
+		if (dialog.open) {
+			return;
+		}
+		dialog.showModal();
+	}
+})
+
 // SEARCH

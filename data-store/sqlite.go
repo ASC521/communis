@@ -30,6 +30,7 @@ const (
 		   SELECT notes_details.id, notes_details.title, notes_details.content, notes_details.tags_txt
 		   FROM notes_details, json_each(notes_details.tags_json)
 		   WHERE json_extract(value, '$.id') = ?;`
+	defaultLimit = 5
 )
 
 type SQLite struct {
@@ -126,7 +127,6 @@ func (r *SQLite) CreateNote(
 		}
 
 		return nid, nil
-
 	})
 }
 
@@ -193,7 +193,6 @@ func (r *SQLite) FindNoteByID(ctx context.Context, id int64) (Note, error) {
 }
 
 func (r *SQLite) GetNoteDetailByIds(ctx context.Context, ids []int64) ([]NoteDetail, error) {
-
 	args := make([]any, len(ids))
 	placeholders := make([]string, len(ids))
 	for i, id := range ids {
@@ -223,7 +222,6 @@ func (r *SQLite) GetNoteDetailByIds(ctx context.Context, ids []int64) ([]NoteDet
 	}
 
 	return noteDetails, nil
-
 }
 
 func (r *SQLite) UpdateNote(
@@ -236,7 +234,6 @@ func (r *SQLite) UpdateNote(
 	referenceNoteIds []int64,
 ) error {
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
-
 		_, err := tx.Exec(delNoteFTSSql, id)
 		if err != nil {
 			return -1, err
@@ -305,7 +302,6 @@ func (r *SQLite) UpdateNote(
 		}
 
 		return 1, nil
-
 	})
 
 	return err
@@ -313,7 +309,6 @@ func (r *SQLite) UpdateNote(
 
 func (r *SQLite) DeleteNote(ctx context.Context, id int64) error {
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
-
 		_, err := tx.Exec(delNoteFTSSql, id)
 		if err != nil {
 			return -1, err
@@ -326,16 +321,14 @@ func (r *SQLite) DeleteNote(ctx context.Context, id int64) error {
 		}
 
 		return 1, nil
-
 	})
 
 	return err
 }
 
 func (r *SQLite) ListNotes(ctx context.Context, limit, offset int) (PaginatedNotes, error) {
-
 	if limit <= 0 {
-		limit = 10
+		limit = defaultLimit
 	}
 
 	if offset < 0 {
@@ -385,11 +378,9 @@ func (r *SQLite) ListNotes(ctx context.Context, limit, offset int) (PaginatedNot
 		HasMore:    hasMore,
 		NextOffset: nextOffset,
 	}, nil
-
 }
 
 func (r *SQLite) SearchNotes(ctx context.Context, q string) ([]NoteSearchResult, error) {
-
 	sql := `SELECT DISTINCT
 		  nd.id,
 		  nd.title,
@@ -425,11 +416,9 @@ func (r *SQLite) SearchNotes(ctx context.Context, q string) ([]NoteSearchResult,
 	}
 
 	return srs, nil
-
 }
 
-func (r *SQLite) RecentlyUpdatedNotes(ctx context.Context, limit int) ([]NoteDetail, error) {
-
+func (r *SQLite) RecentlyModifiedNotes(ctx context.Context, limit int) ([]NoteDetail, error) {
 	sql := `SELECT n.id, n.title
 		FROM notes as n
 		ORDER BY last_updated_at_utc DESC
@@ -494,7 +483,7 @@ func (r *SQLite) SetNoteBookmark(ctx context.Context, noteID int64, bookmark boo
 
 func (r *SQLite) BookmarkedNotes(ctx context.Context, limit int) ([]NoteDetail, error) {
 	if limit <= 0 {
-		limit = 5
+		limit = defaultLimit
 	}
 
 	sql := `SELECT n.id, n.title
@@ -513,12 +502,80 @@ func (r *SQLite) BookmarkedNotes(ctx context.Context, limit int) ([]NoteDetail, 
 	return parseNoteDetailsFromRows(rows)
 }
 
+func (r *SQLite) MostReferencedNotes(ctx context.Context, limit int) ([]NoteDetail, error) {
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+
+	sql := `SELECT reference_notes.ref_note_id, notes.title
+			FROM reference_notes
+			INNER JOIN notes ON reference_notes.ref_note_id = notes.id
+			GROUP BY ref_note_id
+			ORDER BY count(reference_notes.ref_note_id) DESC
+			LIMIT ?;`
+
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return parseNoteDetailsFromRows(rows)
+}
+
+func (r *SQLite) NoteWithMostReferences(ctx context.Context, limit int) ([]NoteDetail, error) {
+	/* code */
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+
+	sql := `SELECT reference_notes.note_id, notes.title
+			FROM reference_notes
+			INNER JOIN notes ON reference_notes.note_id = notes.id
+			GROUP BY note_id
+			ORDER BY count(reference_notes.ref_note_id) DESC
+			LIMIT ?;`
+
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return parseNoteDetailsFromRows(rows)
+}
+
+func (r *SQLite) NotesWithNoContent(ctx context.Context, limit int) ([]NoteDetail, error) {
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+
+	sql := `SELECT id, title
+			FROM notes
+			WHERE content IS NULL OR TRIM(content) = ''
+			ORDER BY created_at_utc ASC
+			LIMIT ?;`
+
+	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
+	defer cancel()
+
+	rows, err := r.db.Read.QueryContext(ctxWTO, sql, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return parseNoteDetailsFromRows(rows)
+}
+
 // NOTE FUNCTIONS
 
 // SECTION FUNCTIONS
 
 func (r *SQLite) CreateSection(ctx context.Context, s Section) (int64, error) {
-
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
 	res, err := r.db.Write.ExecContext(ctxWTO, "INSERT INTO sections (name) VALUES (?);", s.Name)
@@ -526,10 +583,9 @@ func (r *SQLite) CreateSection(ctx context.Context, s Section) (int64, error) {
 		return 0, err
 	}
 	return res.LastInsertId()
-
 }
 
-func (r *SQLite) FindSectionById(ctx context.Context, id int64) (Section, error) {
+func (r *SQLite) FindSectionByID(ctx context.Context, id int64) (Section, error) {
 	sql := "SELECT id, name FROM sections WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -556,7 +612,6 @@ func (r *SQLite) FindSectionByName(ctx context.Context, name string) (Section, e
 }
 
 func (r *SQLite) UpdateSection(ctx context.Context, s Section) error {
-
 	sql := "UPDATE sections SET name = ? WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -570,7 +625,6 @@ func (r *SQLite) UpdateSection(ctx context.Context, s Section) error {
 }
 
 func (r *SQLite) DeleteSection(ctx context.Context, id int64) error {
-
 	sql := "DELETE FROM sections WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -610,12 +664,46 @@ func (r *SQLite) ListAllSections(ctx context.Context) ([]Section, error) {
 	return secs, nil
 }
 
+func (r *SQLite) RecentlyActiveSections(ctx context.Context, limit int) ([]Section, error) {
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+
+	sql := `SELECT notes.section, sections.name
+			FROM notes
+			INNER JOIN sections ON notes.section = sections.id
+			GROUP BY notes.section
+			ORDER BY max(last_updated_at_utc) DESC
+			LIMIT ?;`
+
+	rows, err := r.db.Read.QueryContext(ctx, sql, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	sections := []Section{}
+	for rows.Next() {
+		var s Section
+		err = rows.Scan(&s.ID, &s.Name)
+		if err != nil {
+			return nil, err
+		}
+		sections = append(sections, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating sections: %w", err)
+	}
+
+	return sections, nil
+}
+
 // SECTION FUNCTIONS
 
 // TAG FUNCTIONS
 
 func (r *SQLite) CreateTag(ctx context.Context, t Tag) (int64, error) {
-
 	sql := "INSERT INTO tags (name) VALUES (?);"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -625,10 +713,9 @@ func (r *SQLite) CreateTag(ctx context.Context, t Tag) (int64, error) {
 		return 0, err
 	}
 	return res.LastInsertId()
-
 }
 
-func (r *SQLite) FindTagById(ctx context.Context, id int64) (Tag, error) {
+func (r *SQLite) FindTagByID(ctx context.Context, id int64) (Tag, error) {
 	sql := "SELECT id, name FROM tags WHERE id = ?;"
 	ctxWTO, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
@@ -655,9 +742,7 @@ func (r *SQLite) FindTagByName(ctx context.Context, name string) (Tag, error) {
 }
 
 func (r *SQLite) UpdateTag(ctx context.Context, t Tag) error {
-
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
-
 		_, err := tx.Exec(delTagFTSSql, t.ID)
 		if err != nil {
 			return -1, err
@@ -680,7 +765,6 @@ func (r *SQLite) UpdateTag(ctx context.Context, t Tag) error {
 
 func (r *SQLite) DeleteTag(ctx context.Context, id int64) error {
 	_, err := sqlitex.WithTransaction(r.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
-
 		_, err := tx.Exec(delTagFTSSql, id)
 		if err != nil {
 			return -1, err
@@ -698,7 +782,6 @@ func (r *SQLite) DeleteTag(ctx context.Context, id int64) error {
 	})
 
 	return err
-
 }
 
 func (r *SQLite) ListAllTags(ctx context.Context) ([]Tag, error) {
@@ -728,11 +811,9 @@ func (r *SQLite) ListAllTags(ctx context.Context) ([]Tag, error) {
 	}
 
 	return ts, nil
-
 }
 
 func (r *SQLite) ListTags(ctx context.Context, limit, offset int) (PaginatedTags, error) {
-
 	if limit <= 0 {
 		limit = 10
 	}
@@ -775,7 +856,6 @@ func (r *SQLite) ListTags(ctx context.Context, limit, offset int) (PaginatedTags
 	}
 
 	return PaginatedTags{Tags: ts, Limit: limit, Offset: offset, HasMore: hasMore, NextOffset: nextOffset}, nil
-
 }
 
 func (r *SQLite) QueryTags(ctx context.Context, ids []int64) ([]Tag, error) {
@@ -787,7 +867,8 @@ func (r *SQLite) QueryTags(ctx context.Context, ids []int64) ([]Tag, error) {
 		args[i] = n
 	}
 
-	q := fmt.Sprintf(`
+	q := fmt.Sprintf(
+		`
 		SELECT id, name
 		FROM tags
 		WHERE id in (%s);

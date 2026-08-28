@@ -1,4 +1,5 @@
 (A) Add ability to copy code blocks from rendered note
+(B) Redo home screen making it more information dense
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
@@ -6,8 +7,8 @@
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (F) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) PostUser should be happening within a transaction
+(x) Refactor organization of html templates to better fit htmx
 Add advanced query support to search screen +v1
-Bug Fix: Entering search from home screen results in querying the server twice on loading search page +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Security is blocking external images being loaded in markdown
 Error Screens +v1
@@ -15,7 +16,6 @@ Fix note preview page -  buttons don't line up
 kindle highlight and note parser
 kobo highlight and note parser
 Redo UI to be mobile friendly
-Refactor organization of html templates to better fit htmx
 Search results should contain rendered html from markdown not raw markdown
 Unit tests on note form parsing and validation +v1
 x (A) Add capability to add, edit, and delete users +v1 +auth-user

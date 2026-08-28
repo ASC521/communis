@@ -194,37 +194,54 @@ main {
     }
 }
 
+.keycap {
+	font-family: inherit;
+	font-size: 0.8em;
+	line-height: 1;
+	padding: 0.2em 0.5em;
+	border: 1px solid var(--color-muted);
+	border-bottom-width: 2px;
+	border-radius: 0.25rem;
+	background-color: var(--color-background);
+	color: var(--color-text);
+	box-shadow: 0 1px 0 var(--color-muted);
+}
 
 .search-form {
-    display: flex;
-    align-items: center;
-    width: min(380px, 100%);   /* caps width but stays fluid */
-    padding: 0.75rem 1.125rem; /* scales with user font prefs */
-    border-radius: 0.875rem;
-    font-size: 0.9375rem;
-    border: solid;
-    background-color: var(--color-surface);
-    color: var(--color-text);
-    
-
-    /* TODO: Icon will float if resized to thin */
-    > .icon {
 	display: flex;
 	align-items: center;
-	flex-shrink: 0;
-	height: 1.5em;
-	width: 1.5em;
-	/* position: absolute; */
-	/* left: 10px; */
-	pointer-events: none;
-    }
-    > .field {
-	flex: 1;
-	border: none;
-	outline: none;
-	background-color: inherit;
-	color: inherit;
-    }
+	width: min(380px, 100%);   /* caps width but stays fluid */
+	padding: 0.75rem 1.125rem; /* scales with user font prefs */
+	border-radius: 0.875rem;
+	font-size: 0.9375rem;
+	border: solid;
+	background-color: var(--color-surface);
+	color: var(--color-text);
+
+	&.-transparent {
+		border: transparent;
+	}
+
+	&.-button {
+		cursor: pointer;
+	}
+
+	> .icon {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+		height: 1.5em;
+		width: 1.5em;
+		pointer-events: none;
+		padding-right: .75rem;
+	}
+	> .field {
+		flex: 1;
+		border: none;
+		outline: none;
+		background-color: inherit;
+		color: inherit;
+	}
 }
 
 .search-result {
@@ -436,14 +453,19 @@ main {
 
 /* LAYOUTS */
 .home-page {
-    align-items: center;
     justify-content: center;
-    flex: .75;
+    display: grid;
+    grid-template-rows: .25fr 1fr 1fr;
+
+    > .title {
+    	justify-self: center;
+    	align-self: top;
+    }
 
     > .quick-links {
-	display: flex;
-	flex-direction: row;
-	gap: 4rem;
+    	display: grid;
+    	grid-template-columns: 1fr 1fr 1fr;
+		gap: 4rem;
     }
 }
 
