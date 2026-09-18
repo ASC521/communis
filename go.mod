@@ -1,9 +1,8 @@
 module github.com/ASC521/communis
 
-go 1.25.7
+go 1.27
 
 require (
-	github.com/BurntSushi/toml v1.6.0
 	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/mattn/go-sqlite3 v1.14.50

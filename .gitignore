@@ -34,8 +34,7 @@ go.work.sum
 *.sublime-workspace
 TAGS
 
-communis.toml
-config.toml
+config.json
 
 dist/
 run/

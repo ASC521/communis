@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"encoding/json/jsontext"
 	"os"
 	"path/filepath"
 
@@ -17,15 +17,15 @@ const (
 )
 
 type SQLite struct {
-	BusyTimeout       int    `toml:"busy-timeout"`
-	CacheSize         int    `toml:"cache-size"`
-	ForeignKeys       bool   `toml:"foreign-keys"`
-	JournalMode       string `toml:"journal-mode"`
-	Synchronous       string `toml:"synchronous"`
-	TempStore         string `toml:"temp-store"`
-	IndexDBFileName   string `toml:"-"`
-	IndexDBMigrations string `toml:"-"`
-	NotesDBMigrations string `toml:"-"`
+	BusyTimeout       int    `json:"busyTimeout"`
+	CacheSize         int    `json:"cacheSize"`
+	ForeignKeys       bool   `json:"foreignKeys"`
+	JournalMode       string `json:"journalMode"`
+	Synchronous       string `json:"synchronous"`
+	TempStore         string `json:"tempStore"`
+	IndexDBFileName   string `json:"-"`
+	IndexDBMigrations string `json:"-"`
+	NotesDBMigrations string `json:"-"`
 }
 
 func ValidSQLite(s SQLite) error {
@@ -48,40 +48,45 @@ func ValidSQLite(s SQLite) error {
 }
 
 type RegexPattern struct {
-	Pattern string
+	Pattern string `json:"pattern"`
 }
 
-func (r *RegexPattern) MarshalTOML() ([]byte, error) {
-	var b []byte
-	return fmt.Appendf(b, "'%s'", r.Pattern), nil
+func (r *RegexPattern) MarshalerTo(enc *jsontext.Encoder) error {
+	enc.WriteToken(jsontext.String("pattern"))
+	enc.WriteToken(jsontext.String(r.Pattern))
+	return nil
 }
 
-func (r *RegexPattern) UnmarshalText(text []byte) error {
-	r.Pattern = string(text)
+func (r *RegexPattern) UnmarshalerFrom(dec *jsontext.Decoder) error {
+	v, err := dec.ReadValue()
+	if err != nil {
+		return err
+	}
+
+	r.Pattern = string(v)
 	return nil
 }
 
 type Web struct {
-	Host                string         `toml:"host"`
-	Port                uint           `toml:"port"`
-	LoggingIgnoredPaths []RegexPattern `toml:"logging-ignored-paths"`
+	Host                string         `json:"host"`
+	Port                uint           `json:"port"`
+	LoggingIgnoredPaths []RegexPattern `json:"loggingIgnoredPaths"`
 }
 
 type Config struct {
-	DataDirectory          string         `toml:"data-directory"`
-	FileLocation           string         `toml:"-"`
-	SQLite                 SQLite         `toml:"sqlite"`
-	WebHost                string         `toml:"web-host"`
-	WebPort                uint           `toml:"web-port"`
-	WebLoggingIgnoredPaths []RegexPattern `toml:"web-logging-ignored-paths"`
-	WebEnableHTTPS         bool           `toml:"web-enable-https"`
-	WebCert                string         `toml:"web-cert"`
-	WebKey                 string         `toml:"web-key"`
-	Debug                  bool           `toml:"debug"`
+	DataDirectory          string         `json:"dataDirectory"`
+	FileLocation           string         `json:"-"`
+	SQLite                 SQLite         `json:"sqlite"`
+	WebHost                string         `json:"webHost"`
+	WebPort                uint           `json:"webPort"`
+	WebLoggingIgnoredPaths []RegexPattern `json:"webLoggingIgnoredPaths"`
+	WebEnableHTTPS         bool           `json:"webEnableHttps"`
+	WebCert                string         `json:"webCert"`
+	WebKey                 string         `json:"webKey"`
+	Debug                  bool           `json:"debug"`
 }
 
 func DefaultConfig() (*Config, error) {
-
 	dd := DefaultDataDirectory()
 
 	fl := DefaultFileLocation()
@@ -116,15 +121,12 @@ func DefaultDataDirectory() string {
 	}
 
 	return filepath.Join(string(filepath.Separator), "var", "opt", AppName)
-
 }
 
 func DefaultFileLocation() string {
-
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return filepath.Join(xdg, ".config", AppName, "config.toml")
 	}
 
 	return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, "config.toml")
-
 }

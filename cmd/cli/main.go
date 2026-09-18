@@ -2,6 +2,8 @@
 package main
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/ASC521/communis/config"
-	"github.com/BurntSushi/toml"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -77,14 +78,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error occured finding config file: %v\n", err)
 	} else {
 		fmt.Fprintf(os.Stderr, "loading config file from %s\n", resCFP)
-		tomlMetaData, err := toml.DecodeFile(resCFP, conf)
+		data, err := os.ReadFile(resCFP)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to parse toml file: %v", err.Error())
+			fmt.Fprintf(os.Stderr, "failed to read config file: %v", err.Error())
 			os.Exit(1)
 		}
 
-		if len(tomlMetaData.Undecoded()) > 0 {
-			fmt.Fprintf(os.Stderr, "unknown configuration keys: %v", tomlMetaData.Undecoded())
+		err = json.Unmarshal(data, conf, json.RejectUnknownMembers(true))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to unmarshal config file: %v\n", err.Error())
 			os.Exit(1)
 		}
 		conf.FileLocation = resCFP
@@ -112,6 +114,15 @@ func main() {
 			fmt.Fprintf(os.Stderr, "cli flag %s ignored", f.Name)
 		}
 	})
+
+	if conf.Debug {
+		b, err := json.Marshal(*conf, jsontext.Multiline(true))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshaling config: %v", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "**** loaded configuration ****\n%s\n**** loaded configuration ****", b)
+	}
 
 	cmd, subArgs := args[0], args[1:]
 	switch cmd {

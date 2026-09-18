@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,7 +13,6 @@ import (
 	"text/template"
 
 	"github.com/ASC521/communis/config"
-	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/chroma/v2"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alecthomas/chroma/v2/styles"
@@ -19,7 +20,6 @@ import (
 )
 
 func GenerateCMD(conf *config.Config, args []string) error {
-
 	generateFlags := flag.NewFlagSet("generate", flag.ExitOnError)
 	generateFlags.Usage = func() {
 		fmt.Fprint(os.Stderr, "Usage: communis [global options] generate <subcommand>\n\n")
@@ -45,7 +45,7 @@ func GenerateCMD(conf *config.Config, args []string) error {
 		return generateCSS(subArgs)
 	case "config":
 
-		b, err := toml.Marshal(*conf)
+		b, err := json.Marshal(*conf, jsontext.Multiline(true))
 		if err != nil {
 			return err
 		}
@@ -59,11 +59,9 @@ func GenerateCMD(conf *config.Config, args []string) error {
 	default:
 		return fmt.Errorf("%s is not a valid command", cmd)
 	}
-
 }
 
 func generateCSS(args []string) error {
-
 	cssFlags := flag.NewFlagSet("css", flag.ExitOnError)
 	darkThemeF := cssFlags.String("dark-theme", "", "name of dark chroma theme")
 	lightThemeF := cssFlags.String("light-theme", "", "name of light chroma theme")
@@ -103,7 +101,7 @@ func generateCSS(args []string) error {
 	if err != nil {
 		return fmt.Errorf("invalid output directory %s: %v", relOutDir, err)
 	}
-	err = os.MkdirAll(outputDir, 0755)
+	err = os.MkdirAll(outputDir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to make output directory: %v", err)
 	}
@@ -116,7 +114,7 @@ func generateCSS(args []string) error {
 		}
 
 		fn := filepath.Join(outputDir, fmt.Sprintf("highlighting-%s.css", darkLight))
-		if err = os.WriteFile(fn, buf.Bytes(), 0644); err != nil {
+		if err = os.WriteFile(fn, buf.Bytes(), 0o644); err != nil {
 			return fmt.Errorf("failed to write theme file: %v", err)
 		}
 		fmt.Fprintf(os.Stderr, "generated css file at %s\n", fn)
@@ -164,7 +162,6 @@ type UnitFileOptions struct {
 }
 
 func systemdUnitFileCMD(conf *config.Config, args []string) error {
-
 	unitFlags := flag.NewFlagSet("unit-file", flag.ExitOnError)
 	userF := unitFlags.String("username", "", "name of user")
 
@@ -218,7 +215,6 @@ func systemdUnitFileCMD(conf *config.Config, args []string) error {
 
 	_, err = fmt.Fprintln(os.Stdout, b.String())
 	return err
-
 }
 
 const containerTemplate = `[Unit]
