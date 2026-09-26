@@ -51,7 +51,6 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
-
 	routerLogger := logger.WithGroup("ROUTER")
 	var ignore []*regexp.Regexp
 	for _, re := range ignoreRE {
@@ -84,7 +83,8 @@ func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handle
 					"method", r.Method,
 					"path", r.URL.EscapedPath(),
 					"duration", time.Since(start),
-					"remoteAddr", r.RemoteAddr)
+					"remoteAddr", r.RemoteAddr,
+				)
 			}
 		}
 
@@ -105,7 +105,8 @@ func RecoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 						fmt.Sprintf("%v", pv),
 						"method", r.Method,
 						"uri", r.URL.RequestURI(),
-						"stacktrace", string(debug.Stack()))
+						"stacktrace", string(debug.Stack()),
+					)
 					fmt.Fprint(os.Stderr, st+"\n")
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 
@@ -144,14 +145,12 @@ func Authenticate(sessionManager *scs.SessionManager, userStore *userstore.SQLit
 			// browser cache (or other intermediary cache).
 			w.Header().Add("Cache-Control", "no-store")
 			next.ServeHTTP(w, r)
-
 		})
 	}
 }
 
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		isAuthenticated, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
 		if !ok {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -181,12 +180,10 @@ func RedirectAdmin(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
-
 	})
 }
 
 func RequireAdmin(next http.Handler) http.Handler {
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isAuthenticated, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
 		if !ok {
@@ -225,12 +222,11 @@ func InitialSetup(setupRequired *bool) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
-
 }
 
 func CommonHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-eval'; img-src 'self'; font-src 'self'; style-src 'self' 'sha256-faU7yAF8NxuMTNEwVmBz+VcYeIoBQ2EMHW3WaVxCvnk='")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-eval'; img-src 'self'; font-src 'self'; style-src 'self' 'sha256-XmvjP/1LVwk8UH9zkyYVF/Gic3SgO/V86r46JFkYgsk='")
 		w.Header().Set("Referrer-Policy", "origin-when-cross-origin")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "deny")
