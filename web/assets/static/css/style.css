@@ -309,6 +309,9 @@ main {
     &.-width75 {
 	width: 75%;
     }
+    &.-widthauto {
+	width: auto;
+    }
 }
 
 .text-input {
@@ -747,9 +750,6 @@ main {
 		    z-index: 50;
 		}
 
-		> .selected-notes {
-		    list-style
-		}
 	    }
 	    
 	    &.-closed {

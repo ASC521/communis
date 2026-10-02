@@ -7,7 +7,6 @@
   <li
     class="result"
     type="button"
-    id="ref-note-btn"
     role="option"
     hx-post="/ref-notes/select/{{ .ID }}"
     hx-vals='{"title": "{{ .Title }}"}'
@@ -22,10 +21,10 @@
 
 
 {{ define "partial:note:selected-reference" }}
-<li for="ref-note-{{ .ID }}" class="item">
+<li class="item">
   <input type="text" value="{{ .Title }}" class="text-input -readonly text" readonly>
   <input type="hidden" name="reference-notes" value="{{ .ID }}">
-  <button hx-delete="/ref-notes/select/{{ .ID }}" hx-target="closest li" hx-swap="outerHTML" arial-label="Remove {{ .Title }}">X</button>
+  <button type="button" data-remove-ref-note class="text-button -widthauto" aria-label="Remove {{ .Title }}">X</button>
 </li>
 
 <ul id="search-results" class="search-dropdown" role="listbox" hx-swap-oob="true"></ul>
