@@ -125,8 +125,8 @@ func DefaultDataDirectory() string {
 
 func DefaultFileLocation() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, ".config", AppName, "config.toml")
+		return filepath.Join(xdg, ".config", AppName, "config.json")
 	}
 
-	return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, "config.toml")
+	return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, "config.json")
 }
