@@ -57,8 +57,9 @@ func (r *SQLite) DBVersionBefore(ctx context.Context, latestVer int) ([]UserData
 
 func (r *SQLite) UpdateDBVersion(ctx context.Context, userID int64, version int) error {
 	updateStmt := `UPDATE user_databases SET db_version = ? WHERE user_id = ?;`
-
-	_, err := sqlitex.WithTransaction(r.DB.Write, ctx, func(ctx context.Context, tx *sql.Tx) (int, error) {
+	ctxWTO, cancel := context.WithTimeout(ctx, r.DB.QueryTimeout)
+	defer cancel()
+	_, err := sqlitex.WithTransaction(r.DB.Write, ctxWTO, func(ctx context.Context, tx *sql.Tx) (int, error) {
 		_, err := tx.Exec(updateStmt, version, userID)
 		if err != nil {
 			return -1, err

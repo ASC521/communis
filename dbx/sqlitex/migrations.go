@@ -33,7 +33,9 @@ func (s *SQLiteMigrationDriver) AddVersionTable(ctx context.Context) error {
 }
 
 func (s *SQLiteMigrationDriver) RunMigration(ctx context.Context, sqlMig string, version uint) error {
-	_, err := WithTransaction(s.db.Write, ctx, func(ctx context.Context, tx *sql.Tx) (any, error) {
+	ctxWTO, cancel := context.WithTimeout(ctx, s.db.QueryTimeout)
+	defer cancel()
+	_, err := WithTransaction(s.db.Write, ctxWTO, func(ctx context.Context, tx *sql.Tx) (any, error) {
 		_, err := tx.Exec(sqlMig)
 		if err != nil {
 			return nil, err

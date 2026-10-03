@@ -1,6 +1,7 @@
 package sqlitex
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -65,7 +66,9 @@ func NewSessionStoreWithConfig(db *SQLiteDB, config Config) *SessionStore {
 // be set to false.
 func (s *SessionStore) Find(token string) (b []byte, exists bool, err error) {
 	stmt := fmt.Sprintf("SELECT data FROM %s WHERE token = $1 AND julianday('now') < expiry", s.tableName)
-	row := s.db.Read.QueryRow(stmt, token)
+	ctxWTO, cancel := context.WithTimeout(context.Background(), s.db.QueryTimeout)
+	defer cancel()
+	row := s.db.Read.QueryRowContext(ctxWTO, stmt, token)
 	err = row.Scan(&b)
 	if err == sql.ErrNoRows {
 		return nil, false, nil
@@ -80,7 +83,9 @@ func (s *SessionStore) Find(token string) (b []byte, exists bool, err error) {
 // time are updated.
 func (s *SessionStore) Commit(token string, b []byte, expiry time.Time) error {
 	stmt := fmt.Sprintf("REPLACE INTO %s (token, data, expiry) VALUES ($1, $2, julianday($3))", s.tableName)
-	_, err := s.db.Write.Exec(stmt, token, b, expiry.UTC().Format("2006-01-02T15:04:05.999"))
+	ctxWTO, cancel := context.WithTimeout(context.Background(), s.db.QueryTimeout)
+	defer cancel()
+	_, err := s.db.Write.ExecContext(ctxWTO, stmt, token, b, expiry.UTC().Format("2006-01-02T15:04:05.999"))
 	return err
 }
 
@@ -88,7 +93,10 @@ func (s *SessionStore) Commit(token string, b []byte, expiry time.Time) error {
 // instance.
 func (s *SessionStore) Delete(token string) error {
 	stmt := fmt.Sprintf("DELETE FROM %s WHERE token = $1", s.tableName)
-	_, err := s.db.Write.Exec(stmt, token)
+	ctxWTO, cancel := context.WithTimeout(context.Background(), s.db.QueryTimeout)
+	defer cancel()
+
+	_, err := s.db.Write.ExecContext(ctxWTO, stmt, token)
 	return err
 }
 
@@ -96,7 +104,9 @@ func (s *SessionStore) Delete(token string) error {
 // not expired) sessions in the SQLite3Store instance.
 func (s *SessionStore) All() (map[string][]byte, error) {
 	stmt := fmt.Sprintf("SELECT token, data FROM %s WHERE julianday('now') < expiry", s.tableName)
-	rows, err := s.db.Read.Query(stmt)
+	ctxWTO, cancel := context.WithTimeout(context.Background(), s.db.QueryTimeout)
+	defer cancel()
+	rows, err := s.db.Read.QueryContext(ctxWTO, stmt)
 	if err != nil {
 		return nil, err
 	}
@@ -160,6 +170,8 @@ func (s *SessionStore) StopCleanup() {
 
 func (s *SessionStore) deleteExpired() error {
 	stmt := fmt.Sprintf("DELETE FROM %s WHERE expiry < julianday('now')", s.tableName)
-	_, err := s.db.Write.Exec(stmt)
+	ctxWTO, cancel := context.WithTimeout(context.Background(), s.db.QueryTimeout)
+	defer cancel()
+	_, err := s.db.Write.ExecContext(ctxWTO, stmt)
 	return err
 }
