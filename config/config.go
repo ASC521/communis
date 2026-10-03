@@ -12,7 +12,7 @@ const (
 	LinuxOS        = "linux"
 	MacOS          = "darwin"
 	WindowsOS      = "windows"
-	ConfigFileName = "config.toml"
+	ConfigFileName = "config.json"
 	AppName        = "communis"
 )
 
@@ -125,8 +125,8 @@ func DefaultDataDirectory() string {
 
 func DefaultFileLocation() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, ".config", AppName, "config.json")
+		return filepath.Join(xdg, ".config", AppName, ConfigFileName)
 	}
 
-	return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, "config.json")
+	return filepath.Join(string(filepath.Separator), "etc", "opt", AppName, ConfigFileName)
 }
