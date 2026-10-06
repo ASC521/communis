@@ -583,6 +583,32 @@ func TestSQLiteNoteMethods(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			Name: "Tagless",
+			TFunc: func(nr *datastore.SQLite) error {
+				id, err := nr.CreateNote(
+					ctx,
+					"Tagless Note",
+					"lorem ipsum",
+					3,
+					[]int64{},
+					[]int64{},
+				)
+				if err != nil {
+					return fmt.Errorf("failed to create tagless note: %w", err)
+				}
+
+				note, err := nr.FindNoteByID(ctx, id)
+				if err != nil {
+					return fmt.Errorf("find note by id failed: %w", err)
+				}
+
+				if len(note.Tags) != 0 {
+					return fmt.Errorf("note returned with %v tags, expected 0", len(note.Tags))
+				}
+				return nil
+			},
+		},
 	}
 
 	for _, tc := range tcs {

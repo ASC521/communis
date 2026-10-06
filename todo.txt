@@ -1,5 +1,5 @@
-(A) Optimize note_details query
 (B) Add ability to copy code blocks from rendered note
+(B) BUG FIX: database CLI commands only operate on notes database -- does not update the user database.  If migrations run through cli the user database is not kept in sync.
 (B) TECH DEBT: Guard against possible nil logger references
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
@@ -52,6 +52,7 @@ x (A) Markdown Quote +v1 +create-note-rework
 x (A) Markdown Unordered List Button +v1 +create-note-rework
 x (A) Move to icons from text buttons +v1 +create-note-rework
 x (A) Move to pico css +v1
+x (A) Optimize note_details query
 x (A) Persistent theme preference +v1
 x (A) Platform specific default data folder locations
 x (A) PutUser end point needs to be implemented
