@@ -20,17 +20,30 @@ func routes(
 	setupRequired *bool,
 ) http.Handler {
 	mux := http.NewServeMux()
-
+	rl := logger.WithGroup("ROUTER")
 	baseChain := handlers.Chain{
 		handlers.RecoverPanic(logger),
-		handlers.RequestLogger(ignoredLoggingPaths, logger),
+		handlers.RequestLogger(ignoredLoggingPaths, rl),
 		handlers.CommonHeaders, handlers.CrossOriginProtection,
-		sessionManager.LoadAndSave,
-		handlers.Authenticate(sessionManager, dss.UserStore),
 		handlers.InitialSetup(setupRequired),
 	}
-	authReq := handlers.Chain{handlers.RequireAuth, handlers.RedirectAdmin}
-	adminReq := handlers.Chain{handlers.RequireAdmin}
+	publicWithSession := handlers.Chain{sessionManager.LoadAndSave}
+	authReq := handlers.Chain{
+		sessionManager.LoadAndSave,
+		handlers.Authenticate(sessionManager, dss.UserStore, rl),
+		handlers.RequireAuth,
+		handlers.RedirectAdmin,
+	}
+	authReqNoRedirect := handlers.Chain{
+		sessionManager.LoadAndSave,
+		handlers.Authenticate(sessionManager, dss.UserStore, rl),
+		handlers.RequireAuth,
+	}
+	adminReq := handlers.Chain{
+		sessionManager.LoadAndSave,
+		handlers.Authenticate(sessionManager, dss.UserStore, rl),
+		handlers.RequireAdmin,
+	}
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(assets.StaticFiles)))
 
@@ -66,8 +79,8 @@ func routes(
 	mux.Handle("GET /{$}", authReq.Then(handlers.HomeGet(tc, logger, dss, sessionManager)))
 
 	mux.Handle("GET /login", handlers.GetUserLogin(tc, logger, dss.UserStore, sessionManager))
-	mux.Handle("POST /login", handlers.PostUserLogin(tc, logger, dss.UserStore, sessionManager))
-	mux.Handle("DELETE /session", handlers.RequireAuth((handlers.PostUserLogout(tc, logger, sessionManager))))
+	mux.Handle("POST /login", publicWithSession.Then(handlers.PostUserLogin(tc, logger, dss.UserStore, sessionManager)))
+	mux.Handle("DELETE /session", authReqNoRedirect.Then(handlers.PostUserLogout(tc, logger, sessionManager)))
 
 	mux.Handle("GET /admin", adminReq.Then(handlers.GetAdmin(tc, logger, dss.UserStore, sessionManager)))
 	mux.Handle("GET /user/new", adminReq.Then(handlers.GetUserCreate(tc, logger, dss.UserStore, sessionManager)))
@@ -79,9 +92,9 @@ func routes(
 	mux.Handle("PUT /user/{id}/password", adminReq.Then(handlers.PutUserPassword(tc, logger, dss.UserStore)))
 
 	mux.Handle("GET /setup", handlers.GetSetup(tc, logger, setupRequired))
-	mux.Handle("POST /setup", handlers.PostSetup(tc, logger, setupRequired, dss.UserStore, sessionManager))
+	mux.Handle("POST /setup", publicWithSession.Then(handlers.PostSetup(tc, logger, setupRequired, dss.UserStore, sessionManager)))
 
-	mux.Handle("PUT /user/{id}/theme", handlers.RequireAuth(handlers.PutUserTheme(tc, logger, dss.UserStore)))
+	mux.Handle("PUT /user/{id}/theme", authReqNoRedirect.Then(handlers.PutUserTheme(tc, logger, dss.UserStore)))
 
 	if debugEnabled {
 		mux.Handle("GET /debug/conn-cache-state", adminReq.Then(handlers.ConnCacheStateGet(tc, logger, dss)))

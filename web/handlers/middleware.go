@@ -51,7 +51,6 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handler) http.Handler {
-	routerLogger := logger.WithGroup("ROUTER")
 	var ignore []*regexp.Regexp
 	for _, re := range ignoreRE {
 		regex, err := regexp.Compile(re)
@@ -77,7 +76,7 @@ func RequestLogger(ignoreRE []string, logger *slog.Logger) func(next http.Handle
 			}
 
 			if !exclude {
-				routerLogger.Info(
+				logger.Info(
 					fmt.Sprintf("%s %s from %s", r.Method, r.URL.EscapedPath(), r.RemoteAddr),
 					"respStatus", wrw.Status(),
 					"method", r.Method,
@@ -118,10 +117,11 @@ func RecoverPanic(logger *slog.Logger) func(next http.Handler) http.Handler {
 	}
 }
 
-func Authenticate(sessionManager *scs.SessionManager, userStore *userstore.SQLite) func(http.Handler) http.Handler {
+func Authenticate(sessionManager *scs.SessionManager, userStore *userstore.SQLite, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authUserID := sessionManager.GetInt64(r.Context(), "authenticatedUserId")
+			logger.Debug("authenticating user", "id", authUserID)
 			if authUserID == 0 {
 				ctx := context.WithValue(r.Context(), isAuthenticatedContextKey, false)
 				ctx = context.WithValue(ctx, isAdminContextKey, false)

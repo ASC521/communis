@@ -1,7 +1,6 @@
-(A) BUG FIX: Remove authentication check on routes not requiring auth - login page, static pages
-(B) TECH DEBT: Guard against possible nil logger references
+(A) Optimize note_details query
 (B) Add ability to copy code blocks from rendered note
-(B) Optimize note_details query
+(B) TECH DEBT: Guard against possible nil logger references
 (C) Session Manager configuration options
 (C) Tech Debt: Centralize goldmark markdown rendering configurations
 (D) Move create user form to dialog from table row
@@ -27,6 +26,7 @@ x (A) Add section view page - list associated notes in section, have links to ed
 x (A) Add sqlite logging for monitoring
 x (A) Add support for HTTPS server
 x (A) Add undo/redo to markdown editor +v1 +create-note-work
+x (A) BUG FIX: Remove authentication check on routes not requiring auth - login page, static pages
 x (A) Bug Fix: Can't save from note preview screen
 x (A) Bug Fix: Note Edit page does not submit
 x (A) Bug Fix: Save from preview warns user about losing changes

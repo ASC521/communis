@@ -77,10 +77,14 @@ func getUserThemeFromRequest(r *http.Request) string {
 }
 
 func extractBaseDataFromRequest(r *http.Request) assets.BaseData {
+	theme := getUserThemeFromRequest(r)
+	if theme == "" {
+		theme = "light"
+	}
 	return assets.BaseData{
 		IsAuthenticated: isAuthenticated(r),
 		IsAdmin:         isAdmin(r),
 		UserId:          getUserIDFromRequest(r),
-		Theme:           getUserThemeFromRequest(r),
+		Theme:           theme,
 	}
 }
