@@ -17,15 +17,17 @@ const (
 )
 
 type SQLite struct {
-	BusyTimeout       int    `json:"busyTimeout"`
-	CacheSize         int    `json:"cacheSize"`
-	ForeignKeys       bool   `json:"foreignKeys"`
-	JournalMode       string `json:"journalMode"`
-	Synchronous       string `json:"synchronous"`
-	TempStore         string `json:"tempStore"`
-	IndexDBFileName   string `json:"-"`
-	IndexDBMigrations string `json:"-"`
-	NotesDBMigrations string `json:"-"`
+	BusyTimeout               int    `json:"busyTimeout"`
+	CacheSize                 int    `json:"cacheSize"`
+	ForeignKeys               bool   `json:"foreignKeys"`
+	JournalMode               string `json:"journalMode"`
+	Synchronous               string `json:"synchronous"`
+	TempStore                 string `json:"tempStore"`
+	Trace                     bool   `json:"trace"`
+	TraceThresholdMillisecond int    `json:"traceThresholdMillisecond"`
+	IndexDBFileName           string `json:"-"`
+	IndexDBMigrations         string `json:"-"`
+	NotesDBMigrations         string `json:"-"`
 }
 
 func ValidSQLite(s SQLite) error {
@@ -95,15 +97,17 @@ func DefaultConfig() (*Config, error) {
 		DataDirectory: dd,
 		FileLocation:  fl,
 		SQLite: SQLite{
-			BusyTimeout:       5000,
-			CacheSize:         2000,
-			ForeignKeys:       true,
-			JournalMode:       "WAL",
-			Synchronous:       "NORMAL",
-			TempStore:         "MEMORY",
-			IndexDBFileName:   "index.db",
-			IndexDBMigrations: "sql/index-db",
-			NotesDBMigrations: "sql/notes-db",
+			BusyTimeout:               5000,
+			CacheSize:                 2000,
+			ForeignKeys:               true,
+			JournalMode:               "WAL",
+			Synchronous:               "NORMAL",
+			TempStore:                 "MEMORY",
+			IndexDBFileName:           "index.db",
+			IndexDBMigrations:         "sql/index-db",
+			NotesDBMigrations:         "sql/notes-db",
+			Trace:                     false,
+			TraceThresholdMillisecond: 20,
 		},
 		WebHost: "0.0.0.0",
 		WebPort: 6789,

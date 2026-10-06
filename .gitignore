@@ -33,6 +33,7 @@ go.work.sum
 *.sublime-project
 *.sublime-workspace
 TAGS
+.dir-locals.el
 
 config.json
 

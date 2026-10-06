@@ -145,19 +145,19 @@ done
 
 if [ "$test" = true ]; then
     echo "Running unit tests"
-    go test --tags sqlite_fts5 -v ./...
+    go test --tags sqlite_fts5,sqlite_trace -v ./...
     exit 0
 fi
 
 if [ "$run" = true ]; then
     echo "Running communis web application"
-    go run --tags sqlite_fts5 ./cmd/cli serve
+    go run --tags sqlite_fts5,sqlite_trace ./cmd/cli serve
     exit 0
 fi
 
 if [ "$build" = true ]; then
     echo "Building communis with local go: $(which go)"
-    CGO_ENABLED=1 go build --tags sqlite_fts5 -v -o ./dist/exec/communis ./cmd/cli/
+    CGO_ENABLED=1 go build --tags sqlite_fts5,sqlite_trace -v -o ./dist/exec/communis ./cmd/cli/
 fi
 
 if [ "$container" = true ]; then

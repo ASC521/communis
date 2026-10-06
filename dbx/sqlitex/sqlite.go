@@ -85,14 +85,16 @@ func TempStoreFromString(t string) (tempStore, error) {
 }
 
 type sqliteOptions struct {
-	journalMode    journalMode
-	synchronous    synchronous
-	tempStore      tempStore
-	busyTimeout    int
-	cacheSize      int
-	foreignKeys    bool
-	maxReaderConns int
-	queryTimeout   time.Duration
+	journalMode      journalMode
+	synchronous      synchronous
+	tempStore        tempStore
+	busyTimeout      int
+	cacheSize        int
+	foreignKeys      bool
+	maxReaderConns   int
+	queryTimeout     time.Duration
+	traceEnabled     bool
+	traceThresholdMS time.Duration
 }
 
 type SQLiteOption func(so *sqliteOptions) error
@@ -158,6 +160,20 @@ func WithMaxReaderConns(c int) SQLiteOption {
 	}
 }
 
+func WithTracing(t bool) SQLiteOption {
+	return func(o *sqliteOptions) error {
+		o.traceEnabled = t
+		return nil
+	}
+}
+
+func WithTracingTimeThreshold(t time.Duration) SQLiteOption {
+	return func(o *sqliteOptions) error {
+		o.traceThresholdMS = t
+		return nil
+	}
+}
+
 func (o sqliteOptions) pragmaStatements() []string {
 	return []string{
 		fmt.Sprintf("PRAGMA journal_mode = %s;", o.journalMode),
@@ -176,8 +192,10 @@ var (
 
 // ensureDriver registers a custom sqlite3 driver to the sql package.  The custom driver contains
 // a ConnectHook function to set the provided pragma options each time a new connection is created.
-func ensureDriver(sopts sqliteOptions) string {
-	sum := sha256.Sum256([]byte(strings.Join(sopts.pragmaStatements(), "\n")))
+func ensureDriver(sopts sqliteOptions, logger *slog.Logger) string {
+	s := sopts.pragmaStatements()
+	s = append(s, fmt.Sprintf("trace=%v", sopts.traceEnabled))
+	sum := sha256.Sum256([]byte(strings.Join(s, "\n")))
 	optsHash := hex.EncodeToString(sum[:5])
 	name := fmt.Sprintf("sqlite3-%s", optsHash)
 	registerMutex.Lock()
@@ -187,9 +205,16 @@ func ensureDriver(sopts sqliteOptions) string {
 	}
 
 	sql.Register(name, &sqlite.SQLiteDriver{
-		ConnectHook: func(sc *sqlite.SQLiteConn) error {
+		ConnectHook: func(conn *sqlite.SQLiteConn) error {
 			for _, p := range sopts.pragmaStatements() {
-				_, err := sc.Exec(p, nil)
+				_, err := conn.Exec(p, nil)
+				if err != nil {
+					return err
+				}
+			}
+
+			if sopts.traceEnabled {
+				err := configureTrace(conn, logger, sopts.traceThresholdMS)
 				if err != nil {
 					return err
 				}
@@ -208,18 +233,20 @@ type SQLiteDB struct {
 	Write        *sql.DB
 	QueryTimeout time.Duration
 	opts         *sqliteOptions
+	logger       *slog.Logger
 }
 
-func NewSQLiteDB(dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
+func NewSQLiteDB(dbPath string, logger *slog.Logger, opts ...SQLiteOption) (*SQLiteDB, error) {
 	sopts := sqliteOptions{
-		journalMode:    JournalModeWAL,
-		synchronous:    SynchronousNormal,
-		tempStore:      TempStoreMemory,
-		busyTimeout:    5000,
-		cacheSize:      2000,
-		foreignKeys:    true,
-		maxReaderConns: 100,
-		queryTimeout:   10 * time.Second,
+		journalMode:      JournalModeWAL,
+		synchronous:      SynchronousNormal,
+		tempStore:        TempStoreMemory,
+		busyTimeout:      5000,
+		cacheSize:        2000,
+		foreignKeys:      true,
+		maxReaderConns:   100,
+		queryTimeout:     10 * time.Second,
+		traceThresholdMS: 20 * time.Millisecond,
 	}
 
 	for _, opt := range opts {
@@ -245,10 +272,13 @@ func NewSQLiteDB(dbPath string, opts ...SQLiteOption) (*SQLiteDB, error) {
 	} else if fi.IsDir() {
 		return nil, fmt.Errorf("%s references to a directory not a database file", dbPath)
 	}
-
-	driverName := ensureDriver(sopts)
-
 	db := &SQLiteDB{DBPath: dbp, QueryTimeout: sopts.queryTimeout, opts: &sopts}
+	db.logger = logger.WithGroup("SQLITE")
+	if sopts.traceEnabled && !traceSupported {
+		return nil, errors.New("sqlite trace enabled but build was done without tag sqlite_trace")
+	}
+	driverName := ensureDriver(sopts, db.logger)
+
 	write, err := sql.Open(driverName, "file:"+db.DBPath)
 	if err != nil {
 		return nil, err

@@ -81,6 +81,11 @@ func ConfigToSQLiteConnManagerConfig(conf *config.Config) (SQLiteConnManagerConf
 		opts = append(opts, sqlitex.WithTempStore(conf.SQLite.TempStore))
 	}
 
+	opts = append(opts, sqlitex.WithTracing(conf.SQLite.Trace))
+	if conf.SQLite.TraceThresholdMillisecond > 0 {
+		opts = append(opts, sqlitex.WithTracingTimeThreshold(time.Duration(conf.SQLite.TraceThresholdMillisecond)*time.Millisecond))
+	}
+
 	opts = append(opts,
 		sqlitex.WithBusyTimeout(conf.SQLite.BusyTimeout),
 		sqlitex.WithCacheSize(conf.SQLite.CacheSize),
@@ -173,7 +178,7 @@ type SQLiteConnManager struct {
 }
 
 func NewSQLiteConnManager(conf SQLiteConnManagerConfig, logger *slog.Logger) (*SQLiteConnManager, error) {
-	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), conf.SQLiteOptions...)
+	indexDB, err := sqlitex.NewSQLiteDB(filepath.Join(conf.DBDirectory, conf.IndexDBFileName), logger, conf.SQLiteOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +245,7 @@ func (s *SQLiteConnManager) createNewConnection(ctx context.Context, key int64) 
 		return nil, err
 	}
 
-	return sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
+	return sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.logger, s.conf.SQLiteOptions...)
 }
 
 func (s *SQLiteConnManager) GetNotesStore(ctx context.Context, key int64) (*datastore.SQLite, error) {
@@ -389,7 +394,7 @@ func (s *SQLiteConnManager) runMigrations(ctx context.Context) error {
 
 	for _, userDB := range dbsToUpgrade {
 		s.logger.Info(fmt.Sprintf("Notes database migration found for user %v - running up migration", userDB.UserID))
-		conn, err := sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.conf.SQLiteOptions...)
+		conn, err := sqlitex.NewSQLiteDB(filepath.Join(s.conf.DBDirectory, userDB.Path), s.logger, s.conf.SQLiteOptions...)
 		if err != nil {
 			return err
 		}

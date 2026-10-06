@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,7 +25,7 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, func() error, 
 	p := filepath.Dir(cwd)
 	r := filepath.Dir(p)
 	testPath := filepath.Join(r, fmt.Sprintf("test-%v", time.Now().Format(time.RFC3339)))
-	err = os.Mkdir(testPath, 0700)
+	err = os.Mkdir(testPath, 0o700)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to make test directory: %w", err)
 	}
@@ -33,7 +34,8 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, func() error, 
 		return os.RemoveAll(testPath)
 	}
 
-	db, err := sqlitex.NewSQLiteDB(filepath.Join(testPath, "test.db"))
+	logger := slog.New(slog.DiscardHandler)
+	db, err := sqlitex.NewSQLiteDB(filepath.Join(testPath, "test.db"), logger)
 	if err != nil {
 		cleanUp()
 		return nil, nil, fmt.Errorf("failed to create sqlite database: %w", err)
@@ -52,11 +54,9 @@ func bootstrapInMemoryDB(ctx context.Context) (*sqlitex.SQLiteDB, func() error, 
 	}
 
 	return db, cleanUp, nil
-
 }
 
 func TestSQLiteSectionMethods(t *testing.T) {
-
 	nbs := make([]*datastore.Section, 0, 20)
 	for i := range 20 {
 		nbs = append(nbs, &datastore.Section{Name: fmt.Sprintf("section-%v", i+1)})
@@ -157,7 +157,7 @@ func TestSQLiteSectionMethods(t *testing.T) {
 				}
 
 				// not subtracting one because in bootstraping the database we include section '01 Inbox'
-				if len(secs) != (len(nbs)) {
+				if len(secs) != len(nbs) {
 					return fmt.Errorf("expected ListAll to return %v sections, but got %v", len(nbs)-1, len(secs))
 				}
 
@@ -174,11 +174,9 @@ func TestSQLiteSectionMethods(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestSQLiteTagMethods(t *testing.T) {
-
 	ts := make([]*datastore.Tag, 0, 19)
 	for i := range 20 {
 		ts = append(ts, &datastore.Tag{Name: fmt.Sprintf("tag-%v", i+1)})
@@ -327,7 +325,6 @@ func TestSQLiteTagMethods(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestSQLiteNoteMethods(t *testing.T) {
@@ -434,7 +431,6 @@ func TestSQLiteNoteMethods(t *testing.T) {
 		{
 			Name: "Exists",
 			TFunc: func(nr *datastore.SQLite) error {
-
 				ide, err := nr.NoteExists(ctx, "title-3")
 				if err != nil {
 					return err
@@ -585,7 +581,6 @@ func TestSQLiteNoteMethods(t *testing.T) {
 				}
 
 				return nil
-
 			},
 		},
 	}
@@ -598,5 +593,4 @@ func TestSQLiteNoteMethods(t *testing.T) {
 			}
 		})
 	}
-
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/ASC521/communis/config"
 	"github.com/ASC521/communis/dbx/migrations"
 	"github.com/ASC521/communis/dbx/sqlitex"
+	"github.com/ASC521/communis/slogx"
 )
 
 func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string) error {
@@ -35,8 +37,12 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 	}
 
 	ctx := context.Background()
-
-	db, err := sqlitex.NewSQLiteDB(dbPath)
+	logLevel := slog.LevelInfo
+	if conf.Debug {
+		logLevel = slog.LevelDebug
+	}
+	logger := slog.New(slogx.NewPipeHandler(os.Stderr, &slogx.HandlerOptions{Level: logLevel, IncludeSource: false}))
+	db, err := sqlitex.NewSQLiteDB(dbPath, logger)
 	if err != nil {
 		return err
 	}
@@ -97,7 +103,6 @@ func MigrateCMD(conf *config.Config, args []string, dbPath, migrationsDir string
 }
 
 func DatabaseCMD(conf *config.Config, args []string) error {
-
 	dbFlags := flag.NewFlagSet("database", flag.ExitOnError)
 	dbType := dbFlags.String("db-type", "", "database type to migrate - options: INDEX | NOTES")
 	notesUserNumber := dbFlags.String("notes-user-number", "", "user number of notes database to operate on")
@@ -109,7 +114,6 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 		fmt.Fprint(os.Stderr, "\nAvailable Commands:\n")
 		fmt.Fprint(os.Stderr, "bootstrap    create and migrate up a database\n")
 		fmt.Fprint(os.Stderr, "migrate      manage database schema\n\n")
-
 	}
 
 	err := dbFlags.Parse(args)
@@ -146,7 +150,12 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 	switch cmd {
 	case "bootstrap":
 		ctx := context.Background()
-		db, err := sqlitex.NewSQLiteDB(dbPath)
+		logLevel := slog.LevelInfo
+		if conf.Debug {
+			logLevel = slog.LevelDebug
+		}
+		logger := slog.New(slogx.NewPipeHandler(os.Stderr, &slogx.HandlerOptions{Level: logLevel, IncludeSource: false}))
+		db, err := sqlitex.NewSQLiteDB(dbPath, logger)
 		if err != nil {
 			return err
 		}
@@ -166,5 +175,4 @@ func DatabaseCMD(conf *config.Config, args []string) error {
 	default:
 		return fmt.Errorf("command %s is not supported", cmd)
 	}
-
 }
