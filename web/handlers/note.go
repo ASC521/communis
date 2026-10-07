@@ -21,7 +21,32 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
-	"github.com/yuin/goldmark/extension"
+)
+
+var lightMarkdownRenderer = goldmark.New(
+	goldmark.WithExtensions(
+		highlighting.NewHighlighting(
+			highlighting.WithStyle("tango"),
+			highlighting.WithFormatOptions(
+				chromahtml.WithLineNumbers(true),
+				chromahtml.WithClasses(true),
+				chromahtml.ClassPrefix("renderedmd-"),
+			),
+		),
+	),
+)
+
+var darkMarkdownRenderer = goldmark.New(
+	goldmark.WithExtensions(
+		highlighting.NewHighlighting(
+			highlighting.WithStyle("dracula"),
+			highlighting.WithFormatOptions(
+				chromahtml.WithLineNumbers(true),
+				chromahtml.WithClasses(true),
+				chromahtml.ClassPrefix("renderedmd-"),
+			),
+		),
+	),
 )
 
 type noteForm struct {
@@ -40,29 +65,16 @@ type searchForm struct {
 }
 
 func renderNote(markdownContent, theme string) (template.HTML, error) {
-	var style highlighting.Option
+	var r goldmark.Markdown
 	if theme == "dark" {
-		style = highlighting.WithStyle("dracula")
+		r = darkMarkdownRenderer
 	} else {
-		style = highlighting.WithStyle("tango")
+		r = lightMarkdownRenderer
 	}
 
-	md := goldmark.New(
-		goldmark.WithExtensions(
-			highlighting.NewHighlighting(
-				style,
-				highlighting.WithFormatOptions(
-					chromahtml.WithLineNumbers(true),
-					chromahtml.WithClasses(true),
-					chromahtml.ClassPrefix("renderedmd-"),
-				),
-			),
-			extension.NewTable(),
-		),
-	)
 	b := new(bytes.Buffer)
 
-	err := md.Convert([]byte(markdownContent), b)
+	err := r.Convert([]byte(markdownContent), b)
 	if err != nil {
 		return "", err
 	}
