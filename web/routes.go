@@ -18,7 +18,7 @@ func routes(
 	ignoredLoggingPaths []string,
 	debugEnabled bool,
 	setupRequired *bool,
-) http.Handler {
+) (http.Handler, error) {
 	mux := http.NewServeMux()
 	rl := logger.WithGroup("ROUTER")
 	baseChain := handlers.Chain{
@@ -45,7 +45,13 @@ func routes(
 		handlers.RequireAdmin,
 	}
 
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(assets.StaticFiles)))
+	etagCache, err := assets.ComputeStaticFilesEtags()
+	if err != nil {
+		return nil, err
+	}
+	checkCacheHeaders := handlers.CheckFileCacheHeaders(etagCache, logger)
+
+	mux.Handle("GET /static/", checkCacheHeaders(http.StripPrefix("/static/", http.FileServerFS(assets.StaticFiles))))
 
 	mux.Handle("GET /note/{id}/{slug}", authReq.Then(handlers.NoteViewGet(tc, logger, dss, sessionManager)))
 	mux.Handle("GET /note/new", authReq.Then(handlers.NoteNewGet(tc, logger, dss, sessionManager)))
@@ -101,5 +107,5 @@ func routes(
 		mux.Handle("GET /debug/build-info", authReq.Then(handlers.GetDebugBuildInfo()))
 	}
 
-	return baseChain.Then(mux)
+	return baseChain.Then(mux), nil
 }

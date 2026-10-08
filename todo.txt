@@ -1,17 +1,18 @@
+(A) HTTP Cache Headers
 (B) Add ability to copy code blocks from rendered note
-(B) BUG FIX: database CLI commands only operate on notes database -- does not update the user database.  If migrations run through cli the user database is not kept in sync.
+(B) BUG: Search results not appearing note editor screen
 (B) TECH DEBT: Guard against possible nil logger references
 (C) Session Manager configuration options
 (C) Tech Debt: Migrate away from goldmark
+(D) BUG database CLI commands only operate on notes database -- does not update the user database.  If migrations run through cli the user database is not kept in sync.
 (D) Move create user form to dialog from table row
-(E) HTTP Cache Headers
 (F) Add form validation feedback to note create +v1 +create-note-rework
 (F) Feature: MarkDown editor add toolbar button to create a link to another note with app
 (F) PostUser should be happening within a transaction
-(x) Refactor organization of html templates to better fit htmx
 Add advanced query support to search screen +v1
 Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
 Bug Fix: Security is blocking external images being loaded in markdown
+BUG: Edit Note page title should denote editing a note not say New Note
 Error Screens +v1
 Fix note preview page -  buttons don't line up
 kindle highlight and note parser
@@ -94,6 +95,7 @@ x Rebuild inline section create/edit form +v1
 x Redo tag selection on create note screen +v1 +create-note-rework
 x Refactor css
 x Refactor note, tag, and section repositories to single repository interface +v1
+x Refactor organization of html templates to better fit htmx
 x Refactor TemplateCache - don't like having to pass in file name and then defined template name
 x SQLite Migrations and DB Bootstrapping
 x Write proper readme +v1

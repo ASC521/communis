@@ -239,3 +239,19 @@ func CrossOriginProtection(next http.Handler) http.Handler {
 	cop := http.NewCrossOriginProtection()
 	return cop.Handler(next)
 }
+
+func CheckFileCacheHeaders(etagCache map[string]string, logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cacheETag, ok := etagCache[r.URL.EscapedPath()]
+			if !ok {
+				logger.Debug("etag cache miss", "url", r.URL.EscapedPath())
+				next.ServeHTTP(w, r)
+				return
+			}
+			w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
+			w.Header().Set("ETag", cacheETag)
+			next.ServeHTTP(w, r)
+		})
+	}
+}

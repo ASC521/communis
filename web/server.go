@@ -102,7 +102,10 @@ func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog
 	}
 	serverLogger.Info(fmt.Sprintf("initial setup = %v", initialSetupNeeded))
 
-	handler := routes(serverLogger, htmlRenderer, dsm, sessionManager, conf.IgnoredLoggingPaths, conf.Debug, &initialSetupNeeded)
+	handler, err := routes(serverLogger, htmlRenderer, dsm, sessionManager, conf.IgnoredLoggingPaths, conf.Debug, &initialSetupNeeded)
+	if err != nil {
+		return err
+	}
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort(conf.Host, strconv.Itoa(int(conf.Port))),
