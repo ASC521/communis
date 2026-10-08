@@ -1,8 +1,8 @@
 {{ define "partial:note:reference-search-results" }}
 {{ if not . }}
-<ul id="search-results" class="search-dropdown" role="listbox"></ul>
+<ul id="reference-note-search-results" class="search-dropdown" role="listbox"></ul>
 {{ else }}
-<ul id="search-results" class="search-dropdown" role="listbox">
+<ul id="reference-note-search-results" class="search-dropdown" role="listbox">
   {{ range . }}
   <li
     class="result"
@@ -27,7 +27,7 @@
   <button type="button" data-remove-ref-note class="text-button -widthauto" aria-label="Remove {{ .Title }}">X</button>
 </li>
 
-<ul id="search-results" class="search-dropdown" role="listbox" hx-swap-oob="true"></ul>
+<ul id="reference-note-search-results" class="search-dropdown" role="listbox" hx-swap-oob="true"></ul>
 {{ end }}
 
 

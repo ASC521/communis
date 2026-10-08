@@ -1,6 +1,4 @@
-(A) HTTP Cache Headers
 (B) Add ability to copy code blocks from rendered note
-(B) BUG: Search results not appearing note editor screen
 (B) TECH DEBT: Guard against possible nil logger references
 (C) Session Manager configuration options
 (C) Tech Debt: Migrate away from goldmark
@@ -31,6 +29,7 @@ x (A) Bug Fix: Can't save from note preview screen
 x (A) Bug Fix: Note Edit page does not submit
 x (A) BUG FIX: Remove authentication check on routes not requiring auth - login page, static pages
 x (A) Bug Fix: Save from preview warns user about losing changes
+x (A) BUG: Search results not appearing note editor screen
 x (A) Build tag index +v1
 x (A) Change password needs to be implemented
 x (A) Common response headers middleware
@@ -42,6 +41,7 @@ x (A) Feature: toast message - App throws error on receiving invalid credentials
 x (A) First setup of admin user
 x (A) Fix note edit bug where content isn't populated in the overtype editor +v1
 x (A) Fix note preview page - section and tag names have to be pulled from DB
+x (A) HTTP Cache Headers
 x (A) Make textarea on edit notes screen automatically grow as more text is added +v1
 x (A) Markdown Bold Button +v1 +create-note-rework
 x (A) Markdown H1 Button +v1 +create-note-rework
