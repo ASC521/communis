@@ -81,7 +81,7 @@ func RunServer(conf ServerConfig, dsm *userstore.SQLiteConnManager, logger *slog
 
 	serverLogger := logger.WithGroup("SERVER")
 
-	htmlRenderer, err := assets.NewHTMLRenderer(assets.HTMLFiles, conf.Debug, "base.tmpl", "partials/*.tmpl")
+	htmlRenderer, err := assets.NewHTMLRenderer(assets.HTMLFiles, conf.Debug, "base.gohtml", "partials/*.gohtml")
 	if err != nil {
 		return err
 	}

@@ -32,7 +32,7 @@ func GetUserLogin(
 			Form:     loginForm{},
 			BaseData: extractBaseDataFromRequest(r),
 		}
-		if err := htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/login.tmpl"); err != nil {
+		if err := htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/login.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
@@ -74,7 +74,7 @@ func PostUserLogin(
 				BaseData: extractBaseDataFromRequest(r),
 				Form:     lf,
 			}
-			if err = htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/login.tmpl"); err != nil {
+			if err = htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/login.gohtml"); err != nil {
 				logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 				htmlRenderer.RenderError(w, err)
 			}
@@ -89,7 +89,7 @@ func PostUserLogin(
 					BaseData: extractBaseDataFromRequest(r),
 					Form:     lf,
 				}
-				if err = htmlRenderer.Render(w, http.StatusForbidden, data, "base", "pages/login.tmpl"); err != nil {
+				if err = htmlRenderer.Render(w, http.StatusForbidden, data, "base", "pages/login.gohtml"); err != nil {
 					logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 					htmlRenderer.RenderError(w, err)
 				}

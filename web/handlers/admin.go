@@ -224,7 +224,7 @@ func GetAdmin(
 			Users:    users,
 		}
 
-		if err = tc.Render(w, http.StatusOK, data, "base", "pages/admin.tmpl"); err != nil {
+		if err = tc.Render(w, http.StatusOK, data, "base", "pages/admin.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			tc.RenderError(w, err)
 		}
@@ -481,7 +481,7 @@ func GetSetup(
 			SetupUserForm: setupUserForm{FieldErrors: map[string]string{}},
 		}
 
-		if err := htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/setup.tmpl"); err != nil {
+		if err := htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/setup.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
@@ -526,7 +526,7 @@ func PostSetup(
 				BaseData:      extractBaseDataFromRequest(r),
 				SetupUserForm: suf,
 			}
-			htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/setup.tmpl")
+			htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/setup.gohtml")
 			return
 		}
 

@@ -94,7 +94,7 @@ func SectionGet(
 			Sections: sections,
 		}
 
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/section-list.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/section-list.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
@@ -311,7 +311,7 @@ func SectionViewGet(
 			NoteDetails: nds,
 		}
 
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/section-view.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/section-view.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}

@@ -99,7 +99,7 @@ func TagGet(
 			BaseData: extractBaseDataFromRequest(r),
 			Tags:     allTags,
 		}
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/tags-list.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/tags-list.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
@@ -150,7 +150,7 @@ func TagViewGet(
 			Tag:         tag,
 		}
 
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/tag-view.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/tag-view.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}

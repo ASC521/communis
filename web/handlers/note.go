@@ -267,7 +267,7 @@ func NoteNewGet(
 			RenderedNote:           renderedNotePageData{IsPreview: true},
 			SelectedReferenceNotes: []datastore.NoteDetail{},
 		}
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-create.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-create.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
@@ -325,7 +325,7 @@ func NotePost(
 				Tags:     allTags,
 				Form:     nf,
 			}
-			htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/note-create.tmpl")
+			htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/note-create.gohtml")
 			return
 		}
 		id, err := notesRepo.CreateNote(
@@ -416,7 +416,7 @@ func NoteEditGet(
 			SelectedReferenceNotes: n.ReferenceNotes,
 			ReferencedByNotes:      n.ReferenceByNotes,
 		}
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-create.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-create.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
@@ -480,7 +480,7 @@ func NotePut(
 				Form:     nf,
 			}
 
-			htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/note-create.tmpl")
+			htmlRenderer.Render(w, http.StatusUnprocessableEntity, data, "base", "pages/note-create.gohtml")
 			return
 
 		}
@@ -662,7 +662,7 @@ func NoteViewGet(
 			},
 		}
 
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-view.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/note-view.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
@@ -715,7 +715,7 @@ func NoteSearchGet(
 		case "input#ref-notes-search":
 			renderErr = htmlRenderer.Render(w, http.StatusOK, data.SearchResults, "partial:note:reference-search-results")
 		default:
-			renderErr = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/search.tmpl")
+			renderErr = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/search.gohtml")
 		}
 		if renderErr != nil {
 			logger.Error(renderErr.Error(), "method", r.Method, "uri", r.URL.RequestURI())

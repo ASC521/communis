@@ -82,7 +82,7 @@ func HomeGet(
 			BaseData:        extractBaseDataFromRequest(r),
 		}
 
-		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/home.tmpl"); err != nil {
+		if err = htmlRenderer.Render(w, http.StatusOK, data, "base", "pages/home.gohtml"); err != nil {
 			logger.Error(err.Error(), "method", r.Method, "uri", r.URL.RequestURI())
 			htmlRenderer.RenderError(w, err)
 		}
