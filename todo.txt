@@ -1,22 +1,23 @@
+(A) Add new note button on section detail page that adds a new note with appropriate section selected +feature
 (B) Add ability to copy code blocks from rendered note
-(B) TECH DEBT: Guard against possible nil logger references
+(B) Guard against possible nil logger references +tech-debt
+(C) Migrate away from goldmark +tech-debt
 (C) Session Manager configuration options
-(C) Tech Debt: Migrate away from goldmark
-(D) BUG database CLI commands only operate on notes database -- does not update the user database.  If migrations run through cli the user database is not kept in sync.
+(D) database CLI commands only operate on notes database -- does not update the user database.  If migrations run through cli the user database is not kept in sync. +bug
 (D) Move create user form to dialog from table row
 (F) Add form validation feedback to note create +v1 +create-note-rework
-(F) Feature: MarkDown editor add toolbar button to create a link to another note with app
+(F) MarkDown editor add toolbar button to create a link to another note with app +feature
 (F) PostUser should be happening within a transaction
 Add advanced query support to search screen +v1
-Bug Fix: Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +v1
-Bug Fix: Security is blocking external images being loaded in markdown
-BUG: Edit Note page title should denote editing a note not say New Note
+Edit Note page title should denote editing a note not say New Note +bug
 Error Screens +v1
 Fix note preview page -  buttons don't line up
 kindle highlight and note parser
 kobo highlight and note parser
+Markdown editor ordered list - doesn't put any number if clicked when no text is on the row +bug
 Redo UI to be mobile friendly
 Search results should contain rendered html from markdown not raw markdown
+Security is blocking external images being loaded in markdown +bug
 Unit tests on note form parsing and validation +v1
 x (A) Add capability to add, edit, and delete users +v1 +auth-user
 x (A) Add middleware to check auth user and retrieve correct db connection +v1 +user-auth
@@ -51,6 +52,7 @@ x (A) Markdown Inline Code Button +v1 +create-note-rework
 x (A) Markdown Italic Button +v1 +create-note-rework
 x (A) Markdown Ordered List +v1 +create-note-rework
 x (A) Markdown Quote +v1 +create-note-rework
+x (A) markdown rendering of tables broken +bug
 x (A) Markdown Unordered List Button +v1 +create-note-rework
 x (A) Move to icons from text buttons +v1 +create-note-rework
 x (A) Move to pico css +v1

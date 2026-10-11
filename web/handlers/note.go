@@ -21,6 +21,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
+	"github.com/yuin/goldmark/extension"
 )
 
 var lightMarkdownRenderer = goldmark.New(
@@ -33,6 +34,7 @@ var lightMarkdownRenderer = goldmark.New(
 				chromahtml.ClassPrefix("renderedmd-"),
 			),
 		),
+		extension.NewTable(),
 	),
 )
 
@@ -46,6 +48,7 @@ var darkMarkdownRenderer = goldmark.New(
 				chromahtml.ClassPrefix("renderedmd-"),
 			),
 		),
+		extension.NewTable(),
 	),
 )
 
