@@ -768,6 +768,14 @@ main {
 
 }
 
+
+.rendered-markdown > table {
+	table-layout: fixed;
+    width: 100%;
+    margin: 10px auto;
+    text-align: left;
+}
+
 .users-table {
     table-layout: fixed;
     width: 90%;
