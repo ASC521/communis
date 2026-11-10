@@ -5,11 +5,11 @@ go 1.27
 require (
 	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/alexedwards/scs/v2 v2.9.0
-	github.com/mattn/go-sqlite3 v1.14.50
+	github.com/mattn/go-sqlite3 v1.14.53
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/yuin/goldmark v1.8.6
+	github.com/yuin/goldmark v1.8.7
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.58.0
 )
 
 require github.com/dlclark/regexp2/v2 v2.2.1 // indirect
